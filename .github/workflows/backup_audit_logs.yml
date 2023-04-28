@@ -1,0 +1,26 @@
+name: Backup monthly audit logs
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 5 1 * *' # runs monthly, on the 1st at midnight EST
+
+jobs:
+  run_script:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+
+      - name: Install dependencies
+        run: npm i
+
+      - name: Run script
+        run: node bot.mjs
+
+      - name: Upload Archive
+        uses: actions/upload-artifact@v3
+        with:
+          path: logs.json
