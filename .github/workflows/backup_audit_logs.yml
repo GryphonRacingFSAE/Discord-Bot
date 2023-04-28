@@ -6,7 +6,7 @@ on:
     - cron: '0 5 1 * *' # runs monthly, on the 1st at midnight EST
 
 jobs:
-  run_script:
+  Fetch-Logs:
     runs-on: ubuntu-latest
 
     steps:
