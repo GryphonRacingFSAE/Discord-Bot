@@ -12,7 +12,8 @@ client.once(Events.ClientReady, async c => {
     const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID);
     const fetchedLogs = await guild.fetchAuditLogs();
     console.log(fetchedLogs.entries);
-    fs.writeFileSync("logs.json", JSON.stringify(fetchedLogs.entries))
+    fs.writeFileSync("logs.json", JSON.stringify(fetchedLogs.entries));
+	client.destroy();
 });
 
 // Log in to Discord with your client's token
