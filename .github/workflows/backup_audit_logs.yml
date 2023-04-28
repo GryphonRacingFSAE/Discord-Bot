@@ -5,6 +5,10 @@ on:
   schedule:
     - cron: '0 5 1 * *' # runs monthly, on the 1st at midnight EST
 
+env:
+  DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+  DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+
 jobs:
   run_script:
     runs-on: ubuntu-latest
