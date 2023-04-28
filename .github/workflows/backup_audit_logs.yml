@@ -5,10 +5,6 @@ on:
   schedule:
     - cron: '0 5 1 * *' # runs monthly, on the 1st at midnight EST
 
-env:
-  DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
-  DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
-
 jobs:
   run_script:
     runs-on: ubuntu-latest
@@ -21,10 +17,14 @@ jobs:
       - name: Install dependencies
         run: npm i
 
-      - name: Run script
+      - name: Fetch audit logs
         run: node bot.mjs
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
 
       - name: Upload Archive
         uses: actions/upload-artifact@v3
         with:
+          name: logs
           path: logs.json

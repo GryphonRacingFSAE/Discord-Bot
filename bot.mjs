@@ -11,7 +11,6 @@ client.once(Events.ClientReady, async c => {
 	console.log(`Ready! Logged in as ${c.user.tag}`);
     const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID);
     const fetchedLogs = await guild.fetchAuditLogs();
-    console.log(fetchedLogs.entries);
     fs.writeFileSync("logs.json", JSON.stringify(fetchedLogs.entries));
 	client.destroy();
 });
