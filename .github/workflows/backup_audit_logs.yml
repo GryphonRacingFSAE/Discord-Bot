@@ -17,8 +17,8 @@ jobs:
       - name: Install dependencies
         run: npm i
 
-      - name: Fetch audit logs
-        run: node dist/index.js
+      - name: Compile typescript
+        run: npx tsc
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
