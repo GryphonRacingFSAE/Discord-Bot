@@ -1,14 +1,14 @@
 // Types class
-import { SlashCommandBuilder, CommandInteraction, Events, Client } from "discord.js"
+import {SlashCommandBuilder, CommandInteraction, Events, Client, ClientEvents, Awaitable} from "discord.js"
 
 
-export type Types = {
+export type Command = {
     data: SlashCommandBuilder,
     execute: (interaction: CommandInteraction) => Promise<void>;
 }
 
 export type Event = {
-    name: Events,
+    name: Exclude<Events, keyof ClientEvents>,
     once: boolean,
-    execute: (client: Client) => void,
+    execute: (...args: any[]) => Awaitable<void>,
 }

@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from "discord.js"
-import {Types} from "../.././types.mjs"
+import {Command} from "../../types.mjs"
 
 export default {
     data: new SlashCommandBuilder()
@@ -8,4 +8,4 @@ export default {
     async execute(interaction) {
         await interaction.reply("Pong!");
     }
-} as Types;
+} as Command;
