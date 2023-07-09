@@ -18,7 +18,7 @@ jobs:
         run: npm i
 
       - name: Fetch audit logs
-        run: node bot.mjs
+        run: node dist/index.js
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
