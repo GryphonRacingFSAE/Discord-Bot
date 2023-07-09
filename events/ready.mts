@@ -1,11 +1,11 @@
 import { Events } from "discord.js"
 import { Event } from "../types.mjs"
 
-export default Event
+export default
 {
-    Events.ClientReady
-    true
-    function execute(client) {
+    name: Events.ClientReady,
+    once: true,
+    execute(client) {
         console.log(`Ready! Logged in as ${client.user.tag}`);
     }
 }

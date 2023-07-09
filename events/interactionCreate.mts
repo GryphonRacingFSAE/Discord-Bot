@@ -2,11 +2,11 @@ import { Events } from "discord.js"
 import { Event } from "../types.mjs"
 import {DiscordClient} from "../discordClient.mjs"
 
-export default Event
+export default
 {
-    Events.InteractionCreate
-    false
-    async function execute(interaction) {
+    name: Events.InteractionCreate,
+    once: false,
+    async execute(interaction) {
         if (!interaction.isChatInputCommand()) return;
 
         const command = (interaction.client as DiscordClient).commands.get(interaction.commandName);
