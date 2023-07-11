@@ -17,11 +17,19 @@ jobs:
       - name: Install dependencies
         run: npm i
 
-      - name: Compile typescript
-        run: npx tsc
+      - name: Linter
+        run: npm run lint
+
+      - name: Prettier
+        run: npm run format
+
+      - name: Compile TypeScript
+        run: npm run dev
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+          DISCORD_APPLICATION_ID: ${{ secrets.DISCORD_APPLICATION_ID }}
+
 
       - name: Upload Archive
         uses: actions/upload-artifact@v3
