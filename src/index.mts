@@ -18,20 +18,24 @@ const client = new DiscordClient({ intents: [GatewayIntentBits.Guilds] });
     const foldersPath = path.join(__dirname, "commands");
     const commandFolders = fs.readdirSync(foldersPath);
 
+    // Iterate over every command/folder
     for (const folder of commandFolders) {
         const commandsPath = path.join(foldersPath, folder);
         const commandFiles = fs.readdirSync(commandsPath).filter(
             file => file.endsWith(".mjs"), // Compiled to js!
         );
-
+        // Iterate over file in said folder
         for (const file of commandFiles) {
+            // Import contents
             const filePath = path.join(commandsPath, file);
             const resolvedPath = pathToFileURL(filePath).href;
             const command: Command = (await import(resolvedPath)).default;
             // Set a new item in the Collection with the key as the command name and the value as the exported module
             if (command && `data` in command && `execute` in command) {
+                // Bind command
                 client.commands.set(command.data.name, command);
             } else {
+                // Invalid/missing contents
                 console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
             }
         }
@@ -42,26 +46,24 @@ const client = new DiscordClient({ intents: [GatewayIntentBits.Guilds] });
 {
     const eventsPath = path.join(__dirname, "events");
     const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith(".mjs"));
-
+    // Iterate over each events/*.mts file
     for (const file of eventFiles) {
+        // Import files' content
         const filePath = path.join(eventsPath, file);
         const resolvedPath = pathToFileURL(filePath).href;
         const event: Event = (await import(resolvedPath)).default;
+        // Attach the event onto the client
         if (`name` in event && `execute` in event) {
             if (event.once) {
-                console.log("Once");
                 client.once(event.name, (...args) => event.execute(...args));
             } else {
-                console.log("on");
                 client.on(event.name, (...args) => event.execute(...args));
             }
         } else {
+            // You goofed up if you ended here.
+            // Remember to add a name or execution member next time
             console.log(`[WARNING] The command at ${filePath} is missing a required "name" or "execute" property.`);
         }
-    }
-
-    {
-        console.log("I should error!");
     }
 }
 
