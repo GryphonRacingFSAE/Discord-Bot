@@ -1,13 +1,13 @@
-import {Client, Events, Collection, GatewayIntentBits, ClientOptions} from "discord.js";
+import { GatewayIntentBits } from "discord.js";
 import path from "node:path";
 import * as dotenv from "dotenv";
 import * as fs from "fs";
-import { dirname } from 'path';
-import {fileURLToPath, pathToFileURL} from 'url';
-import {DiscordClient} from "./discordClient.mjs";
-import {Command, Event} from "./types.mjs"
+import { dirname } from "path";
+import { fileURLToPath, pathToFileURL } from "url";
+import { DiscordClient } from "./discordClient.mjs";
+import { Command, Event } from "./types.mjs";
 
-dotenv.config()
+dotenv.config();
 // Some hack to get __dirname to work in modules
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -15,13 +15,13 @@ const client = new DiscordClient({ intents: [GatewayIntentBits.Guilds] });
 
 // Load in commands
 {
-    const foldersPath = path.join(__dirname, 'commands');
+    const foldersPath = path.join(__dirname, "commands");
     const commandFolders = fs.readdirSync(foldersPath);
 
     for (const folder of commandFolders) {
         const commandsPath = path.join(foldersPath, folder);
         const commandFiles = fs.readdirSync(commandsPath).filter(
-            file => file.endsWith('.mjs') // Compiled to js!
+            file => file.endsWith(".mjs"), // Compiled to js!
         );
 
         for (const file of commandFiles) {
@@ -40,8 +40,8 @@ const client = new DiscordClient({ intents: [GatewayIntentBits.Guilds] });
 
 // Load in events
 {
-    const eventsPath = path.join(__dirname, 'events');
-    const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.mjs'));
+    const eventsPath = path.join(__dirname, "events");
+    const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith(".mjs"));
 
     for (const file of eventFiles) {
         const filePath = path.join(eventsPath, file);
@@ -58,6 +58,10 @@ const client = new DiscordClient({ intents: [GatewayIntentBits.Guilds] });
         } else {
             console.log(`[WARNING] The command at ${filePath} is missing a required "name" or "execute" property.`);
         }
+    }
+
+    {
+        console.log("I should error!");
     }
 }
 

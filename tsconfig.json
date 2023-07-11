@@ -7,5 +7,6 @@
     "sourceMap": true,
     "outDir": "dist"
   },
+  "include": ["src"],
   "lib": ["es2017"]
 }
