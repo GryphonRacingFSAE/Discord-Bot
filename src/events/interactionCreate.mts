@@ -1,9 +1,7 @@
-import { Events } from "discord.js"
-import { Event } from "../types.mjs"
-import {DiscordClient} from "../discordClient.mjs"
+import { Events } from "discord.js";
+import { DiscordClient } from "../discordClient.mjs";
 
-export default
-{
+export default {
     name: Events.InteractionCreate,
     once: false,
     async execute(interaction) {
@@ -22,5 +20,5 @@ export default
             console.error(`Error executing ${interaction.commandName}`);
             console.error(error);
         }
-    }
-}
+    },
+};
