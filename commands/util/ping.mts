@@ -6,6 +6,7 @@ export default {
         .setName("ping")
         .setDescription("Ping the bot!"),
     async execute(interaction) {
-        await interaction.reply("Pong!");
+        let delta = Math.abs((Date.now()-interaction.createdTimestamp)/1000) .toFixed(2)
+        await interaction.reply(`Pong in ${delta} seconds!`);
     }
 } as Command;
