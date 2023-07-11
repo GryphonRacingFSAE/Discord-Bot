@@ -1,7 +1,6 @@
 // Types class
 import { SlashCommandBuilder, CommandInteraction, Events, ClientEvents, Awaitable } from "discord.js";
 
-
 export type Command = {
     /**
      * Represents the command data from discord.js SlashCommandBuffer (name, etc.)
