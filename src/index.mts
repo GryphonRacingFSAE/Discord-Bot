@@ -1,43 +1,37 @@
 import { GatewayIntentBits } from "discord.js";
 import path from "node:path";
-import * as dotenv from "dotenv";
-import * as fs from "fs";
-import { dirname } from "path";
-import { fileURLToPath, pathToFileURL } from "url";
+import dotenv from "dotenv";
+import fs from "node:fs";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { DiscordClient } from "./discordClient.mjs";
-import { Command, Event } from "./types.mjs";
+import type { Command, Event } from "./types.mjs";
 
 dotenv.config();
 // Some hack to get __dirname to work in modules
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const client = new DiscordClient({ intents: [GatewayIntentBits.Guilds] });
 
 // Load in commands
 {
-    const foldersPath = path.join(__dirname, "commands");
-    const commandFolders = fs.readdirSync(foldersPath);
-
     // Iterate over every command/folder
-    for (const folder of commandFolders) {
-        const commandsPath = path.join(foldersPath, folder);
-        const commandFiles = fs.readdirSync(commandsPath).filter(
-            file => file.endsWith(".mjs"), // Compiled to js!
-        );
-        // Iterate over file in said folder
-        for (const file of commandFiles) {
-            // Import contents
-            const filePath = path.join(commandsPath, file);
-            const resolvedPath = pathToFileURL(filePath).href;
-            const command: Command = (await import(resolvedPath)).default;
-            // Set a new item in the Collection with the key as the command name and the value as the exported module
-            if (command && `data` in command && `execute` in command) {
-                // Bind command
-                client.commands.set(command.data.name, command);
-            } else {
-                // Invalid/missing contents
-                console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
-            }
+    const commandsPath = path.join(__dirname, "commands");
+    const commandFiles = fs.readdirSync(commandsPath).filter(
+        file => file.endsWith(".mjs"), // Compiled to js!
+    );
+    // Iterate over file in said folder
+    for (const file of commandFiles) {
+        // Import contents
+        const filePath = path.join(commandsPath, file);
+        const resolvedPath = pathToFileURL(filePath).href;
+        const command: Command = (await import(resolvedPath)).default;
+        // Set a new item in the Collection with the key as the command name and the value as the exported module
+        if (command && `data` in command && `execute` in command) {
+            // Bind command
+            client.commands.set(command.data.name, command);
+        } else {
+            // Invalid/missing contents
+            console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
         }
     }
 }
@@ -53,16 +47,10 @@ const client = new DiscordClient({ intents: [GatewayIntentBits.Guilds] });
         const resolvedPath = pathToFileURL(filePath).href;
         const event: Event = (await import(resolvedPath)).default;
         // Attach the event onto the client
-        if (`name` in event && `execute` in event) {
-            if (event.once) {
-                client.once(event.name, (...args) => event.execute(...args));
-            } else {
-                client.on(event.name, (...args) => event.execute(...args));
-            }
+        if (event.once) {
+            client.once(event.name, (...args) => event.execute(...args));
         } else {
-            // You goofed up if you ended here.
-            // Remember to add a name or execution member next time
-            console.log(`[WARNING] The command at ${filePath} is missing a required "name" or "execute" property.`);
+            client.on(event.name, (...args) => event.execute(...args));
         }
     }
 }

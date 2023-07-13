@@ -11,7 +11,7 @@ export class DiscordClient extends Client {
      */
     commands: Collection<string, Command>;
 
-    constructor(options?: ClientOptions) {
+    constructor(options: ClientOptions) {
         super(options);
         // Leave blank
         this.commands = new Collection();

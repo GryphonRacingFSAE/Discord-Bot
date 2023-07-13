@@ -1,8 +1,10 @@
 {
   "scripts": {
     "dev": "tsc --watch",
-    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
-    "format": "prettier --write src/"
+    "build": "tsc --strict",
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --ignore-path .gitignore --fix",
+    "type-check": "tsc --strict --noEmit",
+    "lint-check": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --ignore-path .gitignore"
   },
   "dependencies": {
     "discord-api-types": "^0.37.47",
