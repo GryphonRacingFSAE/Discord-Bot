@@ -1,4 +1,4 @@
-name: Backup monthly audit logs
+name: Lint, Formatting & Type Check
 
 on:
   push:
@@ -29,10 +29,3 @@ jobs:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
           DISCORD_APPLICATION_ID: ${{ secrets.DISCORD_APPLICATION_ID }}
-
-
-      - name: Upload Archive
-        uses: actions/upload-artifact@v3
-        with:
-          name: logs
-          path: logs.json
