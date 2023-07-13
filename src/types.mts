@@ -1,5 +1,6 @@
 // Types class
-import { SlashCommandBuilder, CommandInteraction, Events, ClientEvents, Awaitable } from "discord.js";
+import { SlashCommandBuilder, CommandInteraction, Events, ClientEvents } from "discord.js";
+import type { Awaitable } from "discord.js";
 
 export type Command = {
     /**
