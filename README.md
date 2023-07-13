@@ -33,7 +33,7 @@ A custom-built Discord bot to run internally on our server and perform various t
     npm run build
     ```
 
-2. Register any new `"/"` commands (if applicable):
+2. Register any new `/` commands (if applicable):
 
     ```
     node dist/deploy-commands.mjs
