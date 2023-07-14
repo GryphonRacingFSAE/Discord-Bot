@@ -5,10 +5,14 @@
 import { SlashCommandBuilder } from "discord.js";
 import { Command } from "../types.mjs";
 import fs from "fs";
+import path from "path";
 
 export default {
     data: new SlashCommandBuilder().setName("save-audit-logs").setDescription("Save audit logs from the past week."),
     async execute(interaction) {
+        const week_ago = new Date();
+        week_ago.setDate(week_ago.getDate() - 7);
+
         const guild = interaction.guild;
         if (!guild) {
             await interaction.reply("This command can only be used in a server (guild).");
@@ -17,9 +21,17 @@ export default {
 
         try {
             const audit_logs = await guild.fetchAuditLogs({ limit: 100 });
-            const logs_json = JSON.stringify(audit_logs.entries, null, 2);
 
-            fs.writeFileSync("audit_logs.json", logs_json);
+            const logs_dir = path.join("__dirname", "..", "logs");
+            fs.mkdirSync(logs_dir, { recursive: true });
+
+            const start_date = week_ago.toISOString().slice(0, 10);
+            const end_date = new Date().toISOString().slice(0, 10);
+
+            const file_name = `${start_date}_${end_date}.json`;
+            const file_path = path.join(logs_dir, file_name);
+
+            fs.writeFileSync(file_path, JSON.stringify(audit_logs.entries, null, 2));
 
             const channel = interaction.channel;
             if (!channel) {
@@ -29,10 +41,10 @@ export default {
 
             await channel.send({
                 content: "",
-                files: ["audit_logs.json"],
+                files: [file_path],
             });
 
-            await interaction.reply("Audit logs from the past week:");
+            await interaction.reply(`Audit logs from ${start_date} to ${end_date}:`);
         } catch (error) {
             console.error("Error saving audit logs:", error);
             await interaction.reply("An error occurred while saving audit logs.");
