@@ -20,7 +20,9 @@ export default {
         }
 
         try {
-            const audit_logs = await guild.fetchAuditLogs({ limit: 100 });
+            const audit_logs = await guild.fetchAuditLogs();
+            const logs_in_range = audit_logs.entries.filter(entry => entry.createdAt > week_ago);
+            const logs_array = logs_in_range.reverse();
 
             const logs_dir = path.join("__dirname", "..", "logs");
             fs.mkdirSync(logs_dir, { recursive: true });
@@ -31,7 +33,7 @@ export default {
             const file_name = `${start_date}_${end_date}.json`;
             const file_path = path.join(logs_dir, file_name);
 
-            fs.writeFileSync(file_path, JSON.stringify(audit_logs.entries, null, 2));
+            fs.writeFileSync(file_path, JSON.stringify(logs_array, null, 2));
 
             const channel = interaction.channel;
             if (!channel) {
