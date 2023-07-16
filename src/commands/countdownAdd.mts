@@ -25,7 +25,7 @@ export default {
         console.log(dateString);
         const match = dateString?.match(/\b(\d{4})\/(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\b/g);
         if (match === null) {
-            await interaction.reply("Invalid date format. Please use YYYY/MM/DD format");
+            await interaction.reply({content: "Invalid date format. Please use YYYY/MM/DD format", ephemeral: true});
             return;
         }
         const [year, month, day] = match![0].split("/");
