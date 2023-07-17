@@ -37,7 +37,7 @@ export default {
                 eventLink: typeof eventLink !== "undefined" ? eventLink : null,
             };
             addCountdown(interaction.client, interaction.channelId, messageInput);
-            updateMessage(interaction.client, interaction.channelId, true, true, null).then(() => {
+            updateMessage(interaction.client, interaction.channelId, false, true, null).then(() => {
                 const task = cron.schedule("*/5 * * * *", () => updateMessage(interaction.client, interaction.channelId, true, false, task));
                 task.start();
             });

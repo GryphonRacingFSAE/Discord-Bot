@@ -83,16 +83,18 @@ export const updateMessage = async (
         } else if (!terminate_on_message_destruction) {
             message = await channel.send({ embeds: [embedded] });
             messageDictionary[channelId].messageId = message.id;
+            updateMessageDictionary();
         }
     }
 
     // If the message is older than 24 hours, delete and make a new one
-    if ((message && now.getTime() - message.createdAt.getTime() >= 1000 * 60 * 60 * 24) || force_new_message) {
+    if ((message && now.getTime() - message.createdAt.getTime() >= 1000 * 60 * 60 * 12) || force_new_message) {
         if (message) {
             await message.delete();
         }
         message = await channel.send({ embeds: [embedded] });
         messageDictionary[channelId].messageId = message.id;
+        updateMessageDictionary();
     }
 };
 

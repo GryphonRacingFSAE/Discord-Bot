@@ -32,7 +32,7 @@ export default {
         // Iterate over all the stored message info and start the countdowns
         for (const channelId in messageInfo) {
             if (messageInfo.hasOwnProperty.call(messageInfo, channelId)) {
-                updateMessage(client, channelId, true, false, null).then(() => {
+                updateMessage(client, channelId, false, false, null).then(() => {
                     const task = cron.schedule("*/5 * * * *", () => updateMessage(client, channelId, true, false, task));
                     task.start();
                 });
