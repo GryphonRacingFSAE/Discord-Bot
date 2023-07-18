@@ -6,7 +6,7 @@
 import dotenv from "dotenv";
 import fs from "node:fs";
 import path from "node:path";
-import type { Command } from "./types.mjs";
+import type { Command } from "./types.js";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { REST, Routes } from "discord.js";
 dotenv.config(); // Load env parameters
