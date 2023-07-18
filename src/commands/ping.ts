@@ -1,7 +1,7 @@
 // Basic ping bot
 
 import { SlashCommandBuilder } from "discord.js";
-import { Command } from "../types.mjs";
+import type { Command } from "@/types";
 
 export default {
     data: new SlashCommandBuilder().setName("ping").setDescription("Ping the bot!"),

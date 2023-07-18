@@ -1,7 +1,7 @@
 // A countdown timer that tries to stay as recent as possible as well
 // updates the message every couple of minutes
 import { SlashCommandBuilder } from "discord.js";
-import { Command } from "../types.mjs";
+import type { Command } from "@/types";
 
 export default {
     data: new SlashCommandBuilder().setName("countdown").setDescription("Start the countdown!"),

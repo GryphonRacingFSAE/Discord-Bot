@@ -1,24 +1,25 @@
 {
-  "scripts": {
-    "dev": "tsc --watch",
-    "build": "tsc --strict",
-    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --ignore-path .gitignore --fix",
-    "type-check": "tsc --strict --noEmit",
-    "lint-check": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --ignore-path .gitignore"
-  },
-  "dependencies": {
-    "discord-api-types": "^0.37.47",
-    "discord.js": "^14.9.0",
-    "dotenv": "^16.3.1"
-  },
-  "devDependencies": {
-    "@types/node": "^20.4.1",
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
-    "eslint": "^8.44.0",
-    "eslint-config-prettier": "^8.8.0",
-    "eslint-plugin-prettier": "^5.0.0",
-    "prettier": "^3.0.0",
-    "typescript": "^5.1.6"
-  }
+    "type": "module",
+    "scripts": {
+        "dev": "tsc --watch",
+        "build": "tsc --strict",
+        "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --ignore-path .gitignore --fix",
+        "type-check": "tsc --strict --noEmit",
+        "lint-check": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --ignore-path .gitignore"
+    },
+    "dependencies": {
+        "discord-api-types": "^0.37.47",
+        "discord.js": "^14.9.0",
+        "dotenv": "^16.3.1"
+    },
+    "devDependencies": {
+        "@types/node": "^20.4.1",
+        "@typescript-eslint/eslint-plugin": "^6.0.0",
+        "@typescript-eslint/parser": "^6.0.0",
+        "eslint": "^8.44.0",
+        "eslint-config-prettier": "^8.8.0",
+        "eslint-plugin-prettier": "^5.0.0",
+        "prettier": "^3.0.0",
+        "typescript": "^5.1.6"
+    }
 }
