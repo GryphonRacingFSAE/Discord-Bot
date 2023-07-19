@@ -18,7 +18,7 @@ export default {
             return;
         }
         deleteCountdown(interaction.client, interaction.channelId, eventName);
-        updateMessage(interaction.client, interaction.channelId,  false, true, null).then(() => {
+        updateMessage(interaction.client, interaction.channelId, false, true, null).then(() => {
             const task = cron.schedule("*/5 * * * *", () => updateMessage(interaction.client, interaction.channelId, true, false, task));
             task.start();
         });

@@ -62,7 +62,7 @@ export const updateMessage = async (
 
     for (const countdownName in messageDictionary[channelId].events) {
         const countdown = messageDictionary[channelId].events[countdownName];
-        let deltaTime = countdown.eventDate.getTime() - now.getTime();
+        const deltaTime = countdown.eventDate.getTime() - now.getTime();
         const event_locale = countdown.eventDate.toLocaleDateString(`en-CA`, { year: `numeric`, month: `long`, day: `numeric` });
         if (deltaTime <= 0) {
             fields.push({ name: countdownName, value: `${event_locale}\n**This event has already started**` });
@@ -76,13 +76,13 @@ export const updateMessage = async (
             const deltaMonths = deltaDays / 30;
 
             if (deltaMonths > 2) {
-                timeLeft = Math.round(deltaMonths) + ' month(s)';
+                timeLeft = Math.round(deltaMonths) + " month(s)";
             } else if (deltaWeeks > 2) {
-                timeLeft = Math.round(deltaWeeks) + ' week(s)';
+                timeLeft = Math.round(deltaWeeks) + " week(s)";
             } else if (deltaDays > 3) {
-                timeLeft = Math.round(deltaDays) + ' day(s)';
+                timeLeft = Math.round(deltaDays) + " day(s)";
             } else {
-                timeLeft = deltaHours + ' hour(s)';
+                timeLeft = deltaHours + " hour(s)";
             }
 
             fields.push({ name: `${countdownName}`, value: `[${event_locale}](${countdown.eventLink})\nTime remaining: ${timeLeft}` });
@@ -90,11 +90,7 @@ export const updateMessage = async (
     }
 
     let message: Message | undefined;
-    const embedded = new EmbedBuilder()
-        .setColor(`#FFC72A`)
-        .setFields(fields)
-        .setTimestamp()
-        .setFooter({ text: "Off to the races!" });
+    const embedded = new EmbedBuilder().setColor(`#FFC72A`).setFields(fields).setTimestamp().setFooter({ text: "Off to the races!" });
 
     try {
         message = await channel.messages.fetch(messageDictionary[channelId].messageId);
