@@ -1,6 +1,6 @@
 // A countdown timer that tries to stay as recent as possible as well
 // updates the message every couple of minutes
-import { SlashCommandBuilder } from "discord.js";
+import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { Command } from "../types.mjs";
 import * as cron from "node-cron";
 import type { CountdownMessageInput } from "../messageManager.mjs";
@@ -12,7 +12,8 @@ export default {
         .setDescription("Start the countdown!")
         .addStringOption(option => option.setName("date").setDescription("Date of the event in YYYY/MM/DD format").setRequired(true))
         .addStringOption(option => option.setName("name").setDescription("Name of the event").setRequired(true))
-        .addStringOption(option => option.setName("url").setDescription("Optional URL of the event").setRequired(false)),
+        .addStringOption(option => option.setName("url").setDescription("Optional URL of the event").setRequired(false))
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
     async execute(interaction) {
         const options = interaction.options;
         const dateString = options.get("date")?.value?.toString();
