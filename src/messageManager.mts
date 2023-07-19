@@ -1,4 +1,8 @@
-// Define all necessary types usage
+// Main function that is responsible for removing / adding countdowns
+// HOW COUNTDOWNS WORK:
+// It's very shrimple, we serialize/deserialize a json dictionary containing the "Countdowns" struct
+// Events are stored in a dictionary, with the key being the event name and value containing any other data about it
+
 import fs from "node:fs";
 import type { Client } from "discord.js";
 import { TextChannel, Message, EmbedBuilder } from "discord.js";
@@ -11,18 +15,20 @@ export type CountdownMessageInput = {
 };
 
 type Countdowns = {
+    // Channel of countdown
     [channelId: string]: {
         messageId: string;
         events: {
+            // Events of countdown
             [eventName: string]: {
-                eventDate: Date;
-                eventLink: string;
+                eventDate: Date; // Date of countdown
+                eventLink: string; // Any link if given
             };
         };
     };
 };
 
-// Manages message editing + deleting and updating
+// Deserialize messages
 const messageDictionary: Countdowns = fs.existsSync("./messages.json")
     ? JSON.parse(fs.readFileSync("./messages.json", "utf8"), (key, value) => {
           if (key === "eventDate") {
@@ -32,7 +38,7 @@ const messageDictionary: Countdowns = fs.existsSync("./messages.json")
       })
     : {};
 
-// Function to write current message info to file
+// Function to write current message dictionary info to file
 const updateMessageDictionary = () => {
     fs.writeFileSync("./messages.json", JSON.stringify(messageDictionary));
 };
@@ -60,6 +66,7 @@ export const updateMessage = async (
         return;
     }
 
+    // Iterate through each countdown and add a field with proper formatting to indicate time
     for (const countdownName in messageDictionary[channelId].events) {
         const countdown = messageDictionary[channelId].events[countdownName];
         const deltaTime = countdown.eventDate.getTime() - now.getTime();
@@ -89,9 +96,11 @@ export const updateMessage = async (
         }
     }
 
+    // Create embedded message
     let message: Message | undefined;
     const embedded = new EmbedBuilder().setColor(`#FFC72A`).setFields(fields).setTimestamp().setFooter({ text: "Off to the races!" });
 
+    // Retrive message if one was not found, try to make a new one if the proper flags have been enabled
     try {
         message = await channel.messages.fetch(messageDictionary[channelId].messageId);
         await message.edit({ embeds: [embedded] });
@@ -133,6 +142,7 @@ export const addCountdown = (client: Client, channelId: string, messageInput: Co
     updateMessageDictionary();
 };
 
+// Removes a countdown
 export const deleteCountdown = (client: Client, channelId: string, eventName: string) => {
     if (!messageDictionary[channelId] || !messageDictionary[channelId].events[eventName]) {
         return;
