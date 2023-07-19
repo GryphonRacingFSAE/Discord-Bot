@@ -60,8 +60,9 @@ export const updateMessage = async (
         // Message has no events so delete it
         try {
             await channel.messages.delete(messageDictionary[channelId].messageId);
-        } finally {
+        } catch {} finally {
             delete messageDictionary[channelId];
+            updateMessageDictionary();
         }
         return;
     }

@@ -1,6 +1,6 @@
 // A countdown timer that tries to stay as recent as possible as well
 // updates the message every couple of minutes
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, PermissionFlagsBits } from "discord.js";
 import { Command } from "../types.mjs";
 import * as cron from "node-cron";
 import { deleteCountdown, updateMessage } from "../messageManager.mjs";
@@ -9,7 +9,8 @@ export default {
     data: new SlashCommandBuilder()
         .setName("remove_countdown")
         .setDescription("Remove a countdown!")
-        .addStringOption(option => option.setName("name").setDescription("Name of the event").setRequired(true)),
+        .addStringOption(option => option.setName("name").setDescription("Name of the event").setRequired(true))
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
     async execute(interaction) {
         const options = interaction.options;
         const eventName = options.get("name")?.value?.toString();
