@@ -50,6 +50,16 @@ export const updateMessage = async (
     }
     const now = new Date();
     const fields: { name: string; value: string }[] = [];
+    if (Object.keys(messageDictionary[channelId].events).length == 0) {
+        // Message has no events so delete it
+        try {
+            await channel.messages.delete(messageDictionary[channelId].messageId);
+        } finally {
+            delete messageDictionary[channelId];
+        }
+        return;
+    }
+
     for (const countdownName in messageDictionary[channelId].events) {
         const countdown = messageDictionary[channelId].events[countdownName];
         let deltaTime = countdown.eventDate.getTime() - now.getTime();
@@ -57,17 +67,31 @@ export const updateMessage = async (
         if (deltaTime <= 0) {
             fields.push({ name: countdownName, value: `${event_locale}\n**This event has already started**` });
         } else {
-            deltaTime = Math.round((deltaTime / (1000 * 60 * 60 * 24)) * 100) / 100;
-            fields.push({ name: `${countdownName}`, value: `[${event_locale}](${countdown.eventLink})\nTime remaining: ${deltaTime} day(s)` });
+            let timeLeft;
+            const deltaSeconds = deltaTime / 1000;
+            const deltaMinutes = deltaSeconds / 60;
+            const deltaHours = deltaMinutes / 60;
+            const deltaDays = deltaHours / 24;
+            const deltaWeeks = deltaDays / 7;
+            const deltaMonths = deltaDays / 30;
+
+            if (deltaMonths > 2) {
+                timeLeft = Math.round(deltaMonths) + ' month(s)';
+            } else if (deltaWeeks > 2) {
+                timeLeft = Math.round(deltaWeeks) + ' week(s)';
+            } else if (deltaDays > 3) {
+                timeLeft = Math.round(deltaDays) + ' day(s)';
+            } else {
+                timeLeft = deltaHours + ' hour(s)';
+            }
+
+            fields.push({ name: `${countdownName}`, value: `[${event_locale}](${countdown.eventLink})\nTime remaining: ${timeLeft}` });
         }
     }
 
     let message: Message | undefined;
     const embedded = new EmbedBuilder()
         .setColor(`#FFC72A`)
-        .setTitle("Race countdown")
-        .setAuthor({ name: "Gryphon Racing" })
-        .setDescription(`Countdowns to certain events.`)
         .setFields(fields)
         .setTimestamp()
         .setFooter({ text: "Off to the races!" });
