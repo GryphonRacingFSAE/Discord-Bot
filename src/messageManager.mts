@@ -60,7 +60,7 @@ export const updateMessage = async (
         // Message has no events so delete it
         try {
             await channel.messages.delete(messageDictionary[channelId].messageId);
-        } catch(error) {
+        } catch (error) {
             console.log(`Failed to find countdown message: ${error}`);
         } finally {
             delete messageDictionary[channelId];
