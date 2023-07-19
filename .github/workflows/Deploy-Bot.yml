@@ -1,0 +1,23 @@
+name: Deploy GRacingBot
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    # Currently we deploy via docker on our shop server, set up has a runner
+    runs-on: [ self-hosted, Linux, X64 ]
+    steps:
+      - uses: actions/checkout@v3
+
+      # I installed docker using the docs here: https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository
+      # Also need this if running as a non-root user https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user
+      - name: Deploy with Docker
+        run: |
+          docker build GRacingBot --tag gracingbot
+          docker stop GRacingBot || true # It's okay if these fail, as the bot might not be active or existant
+          docker rm GRacingBot || true
+          docker run --restart unless-stopped --detach --publish 3000:4173 --name GRacingBot gracingbot
