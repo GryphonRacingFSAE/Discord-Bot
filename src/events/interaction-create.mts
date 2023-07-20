@@ -1,7 +1,7 @@
 // Finds and executes command when the slash command is used
 
 import { Events, Interaction } from "discord.js";
-import { DiscordClient } from "../discordClient.mjs";
+import { DiscordClient } from "../discord-client.mjs";
 
 export default {
     name: Events.InteractionCreate,
