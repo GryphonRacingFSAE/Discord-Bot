@@ -45,33 +45,33 @@ const updateMessageDictionary = () => {
 
 export const updateMessage = async (
     client: Client,
-    channelId: string,
+    channel_id: string,
     terminate_on_message_destruction: boolean, // Destruct task if message is gone
     force_new_message: boolean, // Forcefully create a new message
     task: ScheduledTask | null = null,
 ) => {
-    const channel = client.channels.cache.get(channelId) as TextChannel;
-    if (!messageDictionary[channelId]) {
+    const channel = client.channels.cache.get(channel_id) as TextChannel;
+    if (!messageDictionary[channel_id]) {
         return;
     }
     const now = new Date();
     const fields: { name: string; value: string }[] = [];
-    if (Object.keys(messageDictionary[channelId].events).length == 0) {
+    if (Object.keys(messageDictionary[channel_id].events).length == 0) {
         // Message has no events so delete it
         try {
-            await channel.messages.delete(messageDictionary[channelId].messageId);
+            await channel.messages.delete(messageDictionary[channel_id].messageId);
         } catch (error) {
             console.log(`Failed to find countdown message: ${error}`);
         } finally {
-            delete messageDictionary[channelId];
+            delete messageDictionary[channel_id];
             updateMessageDictionary();
         }
         return;
     }
 
     // Iterate through each countdown and add a field with proper formatting to indicate time
-    for (const countdownName in messageDictionary[channelId].events) {
-        const countdown = messageDictionary[channelId].events[countdownName];
+    for (const countdownName in messageDictionary[channel_id].events) {
+        const countdown = messageDictionary[channel_id].events[countdownName];
         const deltaTime = countdown.eventDate.getTime() - now.getTime();
         const event_locale = countdown.eventDate.toLocaleDateString(`en-CA`, { year: `numeric`, month: `long`, day: `numeric` });
         if (deltaTime <= 0) {
@@ -105,7 +105,7 @@ export const updateMessage = async (
 
     // Retrive message if one was not found, try to make a new one if the proper flags have been enabled
     try {
-        message = await channel.messages.fetch(messageDictionary[channelId].messageId);
+        message = await channel.messages.fetch(messageDictionary[channel_id].messageId);
         await message.edit({ embeds: [embedded] });
     } catch {
         // Message does not exist. It has been destroyed :(
@@ -114,7 +114,7 @@ export const updateMessage = async (
             return;
         } else if (!terminate_on_message_destruction) {
             message = await channel.send({ embeds: [embedded] });
-            messageDictionary[channelId].messageId = message.id;
+            messageDictionary[channel_id].messageId = message.id;
             updateMessageDictionary();
         }
     }
@@ -125,7 +125,7 @@ export const updateMessage = async (
             await message.delete();
         }
         message = await channel.send({ embeds: [embedded] });
-        messageDictionary[channelId].messageId = message.id;
+        messageDictionary[channel_id].messageId = message.id;
         updateMessageDictionary();
     }
 };
