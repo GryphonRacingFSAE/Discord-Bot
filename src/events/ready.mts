@@ -1,5 +1,5 @@
 import { Events, Client } from "discord.js";
-import { updateMessage } from "../messageManager.mjs";
+import { updateMessage } from "../message-manager.mjs";
 import * as cron from "node-cron";
 import fs from "node:fs";
 
