@@ -1,5 +1,7 @@
 FROM node:latest
 
+WORKDIR /usr/app
+
 COPY . .
 
 # Install dependencies and build the app
