@@ -21,4 +21,4 @@ jobs:
           docker build GRacingBot --tag gracingbot
           docker stop GRacingBot || true # It's okay if these fail, as the bot might not be active or existant
           docker rm GRacingBot || true
-          docker run --restart unless-stopped --detach --name GRacingBot gracingbot
+          docker run --name GRacingBot gracingbot -e DISCORD_BOT_TOKEN -e DISCORD_APPLICATION_ID -e DISCORD_GUILD_ID
