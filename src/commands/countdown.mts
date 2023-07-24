@@ -3,30 +3,30 @@
 import { CommandInteractionOptionResolver, SlashCommandBuilder } from "discord.js";
 import { Command } from "../types.mjs";
 import * as cron from "node-cron";
-import type { CountdownMessageInput } from "../message-manager.mjs";
-import { addCountdown, deleteCountdown, updateMessage } from "../message-manager.mjs";
+import type { CountdownMessageInput } from "../countdown-manager.mjs";
+import { addCountdown, deleteCountdown, updateMessage } from "../countdown-manager.mjs";
 
 export default {
     data: new SlashCommandBuilder()
         .setName("countdown")
         .setDescription("Commands regarding a countdown")
-        .addSubcommand(subCommand =>
-            subCommand
+        .addSubcommand(sub_command =>
+            sub_command
                 .setName("add")
                 .setDescription("Start the countdown!")
                 .addStringOption(option => option.setName("date").setDescription("Date of the event in YYYY/MM/DD format").setRequired(true))
                 .addStringOption(option => option.setName("name").setDescription("Name of the event").setRequired(true))
                 .addStringOption(option => option.setName("url").setDescription("Optional URL of the event").setRequired(false)),
         )
-        .addSubcommand(subCommand =>
-            subCommand
+        .addSubcommand(sub_command =>
+            sub_command
                 .setName("remove")
                 .setDescription("Remove a countdown!")
                 .addStringOption(option => option.setName("name").setDescription("Name of the event").setRequired(true)),
         ),
     async execute(interaction) {
-        // Get permissions
         {
+            // Determine permission to use
             const guild = interaction.guild;
             if (!guild) {
                 await interaction.reply({ content: "This command can only be used in a server (guild)", ephemeral: true });
@@ -43,15 +43,16 @@ export default {
         const options = interaction.options as CommandInteractionOptionResolver;
         switch (options.getSubcommand()) {
             case "add": {
-                const dateString = options.get("date")?.value?.toString();
-                const eventName = options.get("name")?.value?.toString();
-                const eventLink = options.get("url")?.value?.toString();
-                if (dateString === undefined && eventName === undefined) {
+                const date_string = options.get("date")?.value?.toString();
+                const event_name = options.get("name")?.value?.toString();
+                const event_link = options.get("url")?.value?.toString();
+                if (date_string === undefined && event_name === undefined) {
                     // This shouldn't be possible as we set those two a requirements
                     return;
                 }
-                console.log(dateString);
-                const match = dateString?.match(/\b(\d{4})\/(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\b/g);
+                console.log(date_string);
+                // ChatGPT is only good for regex
+                const match = date_string?.match(/\b(\d{4})\/(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\b/g);
                 if (match === null) {
                     await interaction.reply({
                         content: "Invalid date format. Please use YYYY/MM/DD format",
@@ -59,34 +60,38 @@ export default {
                     });
                     return;
                 }
-                const [year, month, day] = match![0].split("/");
+                const [year, month, day] = [match![0], match![1], match![2]];
                 const date = new Date(Number(year), Number(month) - 1, Number(day));
-                if (date.getTime() - new Date().getTime() > 0) {
-                    const messageInput: CountdownMessageInput = {
-                        eventDate: date,
-                        eventName: eventName as string,
-                        eventLink: typeof eventLink !== "undefined" ? eventLink : null,
-                    };
-                    addCountdown(interaction.client, interaction.channelId, messageInput);
-                    updateMessage(interaction.client, interaction.channelId, false, true, null).then(() => {
-                        const task = cron.schedule("*/5 * * * *", () => updateMessage(interaction.client, interaction.channelId, true, false, task));
-                        task.start();
-                    });
-                    await interaction.reply({ content: "Countdown added", ephemeral: true });
-                } else {
+                if (date.getTime() - Date.now() <= 0) {
                     // All countdowns must be in the future
                     await interaction.reply({ content: "Date specified should be in the future", ephemeral: true });
+                    return;
                 }
+
+                const message_input: CountdownMessageInput = {
+                    event_date: date,
+                    event_name: event_name as string,
+                    event_link: typeof event_link !== "undefined" ? event_link : null,
+                };
+                addCountdown(interaction.client, interaction.channelId, message_input);
+                updateMessage(interaction.client, interaction.channelId, true, true, null).then(() => {
+                    // Update the message each time every 5 minutes
+                    const task = cron.schedule("*/5 * * * *", () => updateMessage(interaction.client, interaction.channelId, true, false, task));
+                    task.start();
+                });
+                await interaction.reply({ content: "Countdown successfully added", ephemeral: true });
                 break;
             }
             case "remove": {
-                const eventName = options.get("name")?.value?.toString();
-                if (eventName === undefined) {
+                const event_name = options.get("name")?.value?.toString();
+                if (event_name === undefined) {
                     // This shouldn't be possible as we set those two a requirements
                     return;
                 }
-                deleteCountdown(interaction.client, interaction.channelId, eventName);
-                updateMessage(interaction.client, interaction.channelId, false, true, null).then(() => {
+                deleteCountdown(interaction.client, interaction.channelId, event_name);
+                updateMessage(interaction.client, interaction.channelId, true, true, null).then(() => {
+                    // Update message every 5 minute. We cannot assume a cron schedule
+                    // exists already
                     const task = cron.schedule("*/5 * * * *", () => updateMessage(interaction.client, interaction.channelId, true, false, task));
                     task.start();
                 });
