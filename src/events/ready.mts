@@ -1,21 +1,21 @@
 import { Events, Client } from "discord.js";
-import { updateMessage } from "../message-manager.mjs";
+import { updateMessage } from "../countdown-manager.mjs";
 import * as cron from "node-cron";
 import fs from "node:fs";
 
 // Define MessageInfo type
 interface MessageInfo {
-    [channelId: string]: {
-        messageId: string;
-        eventDate: Date;
+    [channel_id: string]: {
+        message_id: string;
+        event_date: Date;
     };
 }
 
 // File path for storing message info
-const infoFilePath = "./messages.json";
+const info_file_path = "./messages.json";
 
 // Load existing message info from file, or initialize to empty object
-const messageInfo: MessageInfo = fs.existsSync(infoFilePath) ? JSON.parse(fs.readFileSync(infoFilePath, "utf8")) : {};
+const message_info: MessageInfo = fs.existsSync(info_file_path) ? JSON.parse(fs.readFileSync(info_file_path, "utf8")) : {};
 
 export default {
     // Bind to ClientReady event
@@ -30,13 +30,14 @@ export default {
         console.log(`Ready! Logged in as ${client.user.tag}`);
 
         // Iterate over all the stored message info and start the countdowns
-        for (const channelId in messageInfo) {
-            if (messageInfo.hasOwnProperty.call(messageInfo, channelId)) {
-                updateMessage(client, channelId, false, false, null).then(() => {
-                    const task = cron.schedule("*/5 * * * *", () => updateMessage(client, channelId, true, false, task));
-                    task.start();
-                });
-            }
+        for (const channel_id in message_info) {
+            // Create a new update schedule for each message, but will destruct
+            // if the message it is editing is destroyed
+            // Janky? Yeah, but to be honest it works *good enough*
+            updateMessage(client, channel_id, false, false, null).then(() => {
+                const task = cron.schedule("*/5 * * * *", () => updateMessage(client, channel_id, true, false, task));
+                task.start();
+            });
         }
     },
 };
