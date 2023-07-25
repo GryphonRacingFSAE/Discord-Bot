@@ -30,7 +30,7 @@ export default {
     },
 } as Command;
 
-export const saveAuditLogs = async (interaction: CommandInteraction | null, guild: Guild) => {
+export async function saveAuditLogs(interaction: CommandInteraction | null, guild: Guild) {
     // Get the date from one week ago
     const week_ago = new Date();
     week_ago.setDate(week_ago.getDate() - 6);
