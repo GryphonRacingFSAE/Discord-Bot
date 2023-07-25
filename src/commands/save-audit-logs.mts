@@ -80,4 +80,4 @@ export async function saveAuditLogs(interaction: CommandInteraction | null, guil
             await interaction.reply("An error occurred while saving audit logs.");
         }
     }
-};
+}
