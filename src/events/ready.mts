@@ -22,16 +22,10 @@ export default {
         cron.schedule("59 23 * * 6", async () => {
             const guild_id = process.env.DISCORD_GUILD_ID;
 
-            // Check if guild_id is undefined
-            if (!guild_id) {
-                console.error("DISCORD_GUILD_ID environment variable is not set.");
-                return;
-            }
-
             // Fetch the guild
-            const guild = client.guilds.cache.get(guild_id);
+            const guild = client.guilds.cache.get(guild_id!);
             if (!guild) {
-                console.error(`Cannot find guild with ID ${guild_id}`);
+                console.error(`Cannot find guild with ID ${guild_id!}`);
                 return;
             }
 
