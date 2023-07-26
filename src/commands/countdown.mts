@@ -36,8 +36,8 @@ export default {
             const captain_role = guild.roles.cache.find(role => role.name === "Captain");
             const lead_role = guild.roles.cache.find(role => role.name === "Leads");
             if (!member || !captain_role || !lead_role || !(member.roles.cache.has(captain_role.id) || member.roles.cache.has(lead_role.id))) {
-                //await interaction.reply({ content: "You do not have the necessary permissions to use this command", ephemeral: true });
-                //return;
+                await interaction.reply({ content: "You do not have the necessary permissions to use this command", ephemeral: true });
+                return;
             }
         }
         const options = interaction.options as CommandInteractionOptionResolver;
