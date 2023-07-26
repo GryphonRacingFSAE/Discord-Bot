@@ -36,8 +36,8 @@ export default {
             const captain_role = guild.roles.cache.find(role => role.name === "Captain");
             const lead_role = guild.roles.cache.find(role => role.name === "Leads");
             if (!member || !captain_role || !lead_role || !(member.roles.cache.has(captain_role.id) || member.roles.cache.has(lead_role.id))) {
-                await interaction.reply({ content: "You do not have the necessary permissions to use this command", ephemeral: true });
-                return;
+                //await interaction.reply({ content: "You do not have the necessary permissions to use this command", ephemeral: true });
+                //return;
             }
         }
         const options = interaction.options as CommandInteractionOptionResolver;
@@ -50,9 +50,8 @@ export default {
                     // This shouldn't be possible as we set those two a requirements
                     return;
                 }
-                console.log(date_string);
-                // ChatGPT is only good for regex
-                const match = date_string?.match(/\b(\d{4})\/(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\b/g);
+                // https://developers.redhat.com/articles/2022/10/13/advanced-regex-capture-groups-lookaheads-and-lookbehinds
+                const match = date_string?.match(new RegExp("^([0-9]{4})/([0-9]{2})/([0-9]{2})$"));
                 if (match === null) {
                     await interaction.reply({
                         content: "Invalid date format. Please use YYYY/MM/DD format",
@@ -60,7 +59,7 @@ export default {
                     });
                     return;
                 }
-                const [year, month, day] = [match![0], match![1], match![2]];
+                const [year, month, day] = [match![1], match![2], match![3]];
                 const date = new Date(Number(year), Number(month) - 1, Number(day));
                 if (date.getTime() - Date.now() <= 0) {
                     // All countdowns must be in the future
