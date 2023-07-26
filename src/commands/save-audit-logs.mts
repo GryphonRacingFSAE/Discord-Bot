@@ -8,7 +8,11 @@ import fs from "fs";
 import path from "path";
 
 export default {
-    data: new SlashCommandBuilder().setName("save-audit-logs").setDescription("Save audit logs from the past week."),
+    data: new SlashCommandBuilder()
+        .setName("save-audit-logs")
+        .setDescription("Save audit logs from the past week.")
+        .addStringOption(option => option.setName("start-date").setDescription("The start date in the format YYYY-MM-DD.").setRequired(false)),
+
     async execute(interaction) {
         const guild = interaction.guild;
         if (!guild) {
@@ -25,20 +29,28 @@ export default {
             return;
         }
 
+        // Get the start date from the interaction options, if provided
+        const start_date = interaction.options.get("start-date")?.value?.toString();
+
         // Call the function to save the audit logs, with interaction provided to indicate the manual scenario
-        await saveAuditLogs(interaction, guild);
+        await saveAuditLogs(interaction, guild, start_date);
     },
 } as Command;
 
-export async function saveAuditLogs(interaction: CommandInteraction | null, guild: Guild) {
-    // Get the date from one week ago
-    const week_ago = new Date();
-    week_ago.setDate(week_ago.getDate() - 6);
+export async function saveAuditLogs(interaction: CommandInteraction | null, guild: Guild, start_date?: string) {
+    // Calculate the filtered start date based on the provided start date or default to one week ago
+    let filtered_start_date: Date;
+    if (start_date) {
+        filtered_start_date = new Date(start_date);
+    } else {
+        filtered_start_date = new Date();
+        filtered_start_date.setDate(filtered_start_date.getDate() - 6);
+    }
 
     try {
         // Fetch the audit logs for the guild
         const audit_logs = await guild.fetchAuditLogs();
-        const logs_in_range = audit_logs.entries.filter(entry => entry.createdAt > week_ago);
+        const logs_in_range = audit_logs.entries.filter(entry => entry.createdAt > filtered_start_date);
         const logs_array = logs_in_range.reverse();
 
         // Create a directory to store the logs file
@@ -46,11 +58,11 @@ export async function saveAuditLogs(interaction: CommandInteraction | null, guil
         fs.mkdirSync(logs_dir, { recursive: true });
 
         // Get the start and end date strings for the file name
-        const start_date = week_ago.toISOString().slice(0, 10);
-        const end_date = new Date().toISOString().slice(0, 10);
+        const formatted_start_date = filtered_start_date.toISOString().slice(0, 10);
+        const formatted_end_date = new Date().toISOString().slice(0, 10);
 
         // Create the file name and path
-        const file_name = `${start_date}_${end_date}.json`;
+        const file_name = `${formatted_start_date}_${formatted_end_date}.json`;
         const file_path = path.join(logs_dir, file_name);
 
         // Write the logs to the file
@@ -59,7 +71,7 @@ export async function saveAuditLogs(interaction: CommandInteraction | null, guil
         // If the command is run manually (interaction provided), reply with the audit logs file
         if (interaction) {
             await interaction.reply({
-                content: `Audit logs from ${start_date} to ${end_date}:`,
+                content: `Audit logs from ${formatted_start_date} to ${formatted_end_date}:`,
                 files: [file_path],
             });
         }
@@ -68,7 +80,7 @@ export async function saveAuditLogs(interaction: CommandInteraction | null, guil
             const channel = guild.channels.cache.find(ch => ch.name === "audit-logs") as TextChannel;
             if (channel) {
                 await channel.send({
-                    content: `Audit logs from ${start_date} to ${end_date}:`,
+                    content: `Audit logs from ${formatted_start_date} to ${formatted_end_date}:`,
                     files: [file_path],
                 });
             }
