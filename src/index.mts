@@ -3,7 +3,7 @@ import path from "node:path";
 import dotenv from "dotenv";
 import fs from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { DiscordClient } from "./discordClient.mjs";
+import { DiscordClient } from "./discord-client.mjs";
 import type { Command, Event } from "./types.mjs";
 
 dotenv.config();
