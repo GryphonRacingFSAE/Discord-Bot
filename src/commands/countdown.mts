@@ -51,6 +51,7 @@ export default {
                     return;
                 }
                 // https://developers.redhat.com/articles/2022/10/13/advanced-regex-capture-groups-lookaheads-and-lookbehinds
+                // Match the date of
                 const match = date_string?.match(new RegExp("^([0-9]{4})/([0-9]{2})/([0-9]{2})$"));
                 if (match === null) {
                     await interaction.reply({

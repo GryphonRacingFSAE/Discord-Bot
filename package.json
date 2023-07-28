@@ -9,7 +9,6 @@
     "lint-check": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --ignore-path .gitignore"
   },
   "dependencies": {
-    "@types/node-cron": "^3.0.8",
     "discord-api-types": "^0.37.47",
     "discord.js": "^14.9.0",
     "dotenv": "^16.3.1",
