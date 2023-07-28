@@ -103,5 +103,6 @@ dist
 # TernJS port file
 .tern-port
 
-# Ignore generated files
-messages.json
+
+
+logs/
