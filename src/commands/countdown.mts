@@ -51,7 +51,7 @@ export default {
                     return;
                 }
                 // https://developers.redhat.com/articles/2022/10/13/advanced-regex-capture-groups-lookaheads-and-lookbehinds
-                // Match the date of
+                // Match the date of the first 4 numbers (year), second 2 numbers (month), third 2 numbers (day)
                 const match = date_string?.match(new RegExp("^([0-9]{4})/([0-9]{2})/([0-9]{2})$"));
                 if (match === null) {
                     await interaction.reply({
@@ -90,8 +90,9 @@ export default {
                 }
                 deleteCountdown(interaction.client, interaction.channelId, event_name);
                 updateMessage(interaction.client, interaction.channelId, true, true, null).then(() => {
-                    // Update message every 5 minute. We cannot assume a cron schedule
-                    // exists already
+                    // Update the message every 5 minutes.
+                    // All cron schedules to terminate if their original message
+                    // was destroyed and our first forces a new message to be made
                     const task = cron.schedule("*/5 * * * *", () => updateMessage(interaction.client, interaction.channelId, true, false, task));
                     task.start();
                 });
