@@ -21,7 +21,6 @@ const info_file_path = "./messages.json";
 // Load existing message info from file, or initialize to empty object
 const message_info: MessageInfo = fs.existsSync(info_file_path) ? JSON.parse(fs.readFileSync(info_file_path, "utf8")) : {};
 
-
 export default {
     // Bind to ClientReady event
     name: Events.ClientReady,

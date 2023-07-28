@@ -39,9 +39,9 @@ const message_dictionary: Countdowns = fs.existsSync("./messages.json")
     : {};
 
 // Function to write current message dictionary info to file
-const updateMessageDictionary = () => {
+function updateMessageDictionary() {
     fs.writeFileSync("./messages.json", JSON.stringify(message_dictionary));
-};
+}
 
 export async function updateMessage(
     client: Client,
@@ -72,15 +72,15 @@ export async function updateMessage(
     // Iterate through each countdown and add a field with proper formatting to indicate time
     for (const countdown_name in message_dictionary[channel_id].events) {
         const countdown = message_dictionary[channel_id].events[countdown_name];
-        const deltaTime = countdown.event_date.getTime() - now.getTime();
+        const delta_time = countdown.event_date.getTime() - now.getTime();
         const event_locale = countdown.event_date.toLocaleDateString(`en-CA`, { year: `numeric`, month: `long`, day: `numeric` });
-        if (deltaTime <= 0) {
+        if (delta_time <= 0) {
             // Remove any events that have already happened
             delete message_dictionary[channel_id];
             //fields.push({ name: countdown_name, value: `${event_locale}\n**This event has already started**` });
         } else {
             let time_left;
-            const delta_seconds = deltaTime / 1000;
+            const delta_seconds = delta_time / 1000;
             const delta_minutes = delta_seconds / 60;
             const delta_hours = delta_minutes / 60;
             const delta_days = delta_hours / 24;
@@ -135,7 +135,7 @@ export async function updateMessage(
 }
 
 // Adds a countdown
-export const addCountdown = (client: Client, channelId: string, messageInput: CountdownMessageInput) => {
+export function addCountdown(client: Client, channelId: string, messageInput: CountdownMessageInput) {
     if (!message_dictionary[channelId]) {
         message_dictionary[channelId] = {
             message_id: "",
@@ -147,13 +147,13 @@ export const addCountdown = (client: Client, channelId: string, messageInput: Co
         event_link: messageInput.event_link === null ? "https://www.youtube.com/watch?v=dQw4w9WgXcQ" : messageInput.event_link,
     };
     updateMessageDictionary();
-};
+}
 
 // Removes a countdown
-export const deleteCountdown = (client: Client, channelId: string, eventName: string) => {
+export function deleteCountdown(client: Client, channelId: string, eventName: string) {
     if (!message_dictionary[channelId] || !message_dictionary[channelId].events[eventName]) {
         return;
     }
     delete message_dictionary[channelId].events[eventName];
     updateMessageDictionary();
-};
+}
