@@ -134,26 +134,24 @@ export async function updateMessage(
     }
 }
 
-// Adds a countdown
-export function addCountdown(client: Client, channelId: string, messageInput: CountdownMessageInput) {
-    if (!message_dictionary[channelId]) {
-        message_dictionary[channelId] = {
+export function addCountdown(client: Client, channel_id: string, message_input: CountdownMessageInput) {
+    if (!message_dictionary[channel_id]) {
+        message_dictionary[channel_id] = {
             message_id: "",
             events: {},
         };
     }
-    message_dictionary[channelId].events[messageInput.event_name] = {
-        event_date: messageInput.event_date,
-        event_link: messageInput.event_link === null ? "https://www.youtube.com/watch?v=dQw4w9WgXcQ" : messageInput.event_link,
+    message_dictionary[channel_id].events[message_input.event_name] = {
+        event_date: message_input.event_date,
+        event_link: message_input.event_link === null ? "https://www.youtube.com/watch?v=dQw4w9WgXcQ" : message_input.event_link,
     };
     updateMessageDictionary();
 }
 
-// Removes a countdown
-export function deleteCountdown(client: Client, channelId: string, eventName: string) {
-    if (!message_dictionary[channelId] || !message_dictionary[channelId].events[eventName]) {
+export function deleteCountdown(client: Client, channel_id: string, event_name: string) {
+    if (!message_dictionary[channel_id] || !message_dictionary[channel_id].events[event_name]) {
         return;
     }
-    delete message_dictionary[channelId].events[eventName];
+    delete message_dictionary[channel_id].events[event_name];
     updateMessageDictionary();
 }
