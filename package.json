@@ -2,6 +2,8 @@
   "scripts": {
     "dev": "tsc --watch",
     "build": "tsc --strict",
+    "run":  "node dist/index.mjs",
+    "deploy-commands": "node dist/deploy-commands.mjs",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --ignore-path .gitignore --fix",
     "type-check": "tsc --strict --noEmit",
     "lint-check": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --ignore-path .gitignore"
