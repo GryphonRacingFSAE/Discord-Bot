@@ -1,7 +1,6 @@
 name: Deploy GRacingBot
 
 on:
-  workflow_dispatch:
   push:
 
 jobs:
