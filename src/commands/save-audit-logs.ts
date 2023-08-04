@@ -54,7 +54,7 @@ export async function saveAuditLogs(interaction: CommandInteraction | null, guil
         const logs_array = logs_in_range.reverse();
 
         // Create a directory to store the logs file
-        const logs_dir = path.join("__dirname", "..", "logs");
+        const logs_dir = "./resources/logs";
         fs.mkdirSync(logs_dir, { recursive: true });
 
         // Get the start and end date strings for the file name
