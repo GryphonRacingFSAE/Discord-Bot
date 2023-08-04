@@ -1,4 +1,4 @@
-# Discord-Bot
+# GRacingBot (Discord-Bot)
 
 ## About
 
@@ -8,7 +8,7 @@ A Discord bot used internally on our server to provide the following services:
 - Monitor our shop and send/update on whether the shop is open/closed (WIP)
 - Semi-automatic verification of members in discord (WIP)
 
-### Setup
+## Setup
 
 - Install [NodeJS](https://nodejs.org/en) & ensure it is installed to PATH.
 - Create a discord bot & discord server for private development
@@ -22,16 +22,13 @@ DISCORD_GUILD_ID=... # Guild ID of the server you're testing with
 DISCORD_APPLICATION_ID=... # Application ID of your bot
 ```
 
-## Building
+### Build + Run
 
 ```bash
-npm run build
-```
-
-## Running
-
-```bash
-node dist/index.mjs
+npm install # Install dependencies
+npm run build # Transpile TypeScript to JavaScript
+node dist/deploy-commands.js # Register any new `/` commands (if applicable):
+node dist/index.mjs # Run Discord bot:
 ```
 
 ## Development
