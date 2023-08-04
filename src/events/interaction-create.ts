@@ -1,12 +1,12 @@
 // Finds and executes command when the slash command is used
 
-import { Events, type Interaction } from "discord.js";
-import { DiscordClient } from "../discord-client.js";
+import { Events, CommandInteraction } from "discord.js";
+import { DiscordClient } from "@/discord-client.js";
 
 export default {
     name: Events.InteractionCreate,
     once: false,
-    async execute(interaction: Interaction) {
+    async execute(interaction: CommandInteraction) {
         // Discard all non-command usages (slash commands)
         if (!interaction.isChatInputCommand()) return;
 

@@ -3,9 +3,9 @@
 // Will run weekly, but can still be invoked manually by the user
 
 import { CommandInteraction, Guild, SlashCommandBuilder, TextChannel } from "discord.js";
-import { Command } from "../types.mjs";
-import fs from "fs";
-import path from "path";
+import type { Command } from "@/types";
+import fs from "node:fs";
+import path from "node:path";
 
 export default {
     data: new SlashCommandBuilder()
@@ -13,7 +13,7 @@ export default {
         .setDescription("Save audit logs from the past week.")
         .addStringOption(option => option.setName("start-date").setDescription("The start date in the format YYYY-MM-DD.").setRequired(false)),
 
-    async execute(interaction) {
+    async execute(interaction: CommandInteraction) {
         const guild = interaction.guild;
         if (!guild) {
             await interaction.reply("This command can only be used in a server (guild).");

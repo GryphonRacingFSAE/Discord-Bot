@@ -3,7 +3,7 @@
     "scripts": {
         "dev": "tsc --watch",
         "build": "tsc --strict",
-        "run": "node dist/index.js",
+        "preview": "node dist/index.js",
         "deploy-commands": "node dist/deploy-commands.js",
         "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --ignore-path .gitignore --fix",
         "type-check": "tsc --strict --noEmit",
@@ -12,10 +12,13 @@
     "dependencies": {
         "discord-api-types": "^0.37.47",
         "discord.js": "^14.9.0",
-        "dotenv": "^16.3.1"
+        "dotenv": "^16.3.1",
+        "node-cron": "^3.0.2"
     },
     "devDependencies": {
+        "@types/dotenv": "^8.2.0",
         "@types/node": "^20.4.1",
+        "@types/node-cron": "^3.0.8",
         "@typescript-eslint/eslint-plugin": "^6.0.0",
         "@typescript-eslint/parser": "^6.0.0",
         "eslint": "^8.44.0",

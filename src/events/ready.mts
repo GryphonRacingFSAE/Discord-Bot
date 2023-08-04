@@ -1,8 +1,8 @@
 import { Events, Client } from "discord.js";
 import cron from "node-cron";
 import dotenv from "dotenv";
-import { saveAuditLogs } from "../commands/save-audit-logs.mjs";
-import { updateMessage } from "../countdown-manager.mjs";
+import { saveAuditLogs } from "../commands/save-audit-logs.js";
+import { updateMessage } from "../countdown-manager.js";
 import fs from "node:fs";
 
 dotenv.config();

@@ -1,6 +1,6 @@
 // A countdown timer that tries to stay as recent as possible as well
 // updates the message every couple of minutes
-import { SlashCommandBuilder } from "discord.js";
+import { CommandInteraction, SlashCommandBuilder } from "discord.js";
 import type { Command } from "@/types";
 import * as cron from "node-cron";
 import type { CountdownMessageInput } from "@/countdown-manager";
@@ -24,7 +24,8 @@ export default {
                 .setDescription("Remove a countdown!")
                 .addStringOption(option => option.setName("name").setDescription("Name of the event").setRequired(true)),
         ),
-    async execute(interaction) {
+    async execute(interaction: CommandInteraction) {
+        if (!interaction.isChatInputCommand()) return;
         {
             // Determine permission to use
             const guild = interaction.guild;
@@ -40,7 +41,7 @@ export default {
                 return;
             }
         }
-        const options = interaction.options as CommandInteractionOptionResolver;
+        const options = interaction.options;
         switch (options.getSubcommand()) {
             case "add": {
                 const date_string = options.get("date")?.value?.toString();
