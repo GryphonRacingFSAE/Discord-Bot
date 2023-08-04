@@ -1,6 +1,6 @@
 import { GatewayIntentBits } from "discord.js";
 import dotenv from "dotenv";
-import { DiscordClient } from "@/discord-client";
+import { DiscordClient } from "@/discord-client.js";
 import type { Command, Event } from "@/types.js";
 import path from "node:path";
 import fs from "node:fs";
@@ -51,4 +51,5 @@ const client = new DiscordClient({ intents: [GatewayIntentBits.Guilds] });
 }
 
 // Login using token
+console.log("Logging in...");
 client.login(process.env.DISCORD_BOT_TOKEN);
