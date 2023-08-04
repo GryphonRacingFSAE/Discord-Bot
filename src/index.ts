@@ -3,8 +3,8 @@ import path from "node:path";
 import dotenv from "dotenv";
 import fs from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { DiscordClient } from "./discord-client.js";
-import type { Command, Event } from "./types.js";
+import { DiscordClient } from "@/discord-client";
+import type { Event } from "@/types";
 
 dotenv.config();
 // Some hack to get __dirname to work in modules
@@ -21,7 +21,7 @@ const client = new DiscordClient({ intents: [GatewayIntentBits.Guilds] });
 
     const commands = Promise.all(command_sources.map(source => import(source)));
     const commandFiles = fs.readdirSync(commandsPath).filter(
-        file => file.endsWith(".mjs"), // Compiled to js!
+        file => file.endsWith(".js"), // Compiled to js!
     );
     // Iterate over file in said folder
     for (const file of command_sources) {
