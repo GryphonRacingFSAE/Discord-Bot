@@ -4,9 +4,9 @@ WORKDIR /usr/app
 
 COPY . .
 
-# Install dependencies and build the app
+# Install dependencies and build the bot
 RUN npm i
 RUN npm run build
 
-# Run/display the app
-CMD ["npm", "run", "preview"]
+# Deploy all commands, then run the bot
+CMD ["npm", "run", "deploy-commands", "&&", "npm", "run", "preview"]
