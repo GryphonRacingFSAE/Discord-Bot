@@ -1,7 +1,7 @@
 import { GatewayIntentBits } from "discord.js";
 import dotenv from "dotenv";
 import { DiscordClient } from "@/discord-client";
-import type { Command, Event } from "@/types";
+import type { Command, Event } from "@/types.js";
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";

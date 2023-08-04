@@ -2,7 +2,7 @@
 // command execution
 
 import { Client, type ClientOptions, Collection } from "discord.js";
-import type { Command } from "./types";
+import type { Command } from "@/types.js";
 
 export class DiscordClient extends Client {
     /**
