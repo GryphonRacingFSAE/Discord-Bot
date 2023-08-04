@@ -3,8 +3,8 @@
 import { CommandInteraction, SlashCommandBuilder } from "discord.js";
 import type { Command } from "@/types";
 import * as cron from "node-cron";
-import type { CountdownMessageInput } from "@/countdown-manager";
-import { addCountdown, deleteCountdown, updateMessage } from "@/countdown-manager";
+import type { CountdownMessageInput } from "@/countdown-manager.js";
+import { addCountdown, deleteCountdown, updateMessage } from "@/countdown-manager.js";
 
 export default {
     data: new SlashCommandBuilder()

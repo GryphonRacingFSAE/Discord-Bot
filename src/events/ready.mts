@@ -16,7 +16,7 @@ interface MessageInfo {
 }
 
 // File path for storing message info
-const info_file_path = "./messages.json";
+const info_file_path = "./resources/messages.json";
 
 // Load existing message info from file, or initialize to empty object
 const message_info: MessageInfo = fs.existsSync(info_file_path) ? JSON.parse(fs.readFileSync(info_file_path, "utf8")) : {};
