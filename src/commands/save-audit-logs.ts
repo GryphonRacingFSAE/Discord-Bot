@@ -3,7 +3,7 @@
 // Will run weekly, but can still be invoked manually by the user
 
 import { CommandInteraction, Guild, SlashCommandBuilder, TextChannel } from "discord.js";
-import type { Command } from "@/types";
+import type { Command } from "@/types.js";
 import fs from "node:fs";
 import path from "node:path";
 

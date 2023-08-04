@@ -1,6 +1,5 @@
 // Types class
 import { SlashCommandBuilder, CommandInteraction, Events, ClientEvents } from "discord.js";
-import type { Awaitable } from "discord.js";
 
 export type Command = {
     /**
@@ -28,5 +27,5 @@ export type Event = {
      * @param args Left as unknown, so it can work with arbitrary events as discord.js may
      * provide different types
      */
-    execute: (...args: unknown[]) => Awaitable<void>;
+    execute: (...args: unknown[]) => Promise<void>;
 };
