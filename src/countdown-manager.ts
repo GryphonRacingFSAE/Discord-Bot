@@ -50,6 +50,8 @@ export async function updateMessage(
     force_new_message: boolean, // Forcefully create a new message
     task: ScheduledTask | null = null,
 ) {
+    console.log("Updating countdown message...");
+
     const channel = client.channels.cache.get(channel_id) as TextChannel;
     if (!message_dictionary[channel_id]) {
         return;

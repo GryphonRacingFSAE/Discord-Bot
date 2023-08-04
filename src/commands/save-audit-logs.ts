@@ -46,6 +46,7 @@ export async function saveAuditLogs(interaction: CommandInteraction | null, guil
         filtered_start_date = new Date();
         filtered_start_date.setDate(filtered_start_date.getDate() - 6);
     }
+    console.log("Saving audit logs since:", filtered_start_date.toISOString().slice(0, 10));
 
     try {
         // Fetch the audit logs for the guild
@@ -77,7 +78,7 @@ export async function saveAuditLogs(interaction: CommandInteraction | null, guil
         }
         // If the command is run automatically (no interaction provided), post the audit logs file to the "audit-logs" channel
         else {
-            const channel = guild.channels.cache.find(ch => ch.name === "audit-logs") as TextChannel;
+            const channel = guild.channels.cache.find(ch => ch.name === "audit-logs") as TextChannel | undefined;
             if (channel) {
                 await channel.send({
                     content: `Audit logs from ${formatted_start_date} to ${formatted_end_date}:`,
@@ -85,6 +86,7 @@ export async function saveAuditLogs(interaction: CommandInteraction | null, guil
                 });
             }
         }
+        console.log("Successfully saved audit logs.");
     } catch (error) {
         console.error("Error saving audit logs:", error);
         // If the command is run manually (interaction provided), reply with an error message
