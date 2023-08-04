@@ -29,7 +29,7 @@ jobs:
 
   # Currently we deploy via docker on our shop server, which is set up has a runner
   Deploy:
-    if: always()
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: [ self-hosted, Linux, X64 ]
     needs: Lint-Type-Build-Check
     steps:
