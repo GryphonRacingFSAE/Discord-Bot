@@ -2,7 +2,7 @@
     "type": "module",
     "scripts": {
         "dev": "tsc --watch",
-        "build": "tsc --strict",
+        "build": "tsc --strict && tsc-alias && ts-add-js-extension add --dir=dist",
         "preview": "node dist/index.js",
         "deploy-commands": "node dist/deploy-commands.js",
         "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --ignore-path .gitignore --fix",
@@ -25,6 +25,8 @@
         "eslint-config-prettier": "^8.8.0",
         "eslint-plugin-prettier": "^5.0.0",
         "prettier": "^3.0.0",
+        "ts-add-js-extension": "^1.5.8",
+        "tsc-alias": "^1.8.7",
         "typescript": "^5.1.6"
     }
 }
