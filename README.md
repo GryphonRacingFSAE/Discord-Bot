@@ -36,7 +36,7 @@ node dist/index.mjs # Run Discord bot
 
 ### Shop Status Monitoring (WIP) - Evan
 
-We have an ESP32 at the main shop entrance monitoring if it's open or closed, if the status changes, it sends a POST request to a http server with the discord bot, which then sends a message to the Discord
+We have an ESP32 at the main shop entrance monitoring if it's open or closed, if the status changes, it sends a POST request to an HTTP server with the Discord bot, which then sends a message to the server
 
 ### Semi-Automatic Verification (WIP) - Danny
 
