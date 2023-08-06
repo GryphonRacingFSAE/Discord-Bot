@@ -44,7 +44,7 @@ Fetch latest team roster + payment status from onedrive (TBD how), verify email,
 
 ### Countdown - Danny
 
-Initiate a countdown from a captain or lead, update the countdown every 5 minutes, and push it to the latest in the chat every day. Save countdowns locally to preserve countdowns between launches
+Initiate a countdown from a Captain or Lead, update the countdown every 5 minutes, and push it to the latest in the chat every day. Save countdowns locally to preserve countdowns between launches.
 
 ### Audit Log Backup - Evan
 
