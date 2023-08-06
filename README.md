@@ -5,7 +5,7 @@
 A Discord bot used internally on our server to provide the following services:
 - Monitor and backup Audit logs (locally and on the server itself)
 - Schedule events and countdown for events in specific chats
-- Monitor our shop and send/update on whether the shop is open/closed (WIP)
+- Monitor our shop door(s) and update on whether the shop is open/closed (WIP)
 - Semi-automatic verification of members in the Discord server (WIP)
 
 ## Setup
