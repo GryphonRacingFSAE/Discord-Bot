@@ -30,7 +30,7 @@ type Countdowns = {
 
 // Deserialize messages
 const message_dictionary: Countdowns = fs.existsSync("./messages.json")
-    ? JSON.parse(fs.readFileSync("./messages.json", "utf8"), (key, value) => {
+    ? JSON.parse(fs.readFileSync("./resources/messages.json", "utf8"), (key, value) => {
           if (key === "event_date") {
               return new Date(value);
           }
@@ -40,7 +40,7 @@ const message_dictionary: Countdowns = fs.existsSync("./messages.json")
 
 // Function to write current message dictionary info to file
 function updateMessageDictionary() {
-    fs.writeFileSync("./messages.json", JSON.stringify(message_dictionary));
+    fs.writeFileSync("./resources/messages.json", JSON.stringify(message_dictionary));
 }
 
 export async function updateMessage(
@@ -50,6 +50,8 @@ export async function updateMessage(
     force_new_message: boolean, // Forcefully create a new message
     task: ScheduledTask | null = null,
 ) {
+    console.log("Updating countdown message...");
+
     const channel = client.channels.cache.get(channel_id) as TextChannel;
     if (!message_dictionary[channel_id]) {
         return;

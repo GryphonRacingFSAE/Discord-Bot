@@ -3,9 +3,9 @@
 // Will run weekly, but can still be invoked manually by the user
 
 import { CommandInteraction, Guild, SlashCommandBuilder, TextChannel } from "discord.js";
-import { Command } from "../types.mjs";
-import fs from "fs";
-import path from "path";
+import type { Command } from "@/types.js";
+import fs from "node:fs";
+import path from "node:path";
 
 export default {
     data: new SlashCommandBuilder()
@@ -13,7 +13,7 @@ export default {
         .setDescription("Save audit logs from the past week.")
         .addStringOption(option => option.setName("start-date").setDescription("The start date in the format YYYY-MM-DD.").setRequired(false)),
 
-    async execute(interaction) {
+    async execute(interaction: CommandInteraction) {
         const guild = interaction.guild;
         if (!guild) {
             await interaction.reply("This command can only be used in a server (guild).");
@@ -46,6 +46,7 @@ export async function saveAuditLogs(interaction: CommandInteraction | null, guil
         filtered_start_date = new Date();
         filtered_start_date.setDate(filtered_start_date.getDate() - 6);
     }
+    console.log("Saving audit logs since:", filtered_start_date.toISOString().slice(0, 10));
 
     try {
         // Fetch the audit logs for the guild
@@ -54,7 +55,7 @@ export async function saveAuditLogs(interaction: CommandInteraction | null, guil
         const logs_array = logs_in_range.reverse();
 
         // Create a directory to store the logs file
-        const logs_dir = path.join("__dirname", "..", "logs");
+        const logs_dir = "./resources/logs";
         fs.mkdirSync(logs_dir, { recursive: true });
 
         // Get the start and end date strings for the file name
@@ -77,7 +78,7 @@ export async function saveAuditLogs(interaction: CommandInteraction | null, guil
         }
         // If the command is run automatically (no interaction provided), post the audit logs file to the "audit-logs" channel
         else {
-            const channel = guild.channels.cache.find(ch => ch.name === "audit-logs") as TextChannel;
+            const channel = guild.channels.cache.find(ch => ch.name === "audit-logs") as TextChannel | undefined;
             if (channel) {
                 await channel.send({
                     content: `Audit logs from ${formatted_start_date} to ${formatted_end_date}:`,
@@ -85,6 +86,7 @@ export async function saveAuditLogs(interaction: CommandInteraction | null, guil
                 });
             }
         }
+        console.log("Successfully saved audit logs.");
     } catch (error) {
         console.error("Error saving audit logs:", error);
         // If the command is run manually (interaction provided), reply with an error message
