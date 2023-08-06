@@ -40,7 +40,7 @@ We have an ESP32 at the main shop entrance monitoring if it's open or closed, if
 
 ### Semi-Automatic Verification (WIP) - Danny
 
-Fetch latest team roster + payment status from onedrive (TBD how), verify email, verify student number, verify student ID? If passing all requirements, the user is given the role "verified".
+Fetch latest team roster + payment status from OneDrive (TBD how), verify email, verify student number, verify student ID? If passing all requirements, the user is given the role "Verified".
 
 ### Countdown - Danny
 
