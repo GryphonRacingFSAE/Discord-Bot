@@ -52,7 +52,7 @@ Download the audit logs every week for the past week, and upload them to Discord
 
 ### Deployment - Dallas
 
-This bot is run on the Embedded subsection's shop computer, it's run in a docker container and locally saved files are mounted onto the filesystem so we can use them non-volatility.
+This bot is run on the Embedded subsection's shop computer, it's run in a docker container and locally saved files are mounted onto the filesystem to ensure non-volatility.
 
 ## Resources
 
