@@ -48,7 +48,7 @@ Initiate a countdown from a captain or lead, update the countdown every 5 minute
 
 ### Audit Log Backup - Evan
 
-Download the audit logs every week for the past week, and upload them to discord to the audit-logs channel (hidden by default). Can also be uploaded manually via command by Captains and Leads.
+Download the audit logs every week for the past week, and upload them to Discord to the audit-logs channel (hidden by default). Can also be uploaded manually via command by Captains and Leads.
 
 ### Deployment - Dallas
 
