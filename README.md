@@ -28,8 +28,8 @@ DISCORD_APPLICATION_ID=... # Application ID of your bot
 ```bash
 npm install # Install dependencies
 npm run build # Transpile TypeScript to JavaScript
-node dist/deploy-commands.js # Register any new `/` commands (if applicable):
-node dist/index.mjs # Run Discord bot:
+node dist/deploy-commands.js # Register any new slash commands (if applicable)
+node dist/index.mjs # Run Discord bot
 ```
 
 ## Development
