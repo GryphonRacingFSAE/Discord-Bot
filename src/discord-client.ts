@@ -1,8 +1,8 @@
 // Extends the discord.js client to add a commands member to help with
 // command execution
 
-import { Client, ClientOptions, Collection } from "discord.js";
-import { Command } from "./types.mjs";
+import { Client, type ClientOptions, Collection } from "discord.js";
+import type { Command } from "@/types.js";
 
 export class DiscordClient extends Client {
     /**

@@ -1,46 +1,61 @@
-# Discord-Bot
+# GRacingBot (Discord-Bot)
 
-A custom-built Discord bot to run internally on our server and perform various tasks, such as:
+## About
 
--   Verify team members
--   Detect shop open/close
--   Save and back-up audit logs
--   Create countdowns for competitions
+A Discord bot used internally on our server to provide the following services:
+- Monitor and backup audit logs (locally and on the server itself)
+- Schedule events and countdown for events in specific chats
+- Monitor our shop door(s) and update on whether the shop is open/closed (WIP)
+- Semi-automatic verification of members in the Discord server (WIP)
 
-&nbsp;
+## Setup
 
-### **Initial Setup:**
+- Install [NodeJS](https://nodejs.org/en) & ensure it is installed to PATH.
+- Create a discord bot & discord server for private development
+  - [This](https://www.freecodecamp.org/news/create-a-discord-bot-with-javascript-nodejs/) is quite a good guide.
+  - Invite the bot to your server with these permissions:
+    ![image](https://github.com/GryphonRacingFSAE/Discord-Bot/assets/36043275/20f4ef5f-900d-4ca2-ade2-e2d04a2d7fd6)
+- Populate .env with the required variables:
 
-1. Install required dependencies:
+```ini
+DISCORD_BOT_TOKEN=... # Bot auth token
+DISCORD_GUILD_ID=... # Guild ID of the server you're testing with
+DISCORD_APPLICATION_ID=... # Application ID of your bot
+```
 
-    ```
-    npm install
-    ```
+### Build + Run
 
-2. Create `.env` file and add necessary environment variables:
+```bash
+npm install # Install dependencies
+npm run build # Transpile TypeScript to JavaScript
+node dist/deploy-commands.js # Register any new slash commands (if applicable)
+node dist/index.mjs # Run Discord bot
+```
 
-    ```
-    DISCORD_BOT_TOKEN=""
-    DISCORD_APPLICATION_ID=""
-    DISCORD_GUILD_ID=""
-    ```
+## Development
 
-### **Build / Run Instructions:**
+### Shop Status Monitoring (WIP) - Evan
 
-1. Compile TypeScript code to JavaScript:
+We have an ESP32 at the main shop entrance monitoring if it's open or closed, if the status changes, it sends a POST request to an HTTP server with the Discord bot, which then sends a message to the server
 
-    ```
-    npm run build
-    ```
+### Semi-Automatic Verification (WIP) - Danny
 
-2. Register any new `/` commands (if applicable):
+Fetch latest team roster + payment status from OneDrive (TBD how), verify email, verify student number, verify student ID? If passing all requirements, the user is given the role "Verified".
 
-    ```
-    node dist/deploy-commands.mjs
-    ```
+### Countdown - Danny
 
-3. Run Discord bot:
+Initiate a countdown from a Captain or Lead, update the countdown every 5 minutes, and push it to the latest in the chat every day. Save countdowns locally to preserve countdowns between launches.
 
-    ```
-    node dist/index.mjs
-    ```
+### Audit Log Backup - Evan
+
+Download the audit logs every week for the past week, and upload them to Discord to the audit-logs channel (hidden by default). Can also be uploaded manually via command by Captains and Leads.
+
+### Deployment - Dallas
+
+This bot is run on the Embedded subsection's shop computer, it's run in a docker container and locally saved files are mounted onto the filesystem to ensure non-volatility.
+
+## Resources
+
+* [discord.js docs](https://old.discordjs.dev/#/docs/discord.js/14.11.0/general/welcome)
+* [discord.js guide](https://discordjs.guide/)
+* [discord.js tutorial](https://www.freecodecamp.org/news/create-a-discord-bot-with-javascript-nodejs/)

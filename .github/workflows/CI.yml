@@ -1,0 +1,48 @@
+name: GRacing Bot CI
+
+on:
+  push:
+
+jobs:
+  Lint-Type-Build-Check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+
+      - name: Install dependencies
+        run: npm i
+
+        # Run all the checks, and report all the results
+      - name: Lint check
+        if: always()
+        run: npm run lint-check
+
+      - name: Type Check
+        if: always()
+        run: npm run type-check
+
+      - name: Compile TypeScript
+        if: always()
+        run: npm run build
+
+  # Currently we deploy via docker on our shop server, which is set up has a runner
+  Deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: [ self-hosted, Linux, X64 ]
+    needs: Lint-Type-Build-Check
+    steps:
+      - uses: actions/checkout@v3
+
+      # I installed docker using the docs here: https://docs.docker.com/desktop/install/ubuntu/
+      - name: Deploy with Docker
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_APPLICATION_ID: ${{ secrets.DISCORD_APPLICATION_ID }}
+          DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+        run: |
+          docker build . --tag gracingbot
+          docker stop GRacingBot || true # It's okay if these fail, as the bot might not be active or existant
+          docker rm GRacingBot || true
+          docker run -d --restart unless-stopped -e DISCORD_BOT_TOKEN -e DISCORD_APPLICATION_ID -e DISCORD_GUILD_ID --name GRacingBot -v /home/grc0/GRacingBotFiles:/resources gracingbot
