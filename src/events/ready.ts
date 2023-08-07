@@ -3,6 +3,7 @@ import cron from "node-cron";
 import dotenv from "dotenv";
 import { saveAuditLogs } from "@/commands/save-audit-logs.js";
 import { updateMessage } from "@/countdown-manager.js";
+import { updateSubsectionRoles } from "@/events/member-update.js";
 import fs from "node:fs";
 
 dotenv.config();
@@ -27,7 +28,7 @@ export default {
     // Run only once (binds to client.once())
     once: true,
     // Define execution function which in this case is just print out bot user tag
-    execute(client: Client) {
+    async execute(client: Client) {
         if (!client.user) {
             throw new Error("client.user is null");
         }
@@ -64,5 +65,17 @@ export default {
                 console.error("Error occurred while saving audit logs:", error);
             }
         });
+
+        // On login, update all subsection roles that might've been missed
+        const guild = client.guilds.cache.get(process.env.DISCORD_GUILD_ID!);
+        if (!guild) {
+            console.error(`Cannot find guild with ID ${process.env.DISCORD_GUILD_ID!}`);
+            return;
+        }
+
+        await guild.members.fetch();
+        for (const member of guild.members.cache.values()) {
+            updateSubsectionRoles(member);
+        }
     },
 };
