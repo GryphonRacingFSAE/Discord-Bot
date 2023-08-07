@@ -50,6 +50,13 @@ Initiate a countdown from a Captain or Lead, update the countdown every 5 minute
 
 Download the audit logs every week for the past week, and upload them to Discord to the audit-logs channel (hidden by default). Can also be uploaded manually via command by Captains and Leads.
 
+### Subsection + Section Auto Assignment - Dallas
+
+Assigns the Category role based on a users current role:
+- Dynamics: Frame, Aerodynamics, Brakes, Suspension
+- Electrical: Low Voltage, Embedded, Tractive System
+- Business: Marketing, Purchasing, Sponsorship
+
 ### Deployment - Dallas
 
 This bot is run on the Embedded subsection's shop computer, it's run in a docker container and locally saved files are mounted onto the filesystem to ensure non-volatility.
