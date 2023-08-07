@@ -21,7 +21,7 @@ export async function updateSubsectionRoles(member: GuildMember) {
 
     const dynamics_subsections = ["Frame", "Aerodynamics", "Suspension", "Brakes"];
     const electrical_subsections = ["Low Voltage", "Embedded", "Tractive System"];
-    const business_subsections = ["Purchasing", "Marketing"];
+    const business_subsections = ["Purchasing", "Marketing", "Sponsorship"];
 
     const dynamics_subsection_roles = dynamics_subsections.map(subsection => member.guild.roles.cache.find(role => role.name === subsection));
     const electrical_subsection_roles = electrical_subsections.map(subsection => member.guild.roles.cache.find(role => role.name === subsection));
