@@ -10,51 +10,36 @@ function arrayNotUndefined<T>(value: (T | undefined)[]): value is T[] {
 export async function updateSubsectionRoles(member: GuildMember) {
     console.log(`Updating subsection roles for ${member.user.tag}`);
 
-    const dynamics = member.guild.roles.cache.find(role => role.name === "Dynamics");
-    const electrical = member.guild.roles.cache.find(role => role.name === "Electrical");
-    const business = member.guild.roles.cache.find(role => role.name === "Business");
+    const category_mapping = {
+        Dynamics: ["Frame", "Aerodynamics", "Suspension", "Brakes"],
+        Electrical: ["Low Voltage", "Embedded", "Tractive System"],
+        Business: ["Purchasing", "Marketing", "Sponsorship"],
+    };
 
-    if (!dynamics || !electrical || !business) {
-        console.error("Cannot find one or more of the following roles: Dynamics, Electrical, Business");
-        return;
+    for (const [category, subsections] of Object.entries(category_mapping)) {
+        const category_role = member.guild.roles.cache.find(role => role.name === category);
+        if (!category_role) {
+            console.error(`Cannot find role ${category}`);
+            continue;
+        }
+
+        const subsection_roles = subsections.map(subsection => member.guild.roles.cache.find(role => role.name === subsection));
+
+        if (!arrayNotUndefined(subsection_roles)) {
+            console.error(`Cannot find one or more of the following roles: ${subsections.join(", ")}`);
+            continue;
+        }
+
+        // If the member has some subsection roles (and doesn't already have the category role)
+        if (subsection_roles.some(subsection => member.roles.cache.has(subsection.id)) && !member.roles.cache.has(category_role.id)) {
+            await member.roles.add(category_role);
+        }
+        // If the member doesn't have any of the subsection roles (and has the category role)
+        else if (!subsection_roles.some(subsection => member.roles.cache.has(subsection.id)) && member.roles.cache.has(category_role.id)) {
+            await member.roles.remove(category_role);
+        }
     }
 
-    const dynamics_subsections = ["Frame", "Aerodynamics", "Suspension", "Brakes"];
-    const electrical_subsections = ["Low Voltage", "Embedded", "Tractive System"];
-    const business_subsections = ["Purchasing", "Marketing", "Sponsorship"];
-
-    const dynamics_subsection_roles = dynamics_subsections.map(subsection => member.guild.roles.cache.find(role => role.name === subsection));
-    const electrical_subsection_roles = electrical_subsections.map(subsection => member.guild.roles.cache.find(role => role.name === subsection));
-    const business_subsection_roles = business_subsections.map(subsection => member.guild.roles.cache.find(role => role.name === subsection));
-
-    if (!arrayNotUndefined(dynamics_subsection_roles) || !arrayNotUndefined(electrical_subsection_roles) || !arrayNotUndefined(business_subsection_roles)) {
-        console.error("Cannot find the role for a subsection.");
-        return;
-    }
-
-    // If the member has the Dynamics role
-    if (dynamics_subsection_roles.some(subsection => member.roles.cache.has(subsection.id)) && !member.roles.cache.has(dynamics.id)) {
-        await member.roles.add(dynamics);
-    } else if (!dynamics_subsection_roles.some(subsection => member.roles.cache.has(subsection.id)) && member.roles.cache.has(dynamics.id)) {
-        // If the member has the Dynamics role but no subsection roles
-        await member.roles.remove(dynamics);
-    }
-
-    // If the member has the Electrical role
-    if (electrical_subsection_roles.some(subsection => member.roles.cache.has(subsection.id)) && !member.roles.cache.has(electrical.id)) {
-        await member.roles.add(electrical);
-    } else if (!electrical_subsection_roles.some(subsection => member.roles.cache.has(subsection.id)) && member.roles.cache.has(electrical.id)) {
-        // If the member has the Electrical role but no subsection roles
-        await member.roles.remove(electrical);
-    }
-
-    // If the member has the Business role
-    if (business_subsection_roles.some(subsection => member.roles.cache.has(subsection.id)) && !member.roles.cache.has(business.id)) {
-        await member.roles.add(business);
-    } else if (!business_subsection_roles.some(subsection => member.roles.cache.has(subsection.id)) && member.roles.cache.has(business.id)) {
-        // If the member has the Business role but no subsection roles
-        await member.roles.remove(business);
-    }
     console.log(`Done updating subsection roles for ${member.user.tag}`);
 }
 
