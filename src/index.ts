@@ -10,7 +10,7 @@ dotenv.config();
 // Some hack to get __dirname to work in modules
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const client = new DiscordClient({ intents: [GatewayIntentBits.Guilds] });
+const client = new DiscordClient({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 
 // Load in commands
 {
@@ -47,6 +47,7 @@ const client = new DiscordClient({ intents: [GatewayIntentBits.Guilds] });
         } else {
             client.on(event.name, (...args) => event.execute(...args));
         }
+        console.log(`Loaded event ${event.name}`);
     }
 }
 
