@@ -15,6 +15,8 @@ A Discord bot used internally on our server to provide the following services:
   - [This](https://www.freecodecamp.org/news/create-a-discord-bot-with-javascript-nodejs/) is quite a good guide.
   - Invite the bot to your server with these permissions:
     ![image](https://github.com/GryphonRacingFSAE/Discord-Bot/assets/36043275/20f4ef5f-900d-4ca2-ade2-e2d04a2d7fd6)
+  - This privileged intent is required for auto-role detecting:
+    ![image](https://github.com/GryphonRacingFSAE/Discord-Bot/assets/36043275/5b052e07-70c9-44ab-b98d-9d0ee3149e7e)
 - Populate .env with the required variables:
 
 ```ini
@@ -49,6 +51,13 @@ Initiate a countdown from a Captain or Lead, update the countdown every 5 minute
 ### Audit Log Backup - Evan
 
 Download the audit logs every week for the past week, and upload them to Discord to the audit-logs channel (hidden by default). Can also be uploaded manually via command by Captains and Leads.
+
+### Subsection + Section Auto Assignment - Dallas
+
+Assigns the Category role based on a users current role:
+- Dynamics: Frame, Aerodynamics, Brakes, Suspension
+- Electrical: Low Voltage, Embedded, Tractive System
+- Business: Marketing, Purchasing, Sponsorship
 
 ### Deployment - Dallas
 
