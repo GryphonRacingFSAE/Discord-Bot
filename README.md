@@ -15,6 +15,8 @@ A Discord bot used internally on our server to provide the following services:
   - [This](https://www.freecodecamp.org/news/create-a-discord-bot-with-javascript-nodejs/) is quite a good guide.
   - Invite the bot to your server with these permissions:
     ![image](https://github.com/GryphonRacingFSAE/Discord-Bot/assets/36043275/20f4ef5f-900d-4ca2-ade2-e2d04a2d7fd6)
+  - This privileged intent is required for auto-role detecting:
+    ![image](https://github.com/GryphonRacingFSAE/Discord-Bot/assets/36043275/5b052e07-70c9-44ab-b98d-9d0ee3149e7e)
 - Populate .env with the required variables:
 
 ```ini
