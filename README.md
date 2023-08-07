@@ -3,19 +3,20 @@
 ## About
 
 A Discord bot used internally on our server to provide the following services:
-- Monitor and backup audit logs (locally and on the server itself)
-- Schedule events and countdown for events in specific chats
-- Monitor our shop door(s) and update on whether the shop is open/closed (WIP)
-- Semi-automatic verification of members in the Discord server (WIP)
+
+-   Monitor and backup audit logs (locally and on the server itself)
+-   Schedule events and countdown for events in specific chats
+-   Monitor our shop door(s) and update on whether the shop is open/closed (WIP)
+-   Semi-automatic verification of members in the Discord server (WIP)
 
 ## Setup
 
-- Install [NodeJS](https://nodejs.org/en) & ensure it is installed to PATH.
-- Create a discord bot & discord server for private development
-  - [This](https://www.freecodecamp.org/news/create-a-discord-bot-with-javascript-nodejs/) is quite a good guide.
-  - Invite the bot to your server with these permissions:
-    ![image](https://github.com/GryphonRacingFSAE/Discord-Bot/assets/36043275/20f4ef5f-900d-4ca2-ade2-e2d04a2d7fd6)
-- Populate .env with the required variables:
+-   Install [NodeJS](https://nodejs.org/en) & ensure it is installed to PATH.
+-   Create a discord bot & discord server for private development
+    -   [This](https://www.freecodecamp.org/news/create-a-discord-bot-with-javascript-nodejs/) is quite a good guide.
+    -   Invite the bot to your server with these permissions:
+        ![image](https://github.com/GryphonRacingFSAE/Discord-Bot/assets/36043275/20f4ef5f-900d-4ca2-ade2-e2d04a2d7fd6)
+-   Populate .env with the required variables:
 
 ```ini
 DISCORD_BOT_TOKEN=... # Bot auth token
@@ -29,7 +30,7 @@ DISCORD_APPLICATION_ID=... # Application ID of your bot
 npm install # Install dependencies
 npm run build # Transpile TypeScript to JavaScript
 node dist/deploy-commands.js # Register any new slash commands (if applicable)
-node dist/index.mjs # Run Discord bot
+node dist/index.js # Run Discord bot
 ```
 
 ## Development
@@ -56,6 +57,6 @@ This bot is run on the Embedded subsection's shop computer, it's run in a docker
 
 ## Resources
 
-* [discord.js docs](https://old.discordjs.dev/#/docs/discord.js/14.11.0/general/welcome)
-* [discord.js guide](https://discordjs.guide/)
-* [discord.js tutorial](https://www.freecodecamp.org/news/create-a-discord-bot-with-javascript-nodejs/)
+-   [discord.js docs](https://old.discordjs.dev/#/docs/discord.js/14.11.0/general/welcome)
+-   [discord.js guide](https://discordjs.guide/)
+-   [discord.js tutorial](https://www.freecodecamp.org/news/create-a-discord-bot-with-javascript-nodejs/)
