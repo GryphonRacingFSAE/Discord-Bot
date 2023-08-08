@@ -1,10 +1,12 @@
-import { Events, Client } from "discord.js";
+import { Events, Client, TextChannel } from "discord.js";
 import cron from "node-cron";
 import dotenv from "dotenv";
 import { saveAuditLogs } from "@/commands/save-audit-logs.js";
 import { updateMessage } from "@/countdown-manager.js";
 import { updateSubsectionRoles } from "@/events/member-update.js";
 import fs from "node:fs";
+import persist from "node-persist";
+import { initializeDoorStatusMessage, updateDoorStatusMessage } from "@/door-status.js";
 
 dotenv.config();
 
@@ -76,6 +78,19 @@ export default {
         await guild.members.fetch();
         for (const member of guild.members.cache.values()) {
             updateSubsectionRoles(member);
+        }
+
+        await persist.init();
+        console.log("Storage initialized");
+
+        const channel_id = "1113510553541939294";
+        const channel = client.channels.cache.get(channel_id) as TextChannel | undefined;
+        if (channel) {
+            await initializeDoorStatusMessage(channel);
+            await updateDoorStatusMessage(channel);
+            setInterval(async () => await updateDoorStatusMessage(channel), 60000);
+        } else {
+            console.error("Invalid channel ID");
         }
     },
 };
