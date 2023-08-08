@@ -105,7 +105,5 @@ dist
 
 
 logs/
-
 messages.json
-
 .node-persist/
