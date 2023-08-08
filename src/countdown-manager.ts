@@ -30,11 +30,11 @@ type Countdowns = {
 
 // Deserialize messages
 const message_dictionary: Countdowns = JSON.parse(fs.readFileSync("./resources/messages.json", "utf8"), (key, value) => {
-          if (key === "event_date") {
-              return new Date(value);
-          }
-          return value;
-      });
+    if (key === "event_date") {
+        return new Date(value);
+    }
+    return value;
+});
 
 // Function to write current message dictionary info to file
 function updateMessageDictionary() {
