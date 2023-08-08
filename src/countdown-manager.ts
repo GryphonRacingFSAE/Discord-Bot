@@ -34,8 +34,7 @@ const message_dictionary: Countdowns = JSON.parse(fs.readFileSync("./resources/m
               return new Date(value);
           }
           return value;
-      })
-    : {};
+      });
 
 // Function to write current message dictionary info to file
 function updateMessageDictionary() {
