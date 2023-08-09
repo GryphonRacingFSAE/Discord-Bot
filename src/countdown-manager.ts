@@ -29,7 +29,7 @@ type Countdowns = {
 };
 
 // Deserialize messages
-const message_dictionary: Countdowns = fs.existsSync("./messages.json")
+const message_dictionary: Countdowns = fs.existsSync("./resources/messages.json")
     ? JSON.parse(fs.readFileSync("./resources/messages.json", "utf8"), (key, value) => {
           if (key === "event_date") {
               return new Date(value);
