@@ -17,3 +17,9 @@ updates:
       - "notevanrutten"
     schedule:
       interval: "weekly"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    reviewers:
+      - "notevanrutten"
+    schedule:
+      interval: "weekly"
