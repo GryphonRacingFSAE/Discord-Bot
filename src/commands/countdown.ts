@@ -77,7 +77,13 @@ export default {
                 addCountdown(interaction.client, interaction.channelId, message_input);
                 updateMessage(interaction.client, interaction.channelId, true, true, null).then(() => {
                     // Update the message each time every 5 minutes
-                    const task = cron.schedule("*/5 * * * *", () => updateMessage(interaction.client, interaction.channelId, true, false, task));
+                    const task = cron.schedule("* */5 * * * *", () => {
+                        try {
+                            updateMessage(interaction.client, interaction.channelId, true, false, task);
+                        } catch (error) {
+                            console.log("Error while updating message in cron add task: ", error);
+                        }
+                    });
                     task.start();
                 });
                 await interaction.reply({ content: "Countdown successfully added", ephemeral: true });
@@ -94,7 +100,13 @@ export default {
                     // Update the message every 5 minutes.
                     // All cron schedules to terminate if their original message
                     // was destroyed and our first forces a new message to be made
-                    const task = cron.schedule("*/5 * * * *", () => updateMessage(interaction.client, interaction.channelId, true, false, task));
+                    const task = cron.schedule("* */5 * * * *", () => {
+                        try {
+                            updateMessage(interaction.client, interaction.channelId, true, false, task);
+                        } catch (error) {
+                            console.log("Error while updating cron deletion task: ", error);
+                        }
+                    });
                     task.start();
                 });
                 await interaction.reply({ content: "Countdown removed", ephemeral: true });
