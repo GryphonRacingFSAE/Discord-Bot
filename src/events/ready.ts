@@ -40,7 +40,14 @@ export default {
             // if the message it is editing is destroyed
             // Janky? Yeah, but to be honest it works *good enough*
             updateMessage(client, channel_id, false, false, null).then(() => {
-                const task = cron.schedule("*/5 * * * *", () => updateMessage(client, channel_id, true, false, task));
+                const task = cron.schedule("* */5 * * * *", () => {
+                    try {
+                        console.log("Updating message");
+                        updateMessage(client, channel_id, true, false, task);
+                    } catch (error) {
+                        console.log("Error while updating cron startup task: ", error);
+                    }
+                });
                 task.start();
             });
         }
