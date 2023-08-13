@@ -49,24 +49,33 @@ export default {
 
         // Schedule weekly audit log saving:
         // Saturday @ 11:59 PM
-        cron.schedule("59 23 * * 6", async () => {
-            const guild_id = process.env.DISCORD_GUILD_ID;
+        const audit_logs_job = cron.schedule(
+            "59 23 * * 6",
+            async () => {
+                const guild_id = process.env.DISCORD_GUILD_ID;
 
-            // Fetch the guild
-            const guild = client.guilds.cache.get(guild_id!);
-            if (!guild) {
-                console.error(`Cannot find guild with ID ${guild_id!}`);
-                return;
-            }
+                // Fetch the guild
+                const guild = client.guilds.cache.get(guild_id!);
+                if (!guild) {
+                    console.error(`Cannot find guild with ID ${guild_id!}`);
+                    return;
+                }
 
-            // Call the function and handle any errors
-            try {
-                await saveAuditLogs(null, guild);
-                console.log("Audit logs saved successfully.");
-            } catch (error) {
-                console.error("Error occurred while saving audit logs:", error);
-            }
-        });
+                // Call the function and handle any errors
+                try {
+                    await saveAuditLogs(null, guild);
+                    console.log("Audit logs saved successfully.");
+                } catch (error) {
+                    console.error("Error occurred while saving audit logs:", error);
+                }
+            },
+            {
+                scheduled: true,
+                timezone: "America/Toronto",
+            },
+        );
+
+        audit_logs_job.start();
 
         // On login, update all subsection roles that might've been missed
         const guild = client.guilds.cache.get(process.env.DISCORD_GUILD_ID!);
