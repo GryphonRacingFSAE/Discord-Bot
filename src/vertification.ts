@@ -176,12 +176,12 @@ export async function handleVerification(message: Message) {
                 });
             await message.reply({ content: "Please **DM the bot** with a 7 digit code sent to the email address." });
         } else if (!user_row) {
-            await message.reply({content: `You have not submitted your application to the [form](<${FORM_LINK}>)`});
+            await message.reply({ content: `Your email is not registered. You have not submitted your application to the [form](<${FORM_LINK}>).` });
         } else {
-            await message.reply({content: "Your email is registered, but you have not paid yet."});
+            await message.reply({ content: "Your email is registered, but you have not paid yet." });
         }
     } else {
-        await message.reply({ content: "Please send a valid email address." });
+        await message.reply({ content: "Please send a valid email address. **Only @uoguelph.ca** domains are accepted." });
     }
 }
 
@@ -204,6 +204,6 @@ export async function handleVerificationDM(client: Client, message: Message) {
         processing_members_code.delete(message.author.id);
         await message.reply(`Verification successful! Welcome aboard, ${user_row.name}.`);
     } else {
-        await message.reply("Incorrect code.");
+        await message.reply("The code you entered is not correct. Please enter the **7 digit code.**");
     }
 }
