@@ -31,6 +31,7 @@ type Verification = {
 export const members_to_monitor: Set<string> = new Set();
 const processing_members_code: Map<string, { email: string; id: string }> = new Map(); // Members and their codes
 const FILE_PATH = "./onedrive/verification.xlsx";
+const FORM_LINK = "https://www.youtube.com/watch?v=fC7oUOUEEi4";
 
 let verification_spreadsheet: Array<Verification>;
 // Pulls from the spreadsheet
@@ -130,7 +131,7 @@ export function validateEmail(email: string): boolean {
             email,
         )
     ) {
-        return email.endsWith("@uoguelph.ca") && verification_spreadsheet.some(data => data.email === email);
+        return email.endsWith("@uoguelph.ca");
     } else {
         return false;
     }
@@ -174,10 +175,14 @@ export async function handleVerification(message: Message) {
                     return;
                 });
             await message.reply({ content: "Please **DM the bot** with a 7 digit code sent to the email address." });
-            return;
+        } else if (!user_row) {
+            await message.reply({content: `You have not submitted your application to the [form](<${FORM_LINK}>)`});
+        } else {
+            await message.reply({content: "Your email is registered, but you have not paid yet."});
         }
+    } else {
+        await message.reply({ content: "Please send a valid email address." });
     }
-    await message.reply({ content: "Please send a valid email address." });
 }
 
 export async function handleVerificationDM(client: Client, message: Message) {
