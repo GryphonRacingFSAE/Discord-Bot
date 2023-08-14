@@ -4,7 +4,9 @@ import dotenv from "dotenv";
 import { saveAuditLogs } from "@/commands/save-audit-logs.js";
 import { updateMessage } from "@/countdown-manager.js";
 import { updateSubsectionRoles } from "@/events/member-update.js";
+import { verificationOnReady } from "@/vertification.js";
 import fs from "node:fs";
+import { DiscordClient } from "@/discord-client";
 
 dotenv.config();
 
@@ -28,7 +30,7 @@ export default {
     // Run only once (binds to client.once())
     once: true,
     // Define execution function which in this case is just print out bot user tag
-    async execute(client: Client) {
+    async execute(_: DiscordClient, client: Client) {
         if (!client.user) {
             throw new Error("client.user is null");
         }
@@ -40,7 +42,7 @@ export default {
             // if the message it is editing is destroyed
             // Janky? Yeah, but to be honest it works *good enough*
             updateMessage(client, channel_id, false, false, null).then(() => {
-                const task = cron.schedule("* */5 * * * *", () => {
+                const task = cron.schedule("*/5 * * * *", () => {
                     try {
                         console.log("Updating message");
                         updateMessage(client, channel_id, true, false, task);
@@ -84,5 +86,7 @@ export default {
         for (const member of guild.members.cache.values()) {
             updateSubsectionRoles(member);
         }
+
+        await verificationOnReady(client);
     },
 };
