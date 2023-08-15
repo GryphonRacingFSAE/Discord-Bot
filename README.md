@@ -26,6 +26,17 @@ DISCORD_GUILD_ID=... # Guild ID of the server you're testing with
 DISCORD_APPLICATION_ID=... # Application ID of your bot
 ```
 
+### ESP32 Config
+
+1. Navigate to the `esp32/door-sensor` folder.
+2. Rename `config-example.h` to `config.h`.
+3. Replace placeholders with your actual values:
+    - Set `WIFI_SSID` to your WiFi network name (SSID).
+    - Set `WIFI_PASSWORD` to your WiFi network password.
+    - Set `SERVER_URL` to the URL where your server is hosted.
+4. Save and close the `config.h` file.
+5. Upload your modified code to the ESP32.
+
 ### Build + Run
 
 ```bash
