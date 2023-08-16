@@ -7,6 +7,7 @@ import { updateSubsectionRoles } from "@/events/member-update.js";
 import fs from "node:fs";
 import persist from "node-persist";
 import { initializeDoorStatusMessage, updateDoorStatusMessage } from "@/door-status.js";
+import http from "node:http";
 
 dotenv.config();
 
@@ -89,17 +90,57 @@ export default {
             updateSubsectionRoles(member);
         }
 
-        await persist.init();
-        console.log("Storage initialized");
-
-        const channel_id = "1113510553541939294";
-        const channel = client.channels.cache.get(channel_id) as TextChannel | undefined;
-        if (channel) {
-            await initializeDoorStatusMessage(channel);
-            await updateDoorStatusMessage(channel);
-            setInterval(async () => await updateDoorStatusMessage(channel), 60000);
-        } else {
-            console.error("Invalid channel ID");
-        }
+        initDoorStatus(client);
     },
 };
+
+async function initDoorStatus(client: Client) {
+    await persist.init();
+    console.log("Storage initialized");
+
+    const guild_id = process.env.DISCORD_GUILD_ID;
+
+    const guild = client.guilds.cache.get(guild_id!);
+    if (!guild) {
+        console.error(`Cannot find guild with ID ${guild_id!}`);
+        return;
+    }
+    const channel = guild.channels.cache.find(ch => ch.name === "shop-open") as TextChannel | undefined;
+
+    if (channel) {
+        await initializeDoorStatusMessage(channel);
+        await updateDoorStatusMessage(channel);
+    } else {
+        console.error("Channel not found");
+    }
+
+    const server = http.createServer(async (req, res) => {
+        if (req.method === "POST" && req.url === "/update_door_status") {
+            let body = "";
+
+            req.on("data", chunk => {
+                body += chunk.toString();
+            });
+
+            req.on("end", async () => {
+                const parsed_data = JSON.parse(body);
+                console.log("Received data:", parsed_data);
+
+                if (channel) await updateDoorStatusMessage(channel);
+
+                res.statusCode = 200;
+                res.setHeader("Content-Type", "text/plain");
+                res.end("Data received successfully");
+            });
+        } else {
+            res.statusCode = 404;
+            res.setHeader("Content-Type", "text/plain");
+            res.end("Not Found");
+        }
+    });
+
+    const PORT = 8080;
+    server.listen(PORT, () => {
+        console.log(`HTTP server is running on port ${PORT}`);
+    });
+}

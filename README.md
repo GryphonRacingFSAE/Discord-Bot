@@ -28,7 +28,7 @@ DISCORD_APPLICATION_ID=... # Application ID of your bot
 
 ### ESP32 Config
 
-1. Navigate to the `esp32/door-sensor` folder.
+1. Navigate to the `esp32/door-sensor/src` folder.
 2. Rename `config-example.h` to `config.h`.
 3. Replace placeholders with your actual values:
     - Set `WIFI_SSID` to your WiFi network name (SSID).

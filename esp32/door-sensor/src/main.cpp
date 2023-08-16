@@ -32,6 +32,7 @@ void setup() {
 
   // Initial reading of the door sensor
   current_state = digitalRead(DOOR_SENSOR_PIN);
+  sendDoorState(current_state);
 }
 
 void loop() {
@@ -58,13 +59,13 @@ void sendDoorState(int state) {
 
   // Specify the server URL and add the required headers
   http.begin(SERVER_URL);
-  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  http.addHeader("Content-Type", "application/json");
 
   // Prepare the POST data
-  String post_data = "state=" + String(state);
+  String json_payload = "{\"state\": " + String(state) + "}";
 
   // Send the POST request and get the response code
-  int http_response_code = http.POST(post_data);
+  int http_response_code = http.POST(json_payload);
 
   // Display the HTTP response code or an error message
   if (http_response_code > 0) {
