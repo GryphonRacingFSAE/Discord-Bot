@@ -29,7 +29,7 @@ type Verification = {
 };
 
 export const members_to_monitor: Set<string> = new Set();
-const processing_members_code: Map<string, { email: string; id: string }> = new Map(); // Members and their codes
+const processing_members_code: Map<string, { email: string; id: string; time_stamp: number }> = new Map(); // Members and their codes
 const FILE_PATH = "./onedrive/verification.xlsx";
 const FORM_LINK = "https://www.youtube.com/watch?v=fC7oUOUEEi4";
 
@@ -162,13 +162,14 @@ export async function handleVerification(message: Message) {
             processing_members_code.set(message.author.id, {
                 email: email,
                 id: verification_code,
+                time_stamp: Date.now(),
             });
             await transporter
                 .sendMail({
                     from: process.env.EMAIL_USERNAME,
                     to: email,
                     subject: "UofG Racing Discord Verification Code",
-                    html: `Hello!<br>Here is your verification code: <strong>${verification_code}</strong>.<br><strong>Do not share your verification code with others. We don't ask for passwords, addresses, credit card information, SSNs, and/or tokens.</strong>`,
+                    html: `Hello!<br>Here is your verification code: <strong>${verification_code}</strong>.<br>Your code will expire in 5 minutes.<br><strong>Do not share your verification code with others. We don't ask for passwords, addresses, credit card information, SSNs, and/or tokens.</strong>`,
                 })
                 .catch(_ => {
                     message.reply({ content: "Failed to send email address. Make sure your email address is valid." });
@@ -192,6 +193,11 @@ export async function handleVerificationDM(client: Client, message: Message) {
     } else if (message.author.bot) return;
     const verification_code = processing_members_code.get(message.author.id)!;
     // Give verification role if successful
+    if (Date.now() - verification_code.time_stamp >= 1000 * 60 * 5) {
+        await message.reply("Your code has expired. Please input your email address again to get a new code.");
+        processing_members_code.delete(message.author.id);
+        return;
+    }
     if (verification_code.id === message.content) {
         const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
         const member = await guild.members.fetch(message.author.id);
