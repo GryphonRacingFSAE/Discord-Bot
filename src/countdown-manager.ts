@@ -28,8 +28,10 @@ type Countdowns = {
     };
 };
 
+const RUNNING_TASKS = new Set<string>(); // Prevent cron from re-running tasks too close together
+
 // Deserialize messages
-const message_dictionary: Countdowns = fs.existsSync("./messages.json")
+const message_dictionary: Countdowns = fs.existsSync("./resources/messages.json")
     ? JSON.parse(fs.readFileSync("./resources/messages.json", "utf8"), (key, value) => {
           if (key === "event_date") {
               return new Date(value);
@@ -53,9 +55,10 @@ export async function updateMessage(
     console.log("Updating countdown message...");
 
     const channel = client.channels.cache.get(channel_id) as TextChannel;
-    if (!message_dictionary[channel_id]) {
+    if (!message_dictionary[channel_id] || RUNNING_TASKS.has(channel_id)) {
         return;
     }
+    RUNNING_TASKS.add(channel_id);
     const now = new Date();
     const fields: { name: string; value: string }[] = [];
     if (Object.keys(message_dictionary[channel_id].events).length == 0) {
@@ -94,9 +97,9 @@ export async function updateMessage(
             } else if (delta_weeks > 2) {
                 time_left = Math.round(delta_weeks) + " week(s)";
             } else if (delta_days > 3) {
-                time_left = Math.round(delta_days) + " day(s)";
+                time_left = Math.round(delta_days * 10) / 10 + " day(s)";
             } else {
-                time_left = delta_hours + " hour(s)";
+                time_left = Math.round(delta_hours * 10000) / 10000 + " hour(s)";
             }
 
             fields.push({ name: `${countdown_name}`, value: `[${event_locale}](${countdown.event_link})\nTime remaining: ${time_left}` });
@@ -105,34 +108,61 @@ export async function updateMessage(
     updateMessageDictionary();
 
     // Create embedded message
-    let message: Message | undefined;
+    let message: Message | null = null;
     const embedded = new EmbedBuilder().setColor(`#FFC72A`).setFields(fields).setTimestamp().setFooter({ text: "Off to the races!" });
 
     // Retrieve message if one was not found, try to make a new one if the proper flags have been enabled
     try {
         message = await channel.messages.fetch(message_dictionary[channel_id].message_id);
-        await message.edit({ embeds: [embedded] });
-    } catch {
-        // Message does not exist. It has been destroyed :(
-        if (terminate_on_message_destruction && task) {
-            task.stop();
-            return;
-        } else if (!terminate_on_message_destruction) {
-            message = await channel.send({ embeds: [embedded] });
-            message_dictionary[channel_id].message_id = message.id;
-            updateMessageDictionary();
+        if (message) {
+            message = await message.edit({ embeds: [embedded] });
+        }
+    } catch (error) {
+        if (error instanceof Error) {
+            console.log("Error while fetching/editing message:", error.message);
+
+            if (error.message.includes("Unknown Message")) {
+                // Handle unknown message error separately if needed.
+                console.log("The message was not found.");
+
+                if (terminate_on_message_destruction && task) {
+                    RUNNING_TASKS.delete(channel_id);
+                    task.stop();
+                    return; // Exit function early if the task is stopped due to this error
+                }
+            }
+
+            if (!terminate_on_message_destruction) {
+                try {
+                    console.log("Generating emergency message");
+                    message = await channel.send({ embeds: [embedded] });
+                    message_dictionary[channel_id].message_id = message.id;
+                    updateMessageDictionary();
+                } catch (sendError) {
+                    if (sendError instanceof Error) {
+                        console.error("Could not send a new message:", sendError.message);
+                    }
+                }
+            }
         }
     }
 
     // If the message is older than 24 hours, delete and make a new one
     // or if the force_new_message flag is enabled
-    if ((message !== undefined && now.getTime() - message.createdTimestamp >= 1000 * 60 * 60 * 24) || force_new_message) {
-        if (message) {
-            await message.delete();
+    try {
+        if ((message !== null && now.getTime() - message.createdTimestamp >= 1000 * 60 * 60 * 24) || force_new_message) {
+            if (message) {
+                await message.delete();
+            }
+
+            const new_message = await channel.send({ embeds: [embedded] });
+            message_dictionary[channel_id].message_id = new_message.id;
+            updateMessageDictionary();
         }
-        message = await channel.send({ embeds: [embedded] });
-        message_dictionary[channel_id].message_id = message.id;
-        updateMessageDictionary();
+    } catch (error) {
+        console.error("Error during message handling:", message?.id, error);
+    } finally {
+        RUNNING_TASKS.delete(channel_id);
     }
 }
 
