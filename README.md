@@ -28,14 +28,14 @@ DISCORD_APPLICATION_ID=... # Application ID of your bot
 
 ### ESP32 Config
 
-1. Navigate to the `esp32/door-sensor/src` folder.
-2. Rename `config-example.h` to `config.h`.
+1. Navigate to the `esp32/door-sensor/src` folder
+2. Rename `config-example.h` to `config.h`
 3. Replace placeholders with the actual values:
-    - Set `WIFI_SSID` to the WiFi network name (SSID).
-    - Set `WIFI_PASSWORD` to the WiFi network password.
-    - Set `SERVER_URL` to the URL where the server is hosted.
-4. Save and close the `config.h` file.
-5. Upload the modified code to the ESP32.
+    - Set `WIFI_SSID` to the WiFi network name (SSID)
+    - Set `WIFI_PASSWORD` to the WiFi network password
+    - Set `SERVER_URL` to the URL where the server is hosted
+4. Save and close the `config.h` file
+5. Upload the modified code to the ESP32
 
 ### Build + Run
 
@@ -48,9 +48,9 @@ node dist/index.js # Run Discord bot
 
 ## Development
 
-### Shop Status Monitoring (WIP) - Evan
+### Shop Status Monitoring - Evan
 
-We have an ESP32 at the main shop entrance monitoring if it's open or closed, if the status changes, it sends a POST request to an HTTP server with the Discord bot, which then sends a message to the server
+We have an ESP32 at the main shop entrance monitoring if it's open or closed, if the status changes, it sends a POST request to an HTTP server with the Discord bot, which then sends a message to the server.
 
 ### Semi-Automatic Verification (WIP) - Danny
 

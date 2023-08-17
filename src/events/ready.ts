@@ -107,12 +107,8 @@ async function initDoorStatus(client: Client) {
     }
     const channel = guild.channels.cache.find(ch => ch.name === "shop-open") as TextChannel | undefined;
 
-    if (channel) {
-        await initializeDoorStatusMessage(channel);
-        await updateDoorStatusMessage(channel);
-    } else {
-        console.error("Channel not found");
-    }
+    if (channel) await initializeDoorStatusMessage(channel);
+    else console.error("Channel not found");
 
     const server = http.createServer(async (req, res) => {
         if (req.method === "POST" && req.url === "/update_door_status") {
@@ -126,7 +122,7 @@ async function initDoorStatus(client: Client) {
                 const parsed_data = JSON.parse(body);
                 console.log("Received data:", parsed_data);
 
-                if (channel) await updateDoorStatusMessage(channel);
+                if (channel) await updateDoorStatusMessage(channel, parsed_data.state);
 
                 res.statusCode = 200;
                 res.setHeader("Content-Type", "text/plain");
