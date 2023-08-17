@@ -10,7 +10,7 @@ export default {
     data: new SlashCommandBuilder()
         .setName("logs")
         .setDescription("Get the next 4000 logs of the bot")
-        .addIntegerOption(option => option.setName("position").setDescription("Beginning position to seek out logs").setRequired(true))
+        .addIntegerOption(option => option.setName("start").setDescription("Beginning position to seek out logs")
         .setDefaultMemberPermissions(PermissionFlagsBits.ViewAuditLog),
     async execute(interaction: CommandInteraction) {
         // Get position and next 4000 logs of the bot
