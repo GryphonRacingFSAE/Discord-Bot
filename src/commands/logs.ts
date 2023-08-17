@@ -9,7 +9,7 @@ const LOG_PATH = "./bot-logs.txt";
 export default {
     data: new SlashCommandBuilder()
         .setName("logs")
-        .setDescription("Get the next 4000 logs of the bot")
+        .setDescription("Get the most recent logs of the bot")
         .addIntegerOption(option => option.setName("start").setDescription("Beginning position to seek out logs")
         .setDefaultMemberPermissions(PermissionFlagsBits.ViewAuditLog),
     async execute(interaction: CommandInteraction) {
