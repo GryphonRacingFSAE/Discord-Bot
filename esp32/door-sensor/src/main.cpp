@@ -23,9 +23,8 @@ void setup() {
   // Connect to WiFi
   Serial.println("Connecting to WiFi...");
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-  }
+  while (WiFi.status() != WL_CONNECTED)
+    delay(100);
   Serial.println("Connected: " + String(WIFI_SSID));
 
   // Set up the door sensor pin as an input with pull-up resistor

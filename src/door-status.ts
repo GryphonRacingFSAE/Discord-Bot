@@ -3,7 +3,6 @@ import persist from "node-persist";
 
 const storage_key = "door_status";
 
-let status_value = true;
 let last_message_id: string | null = null;
 
 export async function initializeDoorStatusMessage(channel: TextChannel) {
@@ -16,7 +15,7 @@ export async function initializeDoorStatusMessage(channel: TextChannel) {
     }
 }
 
-export async function updateDoorStatusMessage(channel: TextChannel) {
+export async function updateDoorStatusMessage(channel: TextChannel, state: boolean) {
     try {
         if (last_message_id) {
             const existing_message = await channel.messages.fetch(last_message_id);
@@ -25,21 +24,19 @@ export async function updateDoorStatusMessage(channel: TextChannel) {
             }
         }
 
-        const embed = createDoorStatusEmbed();
+        const embed = createDoorStatusEmbed(state);
         const message = await channel.send({ embeds: [embed] });
 
         last_message_id = message.id;
         await persist.setItem(storage_key, { id: message.id });
-
-        toggleDoorStatusValue();
     } catch (error) {
         console.error("Error while updating the door status message:", error);
     }
 }
 
-export function createDoorStatusEmbed(): EmbedBuilder {
-    const status_color = status_value ? 0x00ff00 : 0xff0000;
-    const status_text = status_value ? "Open" : "Closed";
+function createDoorStatusEmbed(state: boolean): EmbedBuilder {
+    const status_color = state ? 0x00ff00 : 0xff0000;
+    const status_text = state ? "Open" : "Closed";
 
     const status_embed = new EmbedBuilder()
         .setColor(status_color)
@@ -49,8 +46,4 @@ export function createDoorStatusEmbed(): EmbedBuilder {
         );
 
     return status_embed;
-}
-
-function toggleDoorStatusValue() {
-    status_value = !status_value;
 }
