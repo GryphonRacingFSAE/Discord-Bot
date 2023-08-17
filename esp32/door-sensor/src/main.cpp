@@ -2,14 +2,15 @@
 #include <HTTPClient.h>
 #include <WiFi.h>
 
-#include "config.h" // Include the configuration data
+#include "config.h"
 
 #define DOOR_SENSOR_PIN 15
+#define DEBOUNCE_DELAY 500
 
 int current_state;
 int last_state;
+unsigned long last_debounce_time = 0;
 
-// Function declaration
 void sendDoorState(int state);
 
 void setup() {
@@ -32,25 +33,34 @@ void setup() {
 
   // Initial reading of the door sensor
   current_state = digitalRead(DOOR_SENSOR_PIN);
+  Serial.println(current_state == HIGH ? "\nDoor opened" : "\nDoor closed");
   sendDoorState(current_state);
 }
 
 void loop() {
-  // Save the last door state and read the current door state
-  last_state = current_state;
-  current_state = digitalRead(DOOR_SENSOR_PIN);
+  int raw_state = digitalRead(DOOR_SENSOR_PIN);
 
-  // Check if the door state changed
-  if (last_state == LOW && current_state == HIGH) {
-    Serial.println("\nDoor opened");
-    sendDoorState(current_state); // Call the function to send door state to the server
-  } else if (last_state == HIGH && current_state == LOW) {
-    Serial.println("\nDoor closed");
-    sendDoorState(current_state); // Call the function to send door state to the server
+  // If the raw state changes, reset the debounce timer
+  if (raw_state != last_state)
+    last_debounce_time = millis();
+
+  // Check if the debounce delay has passed since the last change
+  if ((millis() - last_debounce_time) > DEBOUNCE_DELAY) {
+    // Check if the raw state differs from the current state
+    if (raw_state != current_state) {
+      // Update the current state and print the door status
+      current_state = raw_state;
+      Serial.println(current_state == HIGH ? "\nDoor opened" : "\nDoor closed");
+
+      // Send the door state to the server
+      sendDoorState(current_state);
+    }
   }
+
+  // Update the last state for the next iteration
+  last_state = raw_state;
 }
 
-// Function to send door state to the server
 void sendDoorState(int state) {
   Serial.println("Sending door state...");
 
@@ -69,9 +79,10 @@ void sendDoorState(int state) {
 
   // Display the HTTP response code or an error message
   if (http_response_code > 0) {
-    Serial.println("HTTP response code: " + http_response_code);
+    Serial.printf("HTTP response code: %d\n", http_response_code);
+    Serial.println(http.getString());
   } else {
-    Serial.println("Error sending state to server");
+    Serial.printf("HTTP request failed, error: %s\n", http.errorToString(http_response_code).c_str());
   }
 
   // Clean up and close the HTTP connection
