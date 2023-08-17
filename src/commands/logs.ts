@@ -16,8 +16,8 @@ export default {
         // Get position and next 4000 logs of the bot
         if (fs.existsSync(LOG_PATH)) {
             const logs = fs.readFileSync(LOG_PATH, "utf-8").split(/\r?\n/);
-            const position = Math.min(Math.max((interaction.options.get("position")?.value as number) || 0, 0), logs.length - 1);
-            const end_position = Math.min(position + 4000, logs.length - 1);
+            const start_position = Math.max(0, interaction.options.get("start")?.value as number | undefined ?? logs.length - 4001);
+            const end_position = Math.max(logs.length - 1, 0);
             const temp_log_path = Date.now().toString() + ".txt"; // Use timestamp
 
             const last_logs = logs.slice(position, end_position).join("\n");
