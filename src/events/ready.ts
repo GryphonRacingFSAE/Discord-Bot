@@ -95,46 +95,60 @@ export default {
 };
 
 async function initDoorStatus(client: Client) {
+    // Initialize message storage
     await persist.init();
     console.log("Storage initialized");
 
+    // Get the Discord guild ID from environment variables
     const guild_id = process.env.DISCORD_GUILD_ID;
 
+    // Get the guild using the provided ID
     const guild = client.guilds.cache.get(guild_id!);
     if (!guild) {
         console.error(`Cannot find guild with ID ${guild_id!}`);
         return;
     }
+
+    // Find the channel named "shop-open" in the guild
     const channel = guild.channels.cache.find(ch => ch.name === "shop-open") as TextChannel | undefined;
 
+    // Initialize door status message if the channel is found
     if (channel) await initializeDoorStatusMessage(channel);
     else console.error("Channel not found");
 
+    // Set up the HTTP server to handle incoming requests
     const server = http.createServer(async (req, res) => {
         if (req.method === "POST" && req.url === "/update_door_status") {
             let body = "";
 
+            // Read the request body
             req.on("data", chunk => {
                 body += chunk.toString();
             });
 
+            // Process the received data when the request ends
             req.on("end", async () => {
+                // Parse the received JSON data
                 const parsed_data = JSON.parse(body);
                 console.log("Received data:", parsed_data);
 
+                // Update door status message based on the received state
                 if (channel) await updateDoorStatusMessage(channel, parsed_data.state);
 
+                // Respond to the request
                 res.statusCode = 200;
                 res.setHeader("Content-Type", "text/plain");
                 res.end("Data received successfully");
             });
         } else {
+            // Handle 404 for other requests
             res.statusCode = 404;
             res.setHeader("Content-Type", "text/plain");
             res.end("Not Found");
         }
     });
 
+    // Start the HTTP server
     const PORT = 8080;
     server.listen(PORT, () => {
         console.log(`HTTP server is running on port ${PORT}`);
