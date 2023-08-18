@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import dotenv from "dotenv";
-import { Client, GuildMember, Message } from "discord.js";
+import { Client, EmbedBuilder, GuildMember, Message, User } from "discord.js";
 import { createTransport } from "nodemailer";
 import { createHash } from "crypto";
 import xlsx from "xlsx";
@@ -96,13 +96,20 @@ export async function verificationOnReady(client: Client) {
     });
 }
 
-// Simply removes member of guild id from members to monitor
-export function verifiedMember(member: GuildMember) {
-    members_to_monitor.delete(member.id);
-}
-
 export async function sendVerificationMessage(member: GuildMember) {
-    return member.send("Welcome to the server! Please indicate your email address to get verified.");
+    const embeds = new EmbedBuilder()
+        .setTitle("UofG Racing Verification")
+        .setDescription("Welcome! To gain access to the server, please verify yourself.")
+        .addFields(
+            { name: "How", value: "1. Apply to this [form](<https://youtu.be/fC7oUOUEEi4>).\n2. **DM the bot** the email given to the form.\n3. Follow the instructions given." },
+            { name: "Accepted emails", value: "**Only @uoguelph.ca** are accepted emails." },
+            { name: "Code expiration", value: "Your code will **expire in 5 minutes**. If it has, please resend your email address and we will send you a new code." },
+        )
+        .setColor("#FFC72A")
+        .setFooter({ text: "UofG racing will not ask for passwords, credit card information, SSNs, ID, and/or tokens" });
+    return member.send({
+        embeds: [embeds],
+    });
 }
 
 export function generateVerificationCode(user_id: string) {
