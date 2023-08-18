@@ -51,6 +51,9 @@ Initiate a countdown from a Captain or Lead, update the countdown every 5 minute
 ### Log - Danny
 Fetch the current running bots logs. It will fetch at most 4000 lines with an adjustable position to index deeper into the logs if needed.
 
+### Restart - Danny
+This command will shutdown. Utilizes the docker's auto-restart feature to reboot the bot.
+
 ### Audit Log Backup - Evan
 
 Download the audit logs every week for the past week, and upload them to Discord to the audit-logs channel (hidden by default). Can also be uploaded manually via command by Captains and Leads.
