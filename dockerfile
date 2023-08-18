@@ -9,4 +9,4 @@ RUN npm i
 RUN npm run build
 
 # Deploy all commands, then run the bot
-CMD npm run deploy-commands && npm run preview
+CMD npm run deploy-commands && npm run preview-text-logs

@@ -10,17 +10,17 @@ export default {
     data: new SlashCommandBuilder()
         .setName("logs")
         .setDescription("Get the most recent logs of the bot")
-        .addIntegerOption(option => option.setName("start").setDescription("Beginning position to seek out logs")
+        .addIntegerOption(option => option.setName("start").setDescription("Beginning position to seek out logs"))
         .setDefaultMemberPermissions(PermissionFlagsBits.ViewAuditLog),
     async execute(interaction: CommandInteraction) {
         // Get position and next 4000 logs of the bot
         if (fs.existsSync(LOG_PATH)) {
             const logs = fs.readFileSync(LOG_PATH, "utf-8").split(/\r?\n/);
-            const start_position = Math.max(0, interaction.options.get("start")?.value as number | undefined ?? logs.length - 4001);
+            const start_position = Math.max(0, (interaction.options.get("start")?.value as number | undefined) ?? logs.length - 4001);
             const end_position = Math.max(logs.length - 1, 0);
             const temp_log_path = Date.now().toString() + ".txt"; // Use timestamp
 
-            const last_logs = logs.slice(position, end_position).join("\n");
+            const last_logs = logs.slice(start_position, end_position).join("\n");
             fs.writeFileSync(temp_log_path, last_logs); // Create temp file
 
             await interaction.reply({
