@@ -1,7 +1,7 @@
 import { CommandInteraction, EmbedBuilder, SlashCommandBuilder } from "discord.js";
 
 export default {
-    data: new SlashCommandBuilder().setName("verify").setDescription("You should verify yourself NOW!"),
+    data: new SlashCommandBuilder().setName("verify").setDescription("Verify yourself to become a member of Gryphon Racing!"),
     async execute(interaction: CommandInteraction) {
         const embeds = new EmbedBuilder()
             .setTitle("UofG Racing Verification")
