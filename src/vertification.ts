@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import dotenv from "dotenv";
-import { Client, EmbedBuilder, GuildMember, Message, User } from "discord.js";
+import { Client, EmbedBuilder, GuildMember, Message } from "discord.js";
 import { createTransport } from "nodemailer";
 import { createHash } from "crypto";
 import xlsx from "xlsx";

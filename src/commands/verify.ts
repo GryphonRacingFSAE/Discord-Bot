@@ -1,5 +1,5 @@
-import { CommandInteraction, EmbedBuilder, GuildMember, SlashCommandBuilder, User } from "discord.js";
-import { sendVerificationMessage } from "@/vertification";
+import { CommandInteraction, GuildMember, SlashCommandBuilder } from "discord.js";
+import { sendVerificationMessage } from "@/vertification.js";
 
 export default {
     data: new SlashCommandBuilder().setName("verify").setDescription("Verify yourself to become a member of Gryphon Racing!"),
