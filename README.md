@@ -48,6 +48,9 @@ Fetch latest team roster + payment status from OneDrive (TBD how), verify email,
 
 Initiate a countdown from a Captain or Lead, update the countdown every 5 minutes, and push it to the latest in the chat every day. Save countdowns locally to preserve countdowns between launches.
 
+### Log - Danny
+Fetch the current running bots logs. It will fetch at most 4000 lines with an adjustable position to index deeper into the logs if needed.
+
 ### Restart - Danny
 This command will shutdown. Utilizes the docker's auto-restart feature to reboot the bot.
 
