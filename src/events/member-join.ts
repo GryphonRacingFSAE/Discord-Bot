@@ -1,4 +1,4 @@
-import { Events, GuildMember } from "discord.js";
+import { Events, GuildMember, User } from "discord.js";
 import { sendVerificationMessage } from "@/vertification.js";
 import { DiscordClient } from "@/discord-client.js";
 
