@@ -79,7 +79,6 @@ void sendDoorState(int state) {
     // Display the HTTP response code or an error message
     if (http_response_code > 0) {
         Serial.printf("HTTP response code: %d\n", http_response_code);
-        Serial.println(http.getString());
     } else {
         Serial.printf("HTTP request failed, error: %s\n", http.errorToString(http_response_code).c_str());
     }
