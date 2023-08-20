@@ -5,84 +5,68 @@
 #include "config.h"
 
 #define DOOR_SENSOR_PIN 15
-#define DEBOUNCE_DELAY 500
+#define HEARTBEAT_INTERVAL 60000
 
-int current_state;
-int last_state;
-unsigned long last_debounce_time = 0;
+unsigned long previous_heartbeat_time = 0;
 
-void sendDoorState(int state);
+void sendDoorState();
 
 void setup() {
-    // Initialize serial communication for debugging
+    // Initialize serial communication
     Serial.begin(115200);
     while (!Serial)
         delay(100);
     Serial.println("\n");
 
-    // Connect to WiFi
+    // Connect to WiFi using credentials
     Serial.println("Connecting to WiFi...");
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
     while (WiFi.status() != WL_CONNECTED)
         delay(100);
     Serial.println("Connected: " + String(WIFI_SSID));
 
-    // Set up the door sensor pin as an input with pull-up resistor
+    // Set the door sensor pin as input with pull-up resistor
     pinMode(DOOR_SENSOR_PIN, INPUT_PULLUP);
 
-    // Initial reading of the door sensor
-    current_state = digitalRead(DOOR_SENSOR_PIN);
-    Serial.println(current_state == HIGH ? "\nDoor opened" : "\nDoor closed");
-    sendDoorState(current_state);
+    // Send the initial door state
+    sendDoorState();
 }
 
 void loop() {
-    int raw_state = digitalRead(DOOR_SENSOR_PIN);
+    // Get current time in milliseconds
+    unsigned long current_time = millis();
 
-    // If the raw state changes, reset the debounce timer
-    if (raw_state != last_state)
-        last_debounce_time = millis();
-
-    // Check if the debounce delay has passed since the last change
-    if ((millis() - last_debounce_time) > DEBOUNCE_DELAY) {
-        // Check if the raw state differs from the current state
-        if (raw_state != current_state) {
-            // Update the current state and print the door status
-            current_state = raw_state;
-            Serial.println(current_state == HIGH ? "\nDoor opened" : "\nDoor closed");
-
-            // Send the door state to the server
-            sendDoorState(current_state);
-        }
+    if (current_time - previous_heartbeat_time >= HEARTBEAT_INTERVAL) {
+        previous_heartbeat_time = current_time;
+        sendDoorState(); // Send door state at the specified interval
     }
-
-    // Update the last state for the next iteration
-    last_state = raw_state;
 }
 
-void sendDoorState(int state) {
-    Serial.println("Sending door state...");
+void sendDoorState() {
+    // Read the door sensor state
+    int door_state = digitalRead(DOOR_SENSOR_PIN);
 
-    // Initialize an HTTP client instance
+    Serial.print("\nSending door state: ");
+    Serial.println(door_state == HIGH ? "OPEN" : "CLOSED");
+
     HTTPClient http;
 
-    // Specify the server URL and add the required headers
-    http.begin(SERVER_URL);
-    http.addHeader("Content-Type", "application/json");
+    http.begin(SERVER_URL);                             // Connect to the server URL
+    http.addHeader("Content-Type", "application/json"); // Set the content type header
 
-    // Prepare the POST data
-    String json_payload = "{\"state\": " + String(state) + "}";
+    // Create JSON payload
+    String json_payload = "{\"state\": " + String(door_state) + "}";
 
-    // Send the POST request and get the response code
+    // Send POST request with payload
     int http_response_code = http.POST(json_payload);
 
-    // Display the HTTP response code or an error message
     if (http_response_code > 0) {
         Serial.printf("HTTP response code: %d\n", http_response_code);
+        Serial.println(http.getString()); // Print server response
     } else {
         Serial.printf("HTTP request failed, error: %s\n", http.errorToString(http_response_code).c_str());
     }
 
-    // Clean up and close the HTTP connection
+    // Close the HTTP connection
     http.end();
 }
