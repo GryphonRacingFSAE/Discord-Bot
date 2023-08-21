@@ -28,14 +28,15 @@ DISCORD_APPLICATION_ID=... # Application ID of your bot
 
 ### ESP32 Config
 
-1. Navigate to the `esp32/door-sensor/src` folder
-2. Rename `config-example.h` to `config.h`
-3. Replace placeholders with the actual values:
-    - Set `WIFI_SSID` to the WiFi network name (SSID)
-    - Set `WIFI_PASSWORD` to the WiFi network password
-    - Set `SERVER_URL` to the URL where the server is hosted
-4. Save and close the `config.h` file
-5. Upload the modified code to the ESP32
+```bash
+$env:WIFI_SSID = 'your_wifi_ssid'
+$env:WIFI_PASSWORD = 'your_wifi_password'
+$env:SERVER_IP = 'your_server_ip'
+
+# Ensure ESP32 is plugged in before running the next command
+# Hold down the BOOT button while "Connecting..." is shown
+pio run -t upload -t monitor
+```
 
 ### Build + Run
 
