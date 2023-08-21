@@ -19,7 +19,7 @@ export async function initializeDoorStatusMessage(channel: TextChannel) {
     }
 }
 
-export async function updateDoorStatusMessage(channel: TextChannel, state: boolean) {
+export async function updateDoorStatusMessage(channel: TextChannel, is_door_open: boolean) {
     try {
         // Check if there's a previous message
         if (last_message_id) {
@@ -32,7 +32,7 @@ export async function updateDoorStatusMessage(channel: TextChannel, state: boole
         }
 
         // Create an embed with the updated door status
-        const embed = createDoorStatusEmbed(state);
+        const embed = createDoorStatusEmbed(is_door_open);
 
         // Send the embed as a new message
         const message = await channel.send({ embeds: [embed] });
@@ -47,10 +47,10 @@ export async function updateDoorStatusMessage(channel: TextChannel, state: boole
     }
 }
 
-function createDoorStatusEmbed(state: boolean): EmbedBuilder {
+function createDoorStatusEmbed(is_door_open: boolean): EmbedBuilder {
     // Determine the color and status text based on the state
-    const status_color = state ? 0x00ff00 : 0xff0000;
-    const status_text = state ? "Open" : "Closed";
+    const status_color = is_door_open ? 0x00ff00 : 0xff0000;
+    const status_text = is_door_open ? "Open" : "Closed";
 
     // Build the embed with the status information
     const status_embed = new EmbedBuilder()
