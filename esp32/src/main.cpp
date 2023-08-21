@@ -1,15 +1,22 @@
 #include <Arduino.h>
 #include <HTTPClient.h>
+#include <Preferences.h>
 #include <WiFi.h>
 
-#include "config.h"
+void saveConfigVariables();
+void readConfigVariables();
+void sendDoorState();
 
 #define DOOR_SENSOR_PIN 15
 #define HEARTBEAT_INTERVAL 60000
 
-unsigned long previous_heartbeat_time = 0;
+Preferences preferences;
 
-void sendDoorState();
+String wifi_ssid;
+String wifi_password;
+String server_ip;
+
+unsigned long previous_heartbeat_time = 0;
 
 void setup() {
     // Initialize serial communication
@@ -18,12 +25,21 @@ void setup() {
         delay(100);
     Serial.println("\n");
 
+    // Initialize NVRAM storage
+    preferences.begin("config", false);
+    // Check if evironment variables were declared
+    if (strlen(WIFI_SSID) != 0 && strlen(WIFI_PASSWORD) != 0 && strlen(SERVER_IP) != 0)
+        saveConfigVariables(); // If they were, save them to NVRAM
+    else
+        readConfigVariables(); // If they weren't, read them from NVRAM
+    preferences.end();
+
     // Connect to WiFi using credentials
-    Serial.println("Connecting to WiFi...");
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    Serial.println("\nConnecting to WiFi...");
+    WiFi.begin(wifi_ssid.c_str(), wifi_password.c_str());
     while (WiFi.status() != WL_CONNECTED)
         delay(100);
-    Serial.println("Connected: " + String(WIFI_SSID));
+    Serial.println("Connected!");
 
     // Set the door sensor pin as input with pull-up resistor
     pinMode(DOOR_SENSOR_PIN, INPUT_PULLUP);
@@ -42,6 +58,33 @@ void loop() {
     }
 }
 
+void saveConfigVariables() {
+    Serial.println("Saving config variables...");
+
+    // Store config data in NVRAM
+    preferences.putString("wifi_ssid", String(WIFI_SSID));
+    preferences.putString("wifi_password", String(WIFI_PASSWORD));
+    preferences.putString("server_ip", String(SERVER_IP));
+
+    // Update global variables
+    wifi_ssid = String(WIFI_SSID);
+    wifi_password = String(WIFI_PASSWORD);
+    server_ip = String(SERVER_IP);
+
+    Serial.println("Done!");
+}
+
+void readConfigVariables() {
+    Serial.println("Reading config variables...");
+
+    // Retrieve config data from NVRAM
+    wifi_ssid = preferences.getString("wifi_ssid");
+    wifi_password = preferences.getString("wifi_password");
+    server_ip = preferences.getString("server_ip");
+
+    Serial.println("Done!");
+}
+
 void sendDoorState() {
     // Read the door sensor state
     int door_state = digitalRead(DOOR_SENSOR_PIN);
@@ -50,8 +93,9 @@ void sendDoorState() {
     Serial.println(door_state == HIGH ? "OPEN" : "CLOSED");
 
     HTTPClient http;
+    String server_url = "http://" + server_ip + ":8080/update_door_status";
 
-    http.begin(SERVER_URL);                             // Connect to the server URL
+    http.begin(server_url);                             // Connect to the server URL
     http.addHeader("Content-Type", "application/json"); // Set the content type header
 
     // Create JSON payload
