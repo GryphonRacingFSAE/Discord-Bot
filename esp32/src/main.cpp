@@ -24,7 +24,7 @@ void sendDoorState();
 void setup() {
     // Set the door sensor pin as input with pull-up resistor
     pinMode(DOOR_SENSOR_PIN, INPUT_PULLUP);
-\
+
     // Initialize serial communication
     Serial.begin(115200);
     while (!Serial) {
