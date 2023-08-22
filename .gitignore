@@ -105,6 +105,6 @@ dist
 
 
 bot-logs.txt
-logs/
 messages.json
 .node-persist/
+resources/
