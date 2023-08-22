@@ -80,9 +80,9 @@ export async function verificationOnReady(client: Client) {
     const verifiedRole = guild.roles.cache.find(role => role.name === "Verified");
     if (!verifiedRole) return;
     // Start a new cron task to de-verify everyone who hasn't paid
-    cron.schedule("0 0 * * SUN", () => {
+    cron.schedule("0 0 * * *", () => {
         const current_month = new Date().getMonth();
-        if (!(current_month >= 6 && current_month <= 8)) return;
+        if (!(current_month >= 5 && current_month <= 9)) return;
         members.forEach(member => {
             if (member.roles.cache.some(role => role.name === "Verified") && !member.user.bot) {
                 // Search for row in spreadsheet
@@ -90,6 +90,8 @@ export async function verificationOnReady(client: Client) {
                 if (!(user_row && validateMembership(user_row)) && member.roles.cache.has(verifiedRole.id)) {
                     // User has Verified role + has not paid
                     member.roles.remove(verifiedRole);
+                    // DM user that they have not paid and thus have been removed
+                    member.send("You have been unverified from UofGuelph Racing due to not paying the club fee.");
                 }
             }
         });
@@ -160,36 +162,36 @@ export async function handleVerification(message: Message) {
     // Ignore bots + users that are verified
     if (message.author.bot || !members_to_monitor.has(message.author.id)) return;
     const email = message.content;
-    if (validateEmail(email)) {
-        // Validate membership
-        const user_row = verification_spreadsheet.find(data => data.email === email);
-        if (user_row && validateMembership(user_row)) {
-            //processing_members.add(message.author.id);
-            const verification_code = generateVerificationCode(message.author.id);
-            processing_members_code.set(message.author.id, {
-                email: email,
-                id: verification_code,
-                time_stamp: Date.now(),
-            });
-            await transporter
-                .sendMail({
-                    from: process.env.EMAIL_USERNAME,
-                    to: email,
-                    subject: "UofG Racing Discord Verification Code",
-                    html: `Hello!<br>Here is your verification code: <strong>${verification_code}</strong>.<br>Your code will expire in 5 minutes.<br><strong>Do not share your verification code with others. We don't ask for passwords, addresses, credit card information, SSNs, and/or tokens.</strong>`,
-                })
-                .catch(_ => {
-                    message.reply({ content: "Failed to send email address. Make sure your email address is valid." });
-                    return;
-                });
-            await message.reply({ content: "Please **DM the bot** with a 7 digit code sent to the email address." });
-        } else if (!user_row) {
-            await message.reply({ content: `Your email is not registered. You have not submitted your application to the [form](<${FORM_LINK}>).` });
-        } else {
-            await message.reply({ content: "Your email is registered, but you have not paid yet." });
-        }
-    } else {
+    if (!validateEmail(email)) {
         await message.reply({ content: "Please send a valid email address. **Only @uoguelph.ca** domains are accepted." });
+        return;
+    }
+    // Validate membership
+    const user_row = verification_spreadsheet.find(data => data.email === email);
+    if (user_row && validateMembership(user_row)) {
+        //processing_members.add(message.author.id);
+        const verification_code = generateVerificationCode(message.author.id);
+        processing_members_code.set(message.author.id, {
+            email: email,
+            id: verification_code,
+            time_stamp: Date.now(),
+        });
+        await transporter
+            .sendMail({
+                from: process.env.EMAIL_USERNAME,
+                to: email,
+                subject: "UofG Racing Discord Verification Code",
+                html: `Hello!<br>Here is your verification code: <strong>${verification_code}</strong>.<br>Your code will expire in 5 minutes.<br><strong>Do not share your verification code with others. We don't ask for passwords, addresses, credit card information, SSNs, and/or tokens.</strong>`,
+            })
+            .catch(_ => {
+                message.reply({ content: "Failed to send email address. Make sure your email address is valid." });
+                return;
+            });
+        await message.reply({ content: "Please **DM the bot** with a 7 digit code sent to the email address." });
+    } else if (!user_row) {
+        await message.reply({ content: `Your email is not registered. You have not submitted your application to the [form](<${FORM_LINK}>).` });
+    } else {
+        await message.reply({ content: "Your email is registered, but you have not paid yet." });
     }
 }
 
