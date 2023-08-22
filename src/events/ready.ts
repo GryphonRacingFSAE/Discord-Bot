@@ -101,6 +101,8 @@ export default {
     },
 };
 
+let previous_door_state: boolean | null = null;
+
 async function initDoorStatus(client: Client) {
     // Initialize message storage
     await persist.init();
@@ -139,8 +141,14 @@ async function initDoorStatus(client: Client) {
                 const parsed_data = JSON.parse(body);
                 console.log("Received data:", parsed_data);
 
-                // Update door status message based on the received state
-                if (channel) await updateDoorStatusMessage(channel, parsed_data.state == "OPEN");
+                // Compare the received state with the previous state
+                const new_door_state = parsed_data.state === "OPEN";
+                if (new_door_state !== previous_door_state) {
+                    previous_door_state = new_door_state;
+
+                    // Update door status message based on the received state
+                    if (channel) await updateDoorStatusMessage(channel, new_door_state);
+                }
 
                 // Respond to the request
                 res.statusCode = 200;
@@ -156,6 +164,6 @@ async function initDoorStatus(client: Client) {
     // Start the HTTP server
     const PORT = 80;
     server.listen(PORT, () => {
-        console.log(`HTTP server is running on at`, server.address());
+        console.log(`HTTP server is running at`, server.address());
     });
 }
