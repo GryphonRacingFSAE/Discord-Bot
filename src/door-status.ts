@@ -58,7 +58,9 @@ function createDoorStatusEmbed(is_door_open: boolean): EmbedBuilder {
         .addFields(
             { name: "Shop Status", value: status_text },
             { name: "Last Updated", value: new Date().toLocaleString("en-US", { weekday: "long", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }) },
-        );
+            { name: "\u200B", value: "[Google Maps](https://goo.gl/maps/f17ShXLsfcKVjqaGA)" },
+        )
+        .setImage("https://i.imgur.com/uw8zfkV.png");
 
     return status_embed;
 }
