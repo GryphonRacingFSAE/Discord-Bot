@@ -4,7 +4,7 @@ on:
   push:
 
 jobs:
-  Lint-Type-Build-Check:
+  Lint-Type-Build-Check-Bot:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,12 +26,35 @@ jobs:
       - name: Compile TypeScript
         if: always()
         run: npm run build
+    
+  Lint-Build-Check-Door-Sensor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+      - name: Setup PlatformIO
+        run: pip install --upgrade platformio
+
+      # Clang Format
+      - name: Format Check
+        uses: DoozyX/clang-format-lint-action@v0.16
+        if: always()
+        with:
+          source: esp32
+
+      # PlatformIO
+      - name: Compile Door Sensor
+        if: always()
+        run: |
+          cd esp32
+          pio run
 
   # Currently we deploy via docker on our shop server, which is set up has a runner
   Deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: [ self-hosted, Linux, X64 ]
-    needs: Lint-Type-Build-Check
+    needs: [Lint-Type-Build-Check-Bot, Lint-Build-Check-Door-Sensor]
     steps:
       - uses: actions/checkout@v3
 

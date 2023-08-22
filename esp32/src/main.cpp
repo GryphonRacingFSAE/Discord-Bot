@@ -20,11 +20,12 @@ void sendDoorState();
 #define EAP_ANONYMOUS_IDENTITY "anonymous@uoguelph.ca"
 #define EAP_USERNAME "dhart04@uoguelph.ca"
 #define EAP_IDENTITY "dhart04@uoguelph.ca"
+#define EAP_PASSWORD ":)"
 
 void setup() {
     // Set the door sensor pin as input with pull-up resistor
     pinMode(DOOR_SENSOR_PIN, INPUT_PULLUP);
-\
+
     // Initialize serial communication
     Serial.begin(115200);
     while (!Serial) {
@@ -33,7 +34,7 @@ void setup() {
     Serial.println("\nConnecting to WiFi...");
     WiFi.disconnect(true);
     WiFi.mode(WIFI_STA);
-    WiFi.begin(WIFI_SSID, WPA2_AUTH_PEAP, EAP_IDENTITY, EAP_USERNAME, EAP_PASSWORD); 
+    WiFi.begin(WIFI_SSID, WPA2_AUTH_PEAP, EAP_IDENTITY, EAP_USERNAME, EAP_PASSWORD);
 
     int retries = 0;
     while (WiFi.status() != WL_CONNECTED) {
@@ -85,10 +86,10 @@ void sendDoorState() {
     } else {
         Serial.println("Failed to connect to server");
         return;
-    }             
+    }
 
     Serial.print("Sending door state: ");
-    Serial.println(door_state == HIGH ? "OPEN" : "CLOSED");                
+    Serial.println(door_state == HIGH ? "OPEN" : "CLOSED");
     http.addHeader("Content-Type", "application/json"); // Set the content type header
 
     // Create JSON payload
