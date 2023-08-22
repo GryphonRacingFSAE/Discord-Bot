@@ -1,49 +1,82 @@
-import { EmbedBuilder, Message, TextChannel } from "discord.js";
-import persist from "node-persist";
+import { Client, EmbedBuilder, TextChannel } from "discord.js";
+import http from "node:http";
 
-// Key to store the last message ID in local storage
-const storage_key = "door_status";
+let previous_door_state: boolean | null = null;
 
-let last_message_id: string | null = null;
+export async function initDoorStatus(client: Client) {
+    // Get the Discord guild ID from environment variables
+    const guild_id = process.env.DISCORD_GUILD_ID;
 
-export async function initializeDoorStatusMessage(channel: TextChannel) {
-    // Fetch the last message ID from local storage
-    const existing_message = (await persist.getItem(storage_key)) as Message | null;
-    if (existing_message) {
-        // Fetch the message using the stored ID
-        const message = await channel.messages.fetch(existing_message.id);
-        if (message) {
-            // Store the fetched message's ID
-            last_message_id = message.id;
-        }
+    // Get the guild using the provided ID
+    const guild = client.guilds.cache.get(guild_id!);
+    if (!guild) {
+        console.error(`Cannot find guild with ID ${guild_id!}`);
+        return;
     }
+
+    // Find the channel named "shop-open" in the guild
+    const channel = guild.channels.cache.find(ch => ch.name === "shop-open") as TextChannel | undefined;
+
+    // Set up the HTTP server to handle incoming requests
+    const server = http.createServer(async (req, res) => {
+        if (req.method === "POST" && req.url === "/update_door_status") {
+            let body = "";
+
+            // Read the request body
+            req.on("data", chunk => {
+                body += chunk.toString();
+            });
+
+            // Process the received data when the request ends
+            req.on("end", async () => {
+                // Parse the received JSON data
+                const parsed_data = JSON.parse(body);
+                console.log("Received data:", parsed_data);
+
+                // Compare the received state with the previous state
+                const new_door_state = parsed_data.state === "OPEN";
+                if (new_door_state !== previous_door_state) {
+                    previous_door_state = new_door_state;
+
+                    // Update door status message based on the received state
+                    if (channel) await sendDoorStatusMessage(channel, new_door_state);
+                }
+
+                // Respond to the request
+                res.statusCode = 200;
+                res.end();
+            });
+        } else {
+            // Handle 404 for other requests
+            res.statusCode = 404;
+            res.end();
+        }
+    });
+
+    // Start the HTTP server
+    const PORT = 80;
+    server.listen(PORT, () => {
+        console.log(`HTTP server is running at`, server.address());
+    });
 }
 
-export async function updateDoorStatusMessage(channel: TextChannel, is_door_open: boolean) {
+async function sendDoorStatusMessage(channel: TextChannel, is_door_open: boolean) {
     try {
-        // Check if there's a previous message
-        if (last_message_id) {
-            // Fetch the previous message using the stored ID
-            const existing_message = await channel.messages.fetch(last_message_id);
-            if (existing_message) {
-                // Delete the previous message
-                await existing_message.delete();
-            }
-        }
+        // Fetch and delete all previous bot messages in the channel
+        const messages_to_delete = channel.messages.cache.filter(message => message.author.bot);
+        await Promise.all(
+            messages_to_delete.map(async message => {
+                await message.delete();
+            }),
+        );
 
-        // Create an embed with the updated door status
+        // Create an embed with the door status
         const embed = createDoorStatusEmbed(is_door_open);
 
-        // Send the embed as a new message
-        const message = await channel.send({ embeds: [embed] });
-
-        // Update the last_message_id variable with the new message's ID
-        last_message_id = message.id;
-
-        // Store the new message ID in local storage
-        await persist.setItem(storage_key, { id: message.id });
+        // Send the embed as a message
+        await channel.send({ embeds: [embed] });
     } catch (error) {
-        console.error("Error while updating the door status message:", error);
+        console.error("Error while sending the door status message:", error);
     }
 }
 
