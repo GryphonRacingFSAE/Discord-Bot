@@ -1,6 +1,7 @@
 import { Client, EmbedBuilder, TextChannel } from "discord.js";
 import http from "node:http";
 
+let last_update_time: number = 0;
 let previous_door_state: boolean | null = null;
 
 export async function initDoorStatus(client: Client) {
@@ -17,6 +18,14 @@ export async function initDoorStatus(client: Client) {
     // Find the channel named "shop-open" in the guild
     const channel = guild.channels.cache.find(ch => ch.name === "shop-open") as TextChannel | undefined;
 
+    // Check if there have been no updates from the ESP32 for 10 minutes
+    setInterval(() => {
+        const current_time = Date.now();
+        if (last_update_time > 0 && current_time - last_update_time > 600000) {
+            if (channel) channel.send("ERROR: No updates received from the ESP32 for 10 minutes");
+        }
+    }, 60000); // Check every minute
+
     // Set up the HTTP server to handle incoming requests
     const server = http.createServer(async (req, res) => {
         if (req.method === "POST" && req.url === "/update_door_status") {
@@ -32,6 +41,9 @@ export async function initDoorStatus(client: Client) {
                 // Parse the received JSON data
                 const parsed_data = JSON.parse(body);
                 console.log("Received data:", parsed_data);
+
+                // Update the last update time
+                last_update_time = Date.now();
 
                 // Compare the received state with the previous state
                 const new_door_state = parsed_data.state === "OPEN";
