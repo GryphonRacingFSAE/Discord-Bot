@@ -31,16 +31,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Clang Format
-      - uses: DoozyX/clang-format-lint-action@v0.16
-        with:
-          source: esp32
-
-      # PlatformIO
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
       - name: Setup PlatformIO
         run: pip install --upgrade platformio
 
+      # Clang Format
+      - name: Format Check
+        uses: DoozyX/clang-format-lint-action@v0.16
+        if: always()
+        with:
+          source: esp32
+
+      # PlatformIO
       - name: Compile Door Sensor
         if: always()
         run: |
