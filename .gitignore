@@ -107,3 +107,4 @@ dist
 logs/
 messages.json
 .node-persist/
+bot-logs.txt
