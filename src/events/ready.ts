@@ -5,9 +5,7 @@ import { saveAuditLogs } from "@/commands/save-audit-logs.js";
 import { updateMessage } from "@/countdown-manager.js";
 import { updateSubsectionRoles } from "@/events/member-update.js";
 import fs from "node:fs";
-import persist from "node-persist";
-import { initializeDoorStatusMessage, updateDoorStatusMessage } from "@/door-status.js";
-import http from "node:http";
+import { initDoorStatus } from "@/door-status.js";
 
 dotenv.config();
 
@@ -97,73 +95,7 @@ export default {
             updateSubsectionRoles(member);
         }
 
+        // Initialize the door status code (see door-status.ts)
         initDoorStatus(client);
     },
 };
-
-let previous_door_state: boolean | null = null;
-
-async function initDoorStatus(client: Client) {
-    // Initialize message storage
-    await persist.init();
-    console.log("Storage initialized");
-
-    // Get the Discord guild ID from environment variables
-    const guild_id = process.env.DISCORD_GUILD_ID;
-
-    // Get the guild using the provided ID
-    const guild = client.guilds.cache.get(guild_id!);
-    if (!guild) {
-        console.error(`Cannot find guild with ID ${guild_id!}`);
-        return;
-    }
-
-    // Find the channel named "shop-open" in the guild
-    const channel = guild.channels.cache.find(ch => ch.name === "shop-open") as TextChannel | undefined;
-
-    // Initialize door status message if the channel is found
-    if (channel) await initializeDoorStatusMessage(channel);
-    else console.error("Channel not found");
-
-    // Set up the HTTP server to handle incoming requests
-    const server = http.createServer(async (req, res) => {
-        if (req.method === "POST" && req.url === "/update_door_status") {
-            let body = "";
-
-            // Read the request body
-            req.on("data", chunk => {
-                body += chunk.toString();
-            });
-
-            // Process the received data when the request ends
-            req.on("end", async () => {
-                // Parse the received JSON data
-                const parsed_data = JSON.parse(body);
-                console.log("Received data:", parsed_data);
-
-                // Compare the received state with the previous state
-                const new_door_state = parsed_data.state === "OPEN";
-                if (new_door_state !== previous_door_state) {
-                    previous_door_state = new_door_state;
-
-                    // Update door status message based on the received state
-                    if (channel) await updateDoorStatusMessage(channel, new_door_state);
-                }
-
-                // Respond to the request
-                res.statusCode = 200;
-                res.end();
-            });
-        } else {
-            // Handle 404 for other requests
-            res.statusCode = 404;
-            res.end();
-        }
-    });
-
-    // Start the HTTP server
-    const PORT = 80;
-    server.listen(PORT, () => {
-        console.log(`HTTP server is running at`, server.address());
-    });
-}
