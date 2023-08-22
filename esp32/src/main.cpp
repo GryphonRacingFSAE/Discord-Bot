@@ -3,7 +3,6 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <esp_wpa2.h>
-#include <ESP32Ping.h>
 
 void sendDoorState();
 
@@ -25,8 +24,7 @@ void sendDoorState();
 void setup() {
     // Set the door sensor pin as input with pull-up resistor
     pinMode(DOOR_SENSOR_PIN, INPUT_PULLUP);
-    pinMode(LED_BUILTIN, OUTPUT);
-
+\
     // Initialize serial communication
     Serial.begin(115200);
     while (!Serial) {
@@ -54,19 +52,6 @@ void setup() {
     Serial.println(WiFi.subnetMask());
     Serial.println(WiFi.macAddress());
     Serial.println(WiFi.localIP());
-    Serial.printf("Pinging %s...\n", SERVER_IP);
-    
-    bool success = Ping.ping(SERVER_IP, 5);
-
-    Serial.printf("Ping result: %f\n", Ping.averageTime());
-    
-    if(!success){
-        Serial.println("Ping failed");
-        return;
-    }
-    
-    Serial.println("Ping successful.");
- 
 }
 
 void loop() {
@@ -107,14 +92,13 @@ void sendDoorState() {
     http.addHeader("Content-Type", "application/json"); // Set the content type header
 
     // Create JSON payload
-    String json_payload = "{\"state\": " + String(door_state == HIGH ? "OPEN" : "CLOSED") + "}";
+    String json_payload = "{\"state\": \"" + String(door_state == HIGH ? "OPEN" : "CLOSED") + "\"}";
 
     // Send POST request with payload
     int http_response_code = http.POST(json_payload);
 
     if (http_response_code > 0) {
         Serial.printf("HTTP response code: %d\n", http_response_code);
-        Serial.println(http.getString()); // Print server response
     } else {
         Serial.printf("HTTP request failed, code: %d error: %s\n", http_response_code, http.errorToString(http_response_code).c_str());
     }
