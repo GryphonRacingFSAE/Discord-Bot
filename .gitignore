@@ -104,7 +104,7 @@ dist
 .tern-port
 
 
+bot-logs.txt
 logs/
 messages.json
 .node-persist/
-bot-logs.txt
