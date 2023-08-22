@@ -43,7 +43,7 @@ export default {
             // if the message it is editing is destroyed
             // Janky? Yeah, but to be honest it works *good enough*
             updateMessage(client, channel_id, false, false, null).then(() => {
-                const task = cron.schedule("* */5 * * * *", () => {
+                const task = cron.schedule("*/5 * * * *", () => {
                     try {
                         console.log("Updating message");
                         updateMessage(client, channel_id, true, false, task);
@@ -140,24 +140,22 @@ async function initDoorStatus(client: Client) {
                 console.log("Received data:", parsed_data);
 
                 // Update door status message based on the received state
-                if (channel) await updateDoorStatusMessage(channel, parsed_data.state);
+                if (channel) await updateDoorStatusMessage(channel, parsed_data.state == "OPEN");
 
                 // Respond to the request
                 res.statusCode = 200;
-                res.setHeader("Content-Type", "text/plain");
-                res.end("Data received successfully");
+                res.end();
             });
         } else {
             // Handle 404 for other requests
             res.statusCode = 404;
-            res.setHeader("Content-Type", "text/plain");
-            res.end("Not Found");
+            res.end();
         }
     });
 
     // Start the HTTP server
-    const PORT = 8080;
+    const PORT = 80;
     server.listen(PORT, () => {
-        console.log(`HTTP server is running on port ${PORT}`);
+        console.log(`HTTP server is running on at`, server.address());
     });
 }
