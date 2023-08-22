@@ -77,7 +77,7 @@ export default {
                 addCountdown(interaction.client, interaction.channelId, message_input);
                 updateMessage(interaction.client, interaction.channelId, true, true, null).then(() => {
                     // Update the message each time every 5 minutes
-                    const task = cron.schedule("* */5 * * * *", () => {
+                    const task = cron.schedule("*/5 * * * *", () => {
                         try {
                             updateMessage(interaction.client, interaction.channelId, true, false, task);
                         } catch (error) {
@@ -100,7 +100,7 @@ export default {
                     // Update the message every 5 minutes.
                     // All cron schedules to terminate if their original message
                     // was destroyed and our first forces a new message to be made
-                    const task = cron.schedule("* */5 * * * *", () => {
+                    const task = cron.schedule("*/5 * * * *", () => {
                         try {
                             updateMessage(interaction.client, interaction.channelId, true, false, task);
                         } catch (error) {
