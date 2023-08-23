@@ -88,7 +88,7 @@ void sendDoorState() {
     http.addHeader("Content-Type", "application/json"); // Set the content type header
 
     // Create JSON payload
-    String json_payload = "{\"state\": \"" + String(door_state) + "\"}";
+    String json_payload = "{\"state\": " + String(door_state) + "}";
 
     // Send POST request with payload
     int http_response_code = http.POST(json_payload);
