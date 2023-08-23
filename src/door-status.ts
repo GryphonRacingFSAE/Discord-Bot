@@ -18,16 +18,20 @@ export async function initDoorStatus(client: Client) {
     // Find the channel named "shop-open" in the guild
     const channel = guild.channels.cache.find(ch => ch.name === "shop-open") as TextChannel | undefined;
 
-    // Check if there have been no updates from the ESP32 for 10 minutes
+    // Check if there have been no updates from the ESP32 for a minute
     setInterval(async () => {
         const current_time = Date.now();
-        if (last_update_time > 0 && current_time - last_update_time > 600000) {
+        if (current_time - last_update_time > 5000) {
+            console.log("Possible ESP32 connection issue...");
+        }
+        if (current_time - last_update_time > 60000) {
             if (previous_door_state !== null) {
+                console.error("ESP32 disconnected!");
                 if (channel) await sendDoorStatusMessage(channel, null);
                 previous_door_state = null;
             }
         }
-    }, 60000); // Check every minute
+    }, 10000);
 
     // Set up the HTTP server to handle incoming requests
     const server = http.createServer(async (req, res) => {
@@ -52,7 +56,7 @@ export async function initDoorStatus(client: Client) {
                 const new_door_state = parsed_data.state;
                 if (new_door_state !== previous_door_state) {
                     // Update door status message based on the received state
-                    if (channel) await sendDoorStatusMessage(channel, new_door_state);
+                    if (channel) await sendDoorStatusMessage(channel, new_door_state === 1);
                     previous_door_state = new_door_state;
                 }
 
@@ -77,12 +81,9 @@ export async function initDoorStatus(client: Client) {
 async function sendDoorStatusMessage(channel: TextChannel, door_status: boolean | null) {
     try {
         // Fetch and delete all previous bot messages in the channel
+        await channel.messages.fetch();
         const messages_to_delete = channel.messages.cache.filter(message => message.author.bot);
-        await Promise.all(
-            messages_to_delete.map(async message => {
-                await message.delete();
-            }),
-        );
+        await channel.bulkDelete(messages_to_delete);
 
         // Create an embed with the door status
         const embed = createDoorStatusEmbed(door_status);
@@ -96,8 +97,11 @@ async function sendDoorStatusMessage(channel: TextChannel, door_status: boolean 
 
 function createDoorStatusEmbed(door_status: boolean | null): EmbedBuilder {
     // Determine the color and status text based on the state
-    const status_color = door_status === true ? 0x00ff00 : door_status === false ? 0xff0000 : door_status ?? 0xcccccc;
-    const status_text = door_status === true ? "Open" : door_status === false ? "Closed" : door_status ?? "Unknown Status";
+    const status_color = door_status === true ? 0x00ff00 : (door_status === false ? 0xff0000 : (door_status ?? 0xcccccc));
+    const status_text = door_status === true ? "Open" : (door_status === false ? "Closed" : (door_status ?? "Unknown Status"));
+    console.log(`Door status: ${door_status}`);
+    console.log(`Door status: ${status_text}`);
+    console.log(`Door status color: ${status_color}`);
 
     // Build the embed with the status information
     const status_embed = new EmbedBuilder()
