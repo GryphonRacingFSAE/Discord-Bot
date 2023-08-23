@@ -19,10 +19,13 @@ export async function initDoorStatus(client: Client) {
     const channel = guild.channels.cache.find(ch => ch.name === "shop-open") as TextChannel | undefined;
 
     // Check if there have been no updates from the ESP32 for 10 minutes
-    setInterval(() => {
+    setInterval(async () => {
         const current_time = Date.now();
         if (last_update_time > 0 && current_time - last_update_time > 600000) {
-            if (channel) channel.send("ERROR: No updates received from the ESP32 for 10 minutes");
+            if (previous_door_state !== null) {
+                if (channel) await sendDoorStatusMessage(channel, null);
+                previous_door_state = null;
+            }
         }
     }, 60000); // Check every minute
 
@@ -46,12 +49,11 @@ export async function initDoorStatus(client: Client) {
                 last_update_time = Date.now();
 
                 // Compare the received state with the previous state
-                const new_door_state = parsed_data.state === "OPEN";
+                const new_door_state = parsed_data.state;
                 if (new_door_state !== previous_door_state) {
-                    previous_door_state = new_door_state;
-
                     // Update door status message based on the received state
                     if (channel) await sendDoorStatusMessage(channel, new_door_state);
+                    previous_door_state = new_door_state;
                 }
 
                 // Respond to the request
@@ -72,7 +74,7 @@ export async function initDoorStatus(client: Client) {
     });
 }
 
-async function sendDoorStatusMessage(channel: TextChannel, is_door_open: boolean) {
+async function sendDoorStatusMessage(channel: TextChannel, door_status: boolean | null) {
     try {
         // Fetch and delete all previous bot messages in the channel
         const messages_to_delete = channel.messages.cache.filter(message => message.author.bot);
@@ -83,7 +85,7 @@ async function sendDoorStatusMessage(channel: TextChannel, is_door_open: boolean
         );
 
         // Create an embed with the door status
-        const embed = createDoorStatusEmbed(is_door_open);
+        const embed = createDoorStatusEmbed(door_status);
 
         // Send the embed as a message
         await channel.send({ embeds: [embed] });
@@ -92,10 +94,10 @@ async function sendDoorStatusMessage(channel: TextChannel, is_door_open: boolean
     }
 }
 
-function createDoorStatusEmbed(is_door_open: boolean): EmbedBuilder {
+function createDoorStatusEmbed(door_status: boolean | null): EmbedBuilder {
     // Determine the color and status text based on the state
-    const status_color = is_door_open ? 0x00ff00 : 0xff0000;
-    const status_text = is_door_open ? "Open" : "Closed";
+    const status_color = door_status === true ? 0x00ff00 : door_status === false ? 0xff0000 : door_status ?? 0xcccccc;
+    const status_text = door_status === true ? "Open" : door_status === false ? "Closed" : door_status ?? "Unknown Status";
 
     // Build the embed with the status information
     const status_embed = new EmbedBuilder()
