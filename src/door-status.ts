@@ -97,11 +97,12 @@ async function sendDoorStatusMessage(channel: TextChannel, door_status: boolean 
 
 function createDoorStatusEmbed(door_status: boolean | null): EmbedBuilder {
     // Determine the color and status text based on the state
-    const status_color = door_status === true ? 0x00ff00 : (door_status === false ? 0xff0000 : (door_status ?? 0xcccccc));
-    const status_text = door_status === true ? "Open" : (door_status === false ? "Closed" : (door_status ?? "Unknown Status"));
-    console.log(`Door status: ${door_status}`);
-    console.log(`Door status: ${status_text}`);
-    console.log(`Door status color: ${status_color}`);
+    let status_text: string = "Unknown Status";
+    let status_color: number = 0xcccccc;
+    if (door_status != null) {
+        status_text = door_status ? "Open" : "Closed";
+        status_color = door_status ? 0x00ff00 : 0xff0000;
+    }
 
     // Build the embed with the status information
     const status_embed = new EmbedBuilder()
