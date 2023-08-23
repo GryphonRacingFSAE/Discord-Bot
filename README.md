@@ -26,18 +26,6 @@ DISCORD_GUILD_ID=... # Guild ID of the server you're testing with
 DISCORD_APPLICATION_ID=... # Application ID of your bot
 ```
 
-### ESP32 Config
-
-```bash
-$env:WIFI_SSID = 'your_wifi_ssid'
-$env:WIFI_PASSWORD = 'your_wifi_password'
-$env:SERVER_IP = 'your_server_ip'
-
-# Ensure ESP32 is plugged in before running the next command
-# Hold down the BOOT button while "Connecting..." is shown
-pio run -t upload -t monitor
-```
-
 ### Build + Run
 
 ```bash
@@ -62,9 +50,11 @@ Fetch latest team roster + payment status from OneDrive (TBD how), verify email,
 Initiate a countdown from a Captain or Lead, update the countdown every 5 minutes, and push it to the latest in the chat every day. Save countdowns locally to preserve countdowns between launches.
 
 ### Log - Danny
+
 Fetch the current running bots logs. It will fetch at most 4000 lines with an adjustable position to index deeper into the logs if needed.
 
 ### Restart - Danny
+
 This command will shutdown. Utilizes the docker's auto-restart feature to reboot the bot.
 
 ### Audit Log Backup - Evan
