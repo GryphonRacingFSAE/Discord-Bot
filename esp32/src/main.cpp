@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include <HTTPClient.h>
 #include <WiFi.h>
-#include <WiFiClientSecure.h>
 #include <esp_wpa2.h>
 
 void sendDoorState();
@@ -9,18 +8,12 @@ void sendDoorState();
 #define DOOR_SENSOR_PIN 15
 #define HEARTBEAT_INTERVAL 3000
 
-#undef SERVER_IP
-// This is the IP of the embedded's shop computer
-#define SERVER_IP "10.2.49.188"
-// #define SERVER_IP "10.12.218.6"
-
 #define WIFI_SSID "uog-wifi-secure"
+#define SERVER_IP "10.2.49.188"
 
-// Ignore config variables for now:
-#define EAP_ANONYMOUS_IDENTITY "anonymous@uoguelph.ca"
 #define EAP_USERNAME "dhart04@uoguelph.ca"
 #define EAP_IDENTITY "dhart04@uoguelph.ca"
-#define EAP_PASSWORD ":)"
+#define EAP_PASSWORD "password"
 
 void setup() {
     // Set the door sensor pin as input with pull-up resistor
@@ -31,6 +24,7 @@ void setup() {
     while (!Serial) {
         delay(100);
     }
+
     Serial.println("\nConnecting to WiFi...");
     WiFi.disconnect(true);
     WiFi.mode(WIFI_STA);
@@ -39,14 +33,14 @@ void setup() {
     int retries = 0;
     while (WiFi.status() != WL_CONNECTED) {
         if (retries++ > 10) {
-            Serial.println("\nFailed to connect to WiFi");
+            Serial.println("Failed to connect to WiFi");
             ESP.restart();
         }
         Serial.print(".");
         Serial.print(WiFi.status());
         delay(1000);
     }
-    Serial.println("\nWifi connected");
+    Serial.println("Connected!");
 
     Serial.println(WiFi.broadcastIP());
     Serial.println(WiFi.gatewayIP());
@@ -56,8 +50,6 @@ void setup() {
 }
 
 void loop() {
-    sendDoorState();
-    delay(HEARTBEAT_INTERVAL); // Send door state at the specified interval
     Serial.print("RSSI: ");
     Serial.println(WiFi.RSSI());
 
@@ -71,6 +63,9 @@ void loop() {
         Serial.print(WiFi.status());
         delay(1000);
     }
+
+    sendDoorState();
+    delay(HEARTBEAT_INTERVAL); // Send door state at the specified interval
 }
 
 void sendDoorState() {
@@ -93,7 +88,7 @@ void sendDoorState() {
     http.addHeader("Content-Type", "application/json"); // Set the content type header
 
     // Create JSON payload
-    String json_payload = "{\"state\": \"" + String(door_state == HIGH ? "OPEN" : "CLOSED") + "\"}";
+    String json_payload = "{\"state\": \"" + String(door_state) + "\"}";
 
     // Send POST request with payload
     int http_response_code = http.POST(json_payload);
