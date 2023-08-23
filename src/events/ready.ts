@@ -5,6 +5,7 @@ import { saveAuditLogs } from "@/commands/save-audit-logs.js";
 import { updateMessage } from "@/countdown-manager.js";
 import { updateSubsectionRoles } from "@/events/member-update.js";
 import fs from "node:fs";
+import { initDoorStatus } from "@/door-status.js";
 
 dotenv.config();
 
@@ -40,7 +41,7 @@ export default {
             // if the message it is editing is destroyed
             // Janky? Yeah, but to be honest it works *good enough*
             updateMessage(client, channel_id, false, false, null).then(() => {
-                const task = cron.schedule("* */5 * * * *", () => {
+                const task = cron.schedule("*/5 * * * *", () => {
                     try {
                         console.log("Updating message");
                         updateMessage(client, channel_id, true, false, task);
@@ -54,24 +55,33 @@ export default {
 
         // Schedule weekly audit log saving:
         // Saturday @ 11:59 PM
-        cron.schedule("59 23 * * 6", async () => {
-            const guild_id = process.env.DISCORD_GUILD_ID;
+        const audit_logs_job = cron.schedule(
+            "59 23 * * 6",
+            async () => {
+                const guild_id = process.env.DISCORD_GUILD_ID;
 
-            // Fetch the guild
-            const guild = client.guilds.cache.get(guild_id!);
-            if (!guild) {
-                console.error(`Cannot find guild with ID ${guild_id!}`);
-                return;
-            }
+                // Fetch the guild
+                const guild = client.guilds.cache.get(guild_id!);
+                if (!guild) {
+                    console.error(`Cannot find guild with ID ${guild_id!}`);
+                    return;
+                }
 
-            // Call the function and handle any errors
-            try {
-                await saveAuditLogs(null, guild);
-                console.log("Audit logs saved successfully.");
-            } catch (error) {
-                console.error("Error occurred while saving audit logs:", error);
-            }
-        });
+                // Call the function and handle any errors
+                try {
+                    await saveAuditLogs(null, guild);
+                    console.log("Audit logs saved successfully.");
+                } catch (error) {
+                    console.error("Error occurred while saving audit logs:", error);
+                }
+            },
+            {
+                scheduled: true,
+                timezone: "America/Toronto",
+            },
+        );
+
+        audit_logs_job.start();
 
         // On login, update all subsection roles that might've been missed
         const guild = client.guilds.cache.get(process.env.DISCORD_GUILD_ID!);
@@ -84,5 +94,8 @@ export default {
         for (const member of guild.members.cache.values()) {
             updateSubsectionRoles(member);
         }
+
+        // Initialize the door status code (see door-status.ts)
+        initDoorStatus(client);
     },
 };
