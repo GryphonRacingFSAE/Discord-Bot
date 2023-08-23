@@ -103,7 +103,7 @@ dist
 # TernJS port file
 .tern-port
 
-messages.json
 
-logs/
 bot-logs.txt
+messages.json
+resources/

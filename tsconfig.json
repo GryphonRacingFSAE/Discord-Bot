@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
         "module": "esnext",
-        "target": "es2017",
+        "target": "es2021",
         "moduleResolution": "node",
         "esModuleInterop": true,
         "sourceMap": true,
@@ -18,5 +18,5 @@
         },
     },
     "include": ["src/**/*"],
-    "lib": ["es2017"]
+    "lib": ["es2021"]
 }
