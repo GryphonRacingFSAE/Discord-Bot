@@ -1,4 +1,4 @@
-import { Events, Client, TextChannel } from "discord.js";
+import { Events, Client } from "discord.js";
 import cron from "node-cron";
 import dotenv from "dotenv";
 import { saveAuditLogs } from "@/commands/save-audit-logs.js";
