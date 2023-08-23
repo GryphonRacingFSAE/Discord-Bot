@@ -103,8 +103,9 @@ dist
 # TernJS port file
 .tern-port
 
-messages.json
 
 logs/
 onedrive
 bot-logs.txt
+messages.json
+resources/
