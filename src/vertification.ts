@@ -92,9 +92,9 @@ export async function verificationOnReady(client: Client) {
         const current_month = new Date().getMonth();
         if (!(current_month >= 5 && current_month <= 9)) return;
         Promise.all(
-            members.map(async(member) => {
+            members.map(async member => {
                 const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
-                const channel = await guild.channels.fetch(process.env.VERIFICATION_CHANNEL!) as TextChannel;
+                const channel = (await guild.channels.fetch(process.env.VERIFICATION_CHANNEL!)) as TextChannel;
                 if (member.roles.cache.some(role => role.name === "Verified") && !member.user.bot) {
                     // Search for row in spreadsheet
                     const user_row = verification_spreadsheet.find(data => data.discord_identifier === member.user.tag);
@@ -106,7 +106,7 @@ export async function verificationOnReady(client: Client) {
                         await channel.send(`${member.id} has been unverified.`);
                     }
                 }
-            })
+            }),
         );
     });
 }
