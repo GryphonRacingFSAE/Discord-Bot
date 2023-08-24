@@ -8,15 +8,7 @@ const { readFile, writeFile, utils } = xlsx;
 import * as cron from "node-cron";
 
 dotenv.config(); // Load env parameters
-if (
-    !process.env.DISCORD_GUILD_ID ||
-    !process.env.EMAIL_USERNAME ||
-    !process.env.EMAIL_PASSWORD ||
-    !process.env.EMAIL_HOST ||
-    !process.env.EMAIL_PORT ||
-    !process.env.HASH_SECRET_KEY ||
-    !process.env.VERIFICATION_CHANNEL
-) {
+if (!process.env.DISCORD_GUILD_ID || !process.env.EMAIL_USERNAME || !process.env.EMAIL_PASSWORD || !process.env.EMAIL_HOST || !process.env.EMAIL_PORT || !process.env.VERIFICATION_CHANNEL) {
     throw new Error("Environment tokens are not defined!");
 }
 
@@ -129,7 +121,7 @@ export async function sendVerificationMessage(member: GuildMember) {
 
 export function generateVerificationCode(user_id: string) {
     const hash = createHash("sha256");
-    hash.update(user_id + Date.now().toString() + process.env.HASH_SECRET_KEY);
+    hash.update(user_id + Date.now().toString());
 
     const chars = "0123456789";
     const hash_value = hash.digest("hex");
