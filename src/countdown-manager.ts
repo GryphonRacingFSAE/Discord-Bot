@@ -45,6 +45,19 @@ function updateMessageDictionary() {
     fs.writeFileSync("./resources/messages.json", JSON.stringify(message_dictionary));
 }
 
+// Get # of messages between the given message and the most recent. Max is 100.
+async function getMessagesBetween(original_message: Message, channel: TextChannel): Promise<number> {
+    const messages = await channel.messages.fetch({ limit: 100 });
+    let count = 0;
+    for (const [, message] of messages) {
+        if (message.id == original_message.id) {
+            return count;
+        }
+        count++;
+    }
+    return count;
+}
+
 export async function updateMessage(
     client: Client,
     channel_id: string,
@@ -150,7 +163,12 @@ export async function updateMessage(
     // If the message is older than 24 hours, delete and make a new one
     // or if the force_new_message flag is enabled
     try {
-        if ((message !== null && now.getTime() - message.createdTimestamp >= 1000 * 60 * 60 * 24) || force_new_message) {
+        if (
+            (message !== null &&
+                (now.getTime() - message.createdTimestamp >= 1000 * 60 * 60 * 24 ||
+                    (now.getTime() - message.createdTimestamp >= 1000 * 60 * 5 && (await getMessagesBetween(message, channel)) >= 100))) ||
+            force_new_message
+        ) {
             if (message) {
                 await message.delete();
             }
