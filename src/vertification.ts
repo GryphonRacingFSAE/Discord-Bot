@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import dotenv from "dotenv";
-import { Client, EmbedBuilder, GuildMember, Message } from "discord.js";
+import { Client, EmbedBuilder, GuildMember, Message, TextChannel } from "discord.js";
 import { createTransport } from "nodemailer";
 import { createHash } from "crypto";
 import xlsx from "xlsx";
@@ -8,7 +8,15 @@ const { readFile, writeFile, utils } = xlsx;
 import * as cron from "node-cron";
 
 dotenv.config(); // Load env parameters
-if (!process.env.DISCORD_GUILD_ID || !process.env.EMAIL_USERNAME || !process.env.EMAIL_PASSWORD || !process.env.EMAIL_HOST || !process.env.EMAIL_PORT || !process.env.HASH_SECRET_KEY) {
+if (
+    !process.env.DISCORD_GUILD_ID ||
+    !process.env.EMAIL_USERNAME ||
+    !process.env.EMAIL_PASSWORD ||
+    !process.env.EMAIL_HOST ||
+    !process.env.EMAIL_PORT ||
+    !process.env.HASH_SECRET_KEY ||
+    !process.env.VERIFICATION_CHANNEL
+) {
     throw new Error("Environment tokens are not defined!");
 }
 
@@ -83,18 +91,23 @@ export async function verificationOnReady(client: Client) {
     cron.schedule("0 0 * * *", () => {
         const current_month = new Date().getMonth();
         if (!(current_month >= 5 && current_month <= 9)) return;
-        members.forEach(member => {
-            if (member.roles.cache.some(role => role.name === "Verified") && !member.user.bot) {
-                // Search for row in spreadsheet
-                const user_row = verification_spreadsheet.find(data => data.discord_identifier === member.user.tag);
-                if (!(user_row && validateMembership(user_row)) && member.roles.cache.has(verifiedRole.id)) {
-                    // User has Verified role + has not paid
-                    member.roles.remove(verifiedRole);
-                    // DM user that they have not paid and thus have been removed
-                    member.send("You have been unverified from UofGuelph Racing due to not paying the club fee.");
+        Promise.all(
+            members.map(async(member) => {
+                const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
+                const channel = await guild.channels.fetch(process.env.VERIFICATION_CHANNEL!) as TextChannel;
+                if (member.roles.cache.some(role => role.name === "Verified") && !member.user.bot) {
+                    // Search for row in spreadsheet
+                    const user_row = verification_spreadsheet.find(data => data.discord_identifier === member.user.tag);
+                    if (!(user_row && validateMembership(user_row)) && member.roles.cache.has(verifiedRole.id)) {
+                        // User has Verified role + has not paid
+                        await member.roles.remove(verifiedRole);
+                        // DM user that they have not paid and thus have been removed
+                        await member.send("You have been unverified from UofGuelph Racing due to not paying the club fee.");
+                        await channel.send(`${member.id} has been unverified.`);
+                    }
                 }
-            }
-        });
+            })
+        );
     });
 }
 
@@ -218,6 +231,9 @@ export async function handleVerificationDM(client: Client, message: Message) {
         pushSpreadsheet();
         processing_members_code.delete(message.author.id);
         await message.reply(`Verification successful! Welcome aboard, ${user_row.name}.`);
+
+        const channel = guild.channels.resolve(process.env.VERIFICATION_CHANNEL!) as TextChannel;
+        await channel.send(`${message.author.tag} has been successfully verified`);
     } else {
         await message.reply("The code you entered is not correct. Please enter the **7 digit code.**");
     }
