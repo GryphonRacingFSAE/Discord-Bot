@@ -186,7 +186,7 @@ export async function updateMessage(
         if (
             (message !== null &&
                 (now.getTime() - message.createdTimestamp >= 1000 * 60 * 60 * 24 ||
-                    (now.getTime() - message.createdTimestamp >= 1000 * 60 * 5 && (await getMessagesBetween(message, channel)) >= 100))) ||
+                    (now.getTime() - message.createdTimestamp >= 1000 * 60 * 10 && (await getMessagesBetween(message, channel)) >= 100))) ||
             force_new_message
         ) {
             if (message) {
