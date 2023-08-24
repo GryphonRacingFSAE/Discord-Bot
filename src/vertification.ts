@@ -31,7 +31,7 @@ type Verification = {
 export const members_to_monitor: Set<string> = new Set();
 const processing_members_code: Map<string, { email: string; id: string; time_stamp: number }> = new Map(); // Members and their codes
 const FILE_PATH = "./onedrive/verification.xlsx";
-const FORM_LINK = "https://www.youtube.com/watch?v=fC7oUOUEEi4";
+const FORM_LINK = "https://forms.office.com/r/pTGwYxBTHq";
 
 let verification_spreadsheet: Array<Verification>;
 // Pulls from the spreadsheet
@@ -103,12 +103,12 @@ export async function sendVerificationMessage(member: GuildMember) {
         .setTitle("UofG Racing Verification")
         .setDescription("Welcome! To gain access to the server, please verify yourself.")
         .addFields(
-            { name: "How", value: "1. Apply to this [form](<https://youtu.be/fC7oUOUEEi4>).\n2. **DM the bot** the email given to the form.\n3. Follow the instructions given." },
+            { name: "How", value: `1. Apply to this [form](<${FORM_LINK}>).\n2. **DM the bot** the email given to the form.\n3. Follow the instructions given.` },
             { name: "Accepted emails", value: "**Only @uoguelph.ca** are accepted emails." },
             { name: "Code expiration", value: "Your code will **expire in 5 minutes**. If it has, please resend your email address and we will send you a new code." },
         )
         .setColor("#FFC72A")
-        .setFooter({ text: "UofG racing will not ask for passwords, credit card information, SSNs, ID, and/or tokens" });
+        .setFooter({ text: "UofG Racing will not ask for passwords, credit card information, SSNs, ID, and/or tokens" });
     return member.send({
         embeds: [embeds],
     });
