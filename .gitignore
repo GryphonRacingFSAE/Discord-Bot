@@ -105,7 +105,7 @@ dist
 
 
 logs/
-onedrive
+onedrive/
 bot-logs.txt
 messages.json
 resources/
