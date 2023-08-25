@@ -97,7 +97,7 @@ async function sendDoorStatusMessage(channel: TextChannel, door_status: boolean 
 
 function createDoorStatusEmbed(door_status: boolean | null): EmbedBuilder {
     // Determine the color and status text based on the state
-    let status_text: string = "Unknown Status";
+    let status_text: string = "Unknown";
     let status_color: number = 0xcccccc;
     if (door_status != null) {
         status_text = door_status ? "Open" : "Closed";
@@ -109,7 +109,7 @@ function createDoorStatusEmbed(door_status: boolean | null): EmbedBuilder {
         .setColor(status_color)
         .addFields(
             { name: "Shop Status", value: status_text },
-            { name: "Last Updated", value: new Date().toLocaleString("en-US", { weekday: "long", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }) },
+            { name: "Last Updated", value: new Date().toLocaleString("en-US", { timeZone: "America/New_York", weekday: "long", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }) },
             { name: "\u200B", value: "[Google Maps](https://goo.gl/maps/f17ShXLsfcKVjqaGA)" },
         )
         .setImage("https://i.imgur.com/uw8zfkV.png");
