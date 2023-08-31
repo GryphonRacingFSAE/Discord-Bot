@@ -5,8 +5,22 @@ import type { Command, Event } from "@/types.js";
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
-
 dotenv.config();
+
+// Check for all environments
+if (
+    !process.env.DISCORD_BOT_TOKEN ||
+    !process.env.DISCORD_APPLICATION_ID ||
+    !process.env.DISCORD_GUILD_ID ||
+    !process.env.EMAIL_USERNAME ||
+    !process.env.EMAIL_PASSWORD ||
+    !(process.env.EMAIL_HOST || process.env.EMAIL_SERVICE) ||
+    !process.env.EMAIL_PORT ||
+    !process.env.VERIFICATION_CHANNEL
+) {
+    throw new Error("Environment tokens are not defined!");
+}
+
 // Some hack to get __dirname to work in modules
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
