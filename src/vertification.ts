@@ -124,7 +124,7 @@ export async function verificationOnReady(client: Client) {
     // Start a new cron task to de-verify everyone who hasn't paid
     cron.schedule("0 0 * * *", () => {
         const current_month = new Date().getMonth();
-        if (!(current_month >= 5 && current_month <= 9)) return;
+        if (!(current_month >= 5 && current_month <= 8)) return;
         Promise.all(
             members.map(async member => {
                 const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
