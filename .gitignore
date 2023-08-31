@@ -104,6 +104,8 @@ dist
 .tern-port
 
 
+logs/
+onedrive/
 bot-logs.txt
 messages.json
 resources/

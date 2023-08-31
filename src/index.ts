@@ -1,4 +1,4 @@
-import { GatewayIntentBits } from "discord.js";
+import { GatewayIntentBits, Partials } from "discord.js";
 import dotenv from "dotenv";
 import { DiscordClient } from "@/discord-client.js";
 import type { Command, Event } from "@/types.js";
@@ -10,7 +10,10 @@ dotenv.config();
 // Some hack to get __dirname to work in modules
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const client = new DiscordClient({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
+const client = new DiscordClient({
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.DirectMessages],
+    partials: [Partials.Message, Partials.Channel, Partials.User],
+});
 
 // Load in commands
 {
@@ -34,7 +37,7 @@ const client = new DiscordClient({ intents: [GatewayIntentBits.Guilds, GatewayIn
     const event_directory = path.join(__dirname, "events");
     const event_files = fs.readdirSync(event_directory).filter(file => file.endsWith(".js"));
 
-    // Iterate over each events file
+    // Iterate over each event file
     for (const file of event_files) {
         // Import files' content
         const event_path = path.join(event_directory, file);
@@ -43,9 +46,9 @@ const client = new DiscordClient({ intents: [GatewayIntentBits.Guilds, GatewayIn
 
         // Attach the event onto the client
         if (event.once) {
-            client.once(event.name, (...args) => event.execute(...args));
+            client.once(event.name, (...args) => event.execute(client, ...args));
         } else {
-            client.on(event.name, (...args) => event.execute(...args));
+            client.on(event.name, (...args) => event.execute(client, ...args));
         }
         console.log(`Loaded event ${event.name}`);
     }
