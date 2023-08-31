@@ -95,6 +95,13 @@ pullSpreadsheet();
 
 // Push to the spreadsheet file
 function pushSpreadsheet() {
+    let used_file_path = DEBUG_FILE_PATH; // Initialize with the default path
+
+    // Check if the main file exists
+    if (fs.existsSync(FILE_PATH)) {
+        used_file_path = FILE_PATH;
+    }
+
     const workbook = utils.book_new();
     const translated_spreadsheet = verification_spreadsheet.map((row: Verification) => {
         const new_row: SpreadsheetRow = {};
@@ -111,7 +118,7 @@ function pushSpreadsheet() {
     utils.book_append_sheet(workbook, worksheet, "Sheet1");
 
     // Write the workbook to the filesystem
-    writeFile(workbook, FILE_PATH);
+    writeFile(workbook, used_file_path);
 }
 
 // Get all members in the guild who do not have the verification role
