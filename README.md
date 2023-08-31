@@ -45,6 +45,9 @@ We have an ESP32 at the main shop entrance monitoring if it's open or closed, if
 
 Fetch latest team roster + payment status from OneDrive (TBD how), verify email, verify student number, verify student ID? If passing all requirements, the user is given the role "Verified".
 
+#### Onedrive sync
+Syncing to the onedrive team verification roster xlsx file is done through rclone + a cron task. Syncing is done every 5 minutes. To edit the synchronization file, please run `crontab -e` on the server to access the cron task configuration.
+
 ### Countdown - Danny
 
 Initiate a countdown from a Captain or Lead, update the countdown every 5 minutes, and push it to the latest in the chat every day. Save countdowns locally to preserve countdowns between launches.
