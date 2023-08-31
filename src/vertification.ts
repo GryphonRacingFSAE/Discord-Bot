@@ -8,18 +8,38 @@ const { readFile, writeFile, utils } = xlsx;
 import * as cron from "node-cron";
 
 dotenv.config(); // Load env parameters
-if (!process.env.DISCORD_GUILD_ID || !process.env.EMAIL_USERNAME || !process.env.EMAIL_PASSWORD || !process.env.EMAIL_HOST || !process.env.EMAIL_PORT || !process.env.VERIFICATION_CHANNEL) {
+if (
+    !process.env.DISCORD_GUILD_ID ||
+    !process.env.EMAIL_USERNAME ||
+    !process.env.EMAIL_PASSWORD ||
+    !(process.env.EMAIL_HOST || process.env.EMAIL_SERVICE) ||
+    !process.env.EMAIL_PORT ||
+    !process.env.VERIFICATION_CHANNEL
+) {
     throw new Error("Environment tokens are not defined!");
 }
 
-const transporter = createTransport({
-    host: process.env.EMAIL_HOST,
-    port: Number(process.env.EMAIL_PORT),
-    auth: {
-        user: process.env.EMAIL_USERNAME,
-        pass: process.env.EMAIL_PASSWORD,
-    },
-});
+const transporter = (() => {
+    if (process.env.EMAIL_SERVICE) {
+        return createTransport({
+            service: process.env.EMAIL_SERVICE,
+            port: Number(process.env.EMAIL_PORT),
+            auth: {
+                user: process.env.EMAIL_USERNAME,
+                pass: process.env.EMAIL_PASSWORD,
+            },
+        });
+    } else {
+        return createTransport({
+            host: process.env.EMAIL_HOST,
+            port: Number(process.env.EMAIL_PORT),
+            auth: {
+                user: process.env.EMAIL_USERNAME,
+                pass: process.env.EMAIL_PASSWORD,
+            },
+        });
+    }
+})();
 
 type Verification = {
     name: string;
