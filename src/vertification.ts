@@ -212,7 +212,7 @@ export function validateEmail(email: string): boolean {
 function validateMembership(user_row: Verification): boolean {
     const current_month = new Date().getMonth();
 
-    if (current_month >= 6 && current_month <= 8) {
+    if (current_month >= 4 && current_month <= 9) {
         return true;
     }
 
