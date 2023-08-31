@@ -6,7 +6,7 @@ import { DiscordClient } from "@/discord-client.js";
 export default {
     name: Events.InteractionCreate,
     once: false,
-    async execute(interaction: CommandInteraction) {
+    async execute(client: DiscordClient, interaction: CommandInteraction) {
         // Discard all non-command usages (slash commands)
         if (!interaction.isChatInputCommand()) return;
 

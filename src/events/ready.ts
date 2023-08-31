@@ -4,7 +4,9 @@ import dotenv from "dotenv";
 import { saveAuditLogs } from "@/commands/save-audit-logs.js";
 import { updateMessage } from "@/countdown-manager.js";
 import { updateSubsectionRoles } from "@/events/member-update.js";
+import { verificationOnReady } from "@/vertification.js";
 import fs from "node:fs";
+import { DiscordClient } from "@/discord-client";
 import { initDoorStatus } from "@/door-status.js";
 
 dotenv.config();
@@ -29,7 +31,7 @@ export default {
     // Run only once (binds to client.once())
     once: true,
     // Define execution function which in this case is just print out bot user tag
-    async execute(client: Client) {
+    async execute(_: DiscordClient, client: Client) {
         if (!client.user) {
             throw new Error("client.user is null");
         }
@@ -95,6 +97,7 @@ export default {
             updateSubsectionRoles(member);
         }
 
+        await verificationOnReady(client);
         // Initialize the door status code (see door-status.ts)
         initDoorStatus(client);
     },
