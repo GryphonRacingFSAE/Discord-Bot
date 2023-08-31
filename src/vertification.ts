@@ -33,12 +33,11 @@ type SpreadsheetRow = {
 
 export const members_to_monitor: Set<string> = new Set();
 const processing_members_code: Map<string, { email: string; id: string; time_stamp: number }> = new Map(); // Members and their codes
-const FILE_PATH = "~/Documents/onedrive-sync/Verification Team Roster.xlsx";
-const DEBUG_FILE_PATH = "./verification.xlsx"; // For debugging purposes only
+const FILE_PATH = "./onedrive/Verification Team Roster.xlsx";
 const FORM_LINK = "https://forms.office.com/r/pTGwYxBTHq";
 
 let verification_spreadsheet: Array<Verification>;
-// Spreadsheet column names are different from what we use internally
+// Spreadsheet column names are different from what we use internally, so we should convert between them
 const COLUMN_NAME_MAPPING: { [key: string]: string } = {
     name: "Name",
     email: "Email",
@@ -54,26 +53,20 @@ for (const [key, value] of Object.entries(COLUMN_NAME_MAPPING)) {
 
 // Pulls from the spreadsheet
 function pullSpreadsheet() {
-    let used_file_path = DEBUG_FILE_PATH; // Initialize with the default path
-
     // Check if the main file exists
-    if (fs.existsSync(FILE_PATH)) {
-        used_file_path = FILE_PATH;
-    } else if (fs.existsSync(DEBUG_FILE_PATH)) {
-        used_file_path = DEBUG_FILE_PATH;
-    } else {
+    if (!fs.existsSync(FILE_PATH)) {
         const ws = utils.aoa_to_sheet([
             ["name", "email", "discord_identifier", "payment_status"], // Column headers
         ]);
         const wb = utils.book_new();
         utils.book_append_sheet(wb, ws, "Sheet1");
-        writeFile(wb, used_file_path);
+        writeFile(wb, FILE_PATH);
         verification_spreadsheet = [];
         return;
     }
 
     // Read from the chosen path
-    const workbook = readFile(used_file_path);
+    const workbook = readFile(FILE_PATH);
     const sheet_name_list = workbook.SheetNames;
     verification_spreadsheet = (utils.sheet_to_json(workbook.Sheets[sheet_name_list[0]]) as SpreadsheetRow[]).map((row: SpreadsheetRow) => {
         const new_row: Verification = {
@@ -95,13 +88,6 @@ pullSpreadsheet();
 
 // Push to the spreadsheet file
 function pushSpreadsheet() {
-    let used_file_path = DEBUG_FILE_PATH; // Initialize with the default path
-
-    // Check if the main file exists
-    if (fs.existsSync(FILE_PATH)) {
-        used_file_path = FILE_PATH;
-    }
-
     const workbook = utils.book_new();
     const translated_spreadsheet = verification_spreadsheet.map((row: Verification) => {
         const new_row: SpreadsheetRow = {};
@@ -118,7 +104,7 @@ function pushSpreadsheet() {
     utils.book_append_sheet(workbook, worksheet, "Sheet1");
 
     // Write the workbook to the filesystem
-    writeFile(workbook, used_file_path);
+    writeFile(workbook, FILE_PATH);
 }
 
 // Get all members in the guild who do not have the verification role
