@@ -36,7 +36,13 @@ export default {
             const member = guild.members.cache.get(interaction.user.id);
             const captain_role = guild.roles.cache.find(role => role.name === "Captain");
             const lead_role = guild.roles.cache.find(role => role.name === "Leads");
-            if (!member || !captain_role || !lead_role || !(member.roles.cache.has(captain_role.id) || member.roles.cache.has(lead_role.id))) {
+            const bot_manager_role = guild.roles.cache.find(role => role.name === "Bot Developer");
+            if (
+                !member ||
+                (!(captain_role && member.roles.cache.has(captain_role.id)) &&
+                    !(lead_role && member.roles.cache.has(lead_role.id)) &&
+                    !(bot_manager_role && member.roles.cache.has(bot_manager_role.id)))
+            ) {
                 await interaction.reply({ content: "You do not have the necessary permissions to use this command", ephemeral: true });
                 return;
             }
