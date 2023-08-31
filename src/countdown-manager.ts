@@ -45,6 +45,19 @@ function updateMessageDictionary() {
     fs.writeFileSync("./resources/messages.json", JSON.stringify(message_dictionary));
 }
 
+// Get # of messages between the given message and the most recent. Max is 100.
+async function getMessagesBetween(original_message: Message, channel: TextChannel): Promise<number> {
+    const messages = await channel.messages.fetch({ limit: 100 });
+    let count = 0;
+    for (const [, message] of messages) {
+        if (message.id == original_message.id) {
+            return count;
+        }
+        count++;
+    }
+    return count;
+}
+
 export async function updateMessage(
     client: Client,
     channel_id: string,
@@ -73,36 +86,56 @@ export async function updateMessage(
         }
         return;
     }
+    {
+        // Sort countdowns based on what is newest
+        const countdown_events = [];
+        for (const countdown_name in message_dictionary[channel_id].events) {
+            const countdown = message_dictionary[channel_id].events[countdown_name];
+            const delta_time = countdown.event_date.getTime() - now.getTime();
+            countdown_events.push({
+                name: countdown_name,
+                event: countdown,
+                delta_time,
+            });
+        }
+        // Sort newest first
+        countdown_events.sort((a, b) => a.delta_time - b.delta_time);
 
-    // Iterate through each countdown and add a field with proper formatting to indicate time
-    for (const countdown_name in message_dictionary[channel_id].events) {
-        const countdown = message_dictionary[channel_id].events[countdown_name];
-        const delta_time = countdown.event_date.getTime() - now.getTime();
-        const event_locale = countdown.event_date.toLocaleDateString(`en-CA`, { year: `numeric`, month: `long`, day: `numeric` });
-        if (delta_time <= 0) {
-            // Remove any events that have already happened
-            delete message_dictionary[channel_id];
-            //fields.push({ name: countdown_name, value: `${event_locale}\n**This event has already started**` });
-        } else {
-            let time_left;
-            const delta_seconds = delta_time / 1000;
-            const delta_minutes = delta_seconds / 60;
-            const delta_hours = delta_minutes / 60;
-            const delta_days = delta_hours / 24;
-            const delta_weeks = delta_days / 7;
-            const delta_months = delta_days / 30;
-
-            if (delta_months > 2) {
-                time_left = Math.round(delta_months) + " month(s)";
-            } else if (delta_weeks > 2) {
-                time_left = Math.round(delta_weeks) + " week(s)";
-            } else if (delta_days > 3) {
-                time_left = Math.round(delta_days * 10) / 10 + " day(s)";
+        // Iterate through each countdown and add a field with proper formatting to indicate time
+        for (const { name, event, delta_time } of countdown_events) {
+            const event_locale = event.event_date.toLocaleDateString(`en-CA`, {
+                year: `numeric`,
+                month: `long`,
+                day: `numeric`,
+            });
+            if (delta_time <= 0) {
+                // Remove any events that have already happened
+                delete message_dictionary[channel_id];
+                //fields.push({ name: countdown_name, value: `${event_locale}\n**This event has already started**` });
             } else {
-                time_left = Math.round(delta_hours * 10000) / 10000 + " hour(s)";
-            }
+                let time_left;
+                const delta_seconds = delta_time / 1000;
+                const delta_minutes = delta_seconds / 60;
+                const delta_hours = delta_minutes / 60;
+                const delta_days = delta_hours / 24;
+                const delta_weeks = delta_days / 7;
+                const delta_months = delta_days / 30;
 
-            fields.push({ name: `${countdown_name}`, value: `[${event_locale}](${countdown.event_link})\nTime remaining: ${time_left}` });
+                if (delta_months > 2) {
+                    time_left = Math.round(delta_months) + " month(s)";
+                } else if (delta_weeks > 2) {
+                    time_left = Math.round(delta_weeks) + " week(s)";
+                } else if (delta_days > 3) {
+                    time_left = Math.round(delta_days * 10) / 10 + " day(s)";
+                } else {
+                    time_left = Math.round(delta_hours * 10000) / 10000 + " hour(s)";
+                }
+
+                fields.push({
+                    name: `${name}`,
+                    value: `[${event_locale}](${event.event_link})\nTime remaining: ${time_left}`,
+                });
+            }
         }
     }
     updateMessageDictionary();
@@ -150,7 +183,12 @@ export async function updateMessage(
     // If the message is older than 24 hours, delete and make a new one
     // or if the force_new_message flag is enabled
     try {
-        if ((message !== null && now.getTime() - message.createdTimestamp >= 1000 * 60 * 60 * 24) || force_new_message) {
+        if (
+            (message !== null &&
+                (now.getTime() - message.createdTimestamp >= 1000 * 60 * 60 * 24 ||
+                    (now.getTime() - message.createdTimestamp >= 1000 * 60 * 10 && (await getMessagesBetween(message, channel)) >= 100))) ||
+            force_new_message
+        ) {
             if (message) {
                 await message.delete();
             }
