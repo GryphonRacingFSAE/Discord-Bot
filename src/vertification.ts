@@ -27,37 +27,86 @@ type Verification = {
     discord_identifier: string;
     payment_status: string;
 };
+type SpreadsheetRow = {
+    [key: string]: string | number;
+};
 
 export const members_to_monitor: Set<string> = new Set();
 const processing_members_code: Map<string, { email: string; id: string; time_stamp: number }> = new Map(); // Members and their codes
-const FILE_PATH = "./onedrive/verification.xlsx";
+const FILE_PATH = "~/Documents/onedrive-sync/Verification Team Roster.xlsx";
+const DEBUG_FILE_PATH = "./verification.xlsx"; // For debugging purposes only
 const FORM_LINK = "https://forms.office.com/r/pTGwYxBTHq";
 
 let verification_spreadsheet: Array<Verification>;
+// Spreadsheet column names are different from what we use internally
+const COLUMN_NAME_MAPPING: { [key: string]: string } = {
+    name: "Name",
+    email: "Email",
+    discord_identifier: "Discord ID",
+    payment_status: "Has Paid",
+};
+
+// Reverse mapping for easier look-up
+const REVERSE_COLUMN_NAME_MAPPING: { [key: string]: string } = {};
+for (const [key, value] of Object.entries(COLUMN_NAME_MAPPING)) {
+    REVERSE_COLUMN_NAME_MAPPING[value] = key;
+}
+
 // Pulls from the spreadsheet
 function pullSpreadsheet() {
+    let used_file_path = DEBUG_FILE_PATH; // Initialize with the default path
+
+    // Check if the main file exists
     if (fs.existsSync(FILE_PATH)) {
-        // Read the spreadsheet if it exists
-        const workbook = readFile(FILE_PATH);
-        const sheetNameList = workbook.SheetNames;
-        verification_spreadsheet = utils.sheet_to_json(workbook.Sheets[sheetNameList[0]]);
+        used_file_path = FILE_PATH;
+    } else if (fs.existsSync(DEBUG_FILE_PATH)) {
+        used_file_path = DEBUG_FILE_PATH;
     } else {
-        // If the file doesn't exist, create it with the necessary columns
         const ws = utils.aoa_to_sheet([
             ["name", "email", "discord_identifier", "payment_status"], // Column headers
         ]);
         const wb = utils.book_new();
         utils.book_append_sheet(wb, ws, "Sheet1");
-        writeFile(wb, FILE_PATH);
+        writeFile(wb, used_file_path);
         verification_spreadsheet = [];
+        return;
     }
+
+    // Read from the chosen path
+    const workbook = readFile(used_file_path);
+    const sheet_name_list = workbook.SheetNames;
+    verification_spreadsheet = (utils.sheet_to_json(workbook.Sheets[sheet_name_list[0]]) as SpreadsheetRow[]).map((row: SpreadsheetRow) => {
+        const new_row: Verification = {
+            name: "",
+            email: "",
+            discord_identifier: "",
+            payment_status: "",
+        };
+        for (const [key, value] of Object.entries(row)) {
+            const translatedKey = REVERSE_COLUMN_NAME_MAPPING[key];
+            if (translatedKey) {
+                new_row[translatedKey as keyof Verification] = String(value);
+            }
+        }
+        return new_row;
+    });
 }
 pullSpreadsheet();
 
 // Push to the spreadsheet file
 function pushSpreadsheet() {
     const workbook = utils.book_new();
-    const worksheet = utils.json_to_sheet(verification_spreadsheet);
+    const translated_spreadsheet = verification_spreadsheet.map((row: Verification) => {
+        const new_row: SpreadsheetRow = {};
+        for (const [key, value] of Object.entries(row)) {
+            const translated_key = COLUMN_NAME_MAPPING[key];
+            if (translated_key) {
+                new_row[translated_key as keyof SpreadsheetRow] = String(value);
+            }
+        }
+        return new_row;
+    });
+    const worksheet = utils.json_to_sheet(translated_spreadsheet);
 
     utils.book_append_sheet(workbook, worksheet, "Sheet1");
 
