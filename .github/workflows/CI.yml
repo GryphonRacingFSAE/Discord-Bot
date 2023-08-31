@@ -66,10 +66,10 @@ jobs:
           DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
           EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-          EMAIL_SERVICE: ${{ env.EMAIL_SERVICE }}
-          EMAIL_HOST: ${{ env.EMAIL_HOST }}
-          EMAIL_PORT: ${{ env.EMAIL_PORT }}
-          VERIFICATION_CHANNEL: ${{ env.VERIFICATION_CHANNEL }}
+          EMAIL_SERVICE: ${{ vars.EMAIL_SERVICE }}
+          EMAIL_HOST: ${{ vars.EMAIL_HOST }}
+          EMAIL_PORT: ${{ vars.EMAIL_PORT }}
+          VERIFICATION_CHANNEL: ${{ vars.VERIFICATION_CHANNEL }}
         run: |
           docker build . --tag gracingbot
           docker stop GRacingBot || true # It's okay if these fail, as the bot might not be active or existant
