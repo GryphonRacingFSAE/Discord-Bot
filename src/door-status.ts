@@ -47,7 +47,6 @@ export async function initDoorStatus(client: Client) {
             req.on("end", async () => {
                 // Parse the received JSON data
                 const parsed_data = JSON.parse(body);
-                console.log("Received data:", parsed_data);
 
                 // Update the last update time
                 last_update_time = Date.now();
@@ -57,6 +56,7 @@ export async function initDoorStatus(client: Client) {
                 if (new_door_state !== previous_door_state) {
                     // Update door status message based on the received state
                     if (channel) await sendDoorStatusMessage(channel, new_door_state === 1);
+                    console.log("Door state changed:", new_door_state);
                     previous_door_state = new_door_state;
                 }
 
