@@ -47,7 +47,6 @@ export async function initDoorStatus(client: Client) {
             req.on("end", async () => {
                 // Parse the received JSON data
                 const parsed_data = JSON.parse(body);
-                console.log("Received data:", parsed_data);
 
                 // Update the last update time
                 last_update_time = Date.now();
