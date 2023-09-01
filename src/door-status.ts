@@ -56,7 +56,7 @@ export async function initDoorStatus(client: Client) {
                 if (new_door_state !== previous_door_state) {
                     // Update door status message based on the received state
                     if (channel) await sendDoorStatusMessage(channel, new_door_state === 1);
-                    console.log("Door state changed:", new_door_state)
+                    console.log("Door state changed:", new_door_state);
                     previous_door_state = new_door_state;
                 }
 
