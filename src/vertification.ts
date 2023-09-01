@@ -241,7 +241,7 @@ export async function handleVerification(message: Message) {
                 html: `Hello!<br>Here is your verification code: <strong>${verification_code}</strong>.<br>Your code will expire in 5 minutes.<br><strong>Do not share your verification code with others. We don't ask for passwords, addresses, credit card information, SSNs, and/or tokens.</strong>`,
             })
             .catch(err => {
-                console.log("Error sending email", err)
+                console.log("Error sending email", err);
                 message.reply({ content: "Failed to send email address. Make sure your email address is valid." });
                 return;
             });
