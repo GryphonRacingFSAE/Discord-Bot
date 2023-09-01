@@ -74,4 +74,4 @@ jobs:
           docker build . --tag gracingbot
           docker stop GRacingBot || true # It's okay if these fail, as the bot might not be active or existant
           docker rm GRacingBot || true
-          docker run -d --restart unless-stopped -e DISCORD_BOT_TOKEN -e DISCORD_APPLICATION_ID -e DISCORD_GUILD_ID -e EMAIL_USERNAME -e EMAIL_PASSWORD -e EMAIL_HOST -e EMAIL_SERVICE -e EMAIL_PORT -e VERIFICATION_CHANNEL -p 80:80 --name GRacingBot -v /home/grc0/GRacingBotFiles:/usr/app/resources -v "~/OneDrive/Gryphon Racing Administrative/Team Roster":/usr/app/onedrive gracingbot
+          docker run -d --restart unless-stopped -e DISCORD_BOT_TOKEN -e DISCORD_APPLICATION_ID -e DISCORD_GUILD_ID -e EMAIL_USERNAME -e EMAIL_PASSWORD -e EMAIL_HOST -e EMAIL_SERVICE -e EMAIL_PORT -e VERIFICATION_CHANNEL -p 80:80 --name GRacingBot -v /home/grc0/GRacingBotFiles:/usr/app/resources -v "/home/grc0/OneDrive/Gryphon Racing Administrative/Team Roster":/usr/app/onedrive gracingbot
