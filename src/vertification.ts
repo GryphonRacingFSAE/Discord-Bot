@@ -312,7 +312,7 @@ export async function handleVerificationDM(client: Client, message: Message) {
         // Update spreadsheet
         const user_row = verification_spreadsheet.find(data => data.email === verification_code.email)!;
         user_row.discord_identifier = message.author.tag;
-        const push_promise = pushSpreadsheet();
+        await pushSpreadsheet();
         processing_members_code.delete(message.author.id);
         await message.reply(`Verification successful! Welcome aboard, ${user_row.name}.`);
 
