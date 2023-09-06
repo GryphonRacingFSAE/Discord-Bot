@@ -36,6 +36,7 @@ type Verification = {
     email: string;
     discord_identifier: string;
     payment_status: string;
+    in_gryphlife: string;
 };
 type SpreadsheetRow = {
     [key: string]: string | number;
@@ -53,6 +54,7 @@ const COLUMN_NAME_MAPPING: { [key: string]: string } = {
     email: "Email",
     discord_identifier: "Discord ID",
     payment_status: "Has Paid",
+    in_gryphlife: "In GryphLife",
 };
 
 // Reverse mapping for easier look-up
@@ -66,7 +68,7 @@ function pullSpreadsheet() {
     // Check if the main file exists
     if (!fs.existsSync(FILE_PATH)) {
         const ws = utils.aoa_to_sheet([
-            ["name", "email", "discord_identifier", "payment_status"], // Column headers
+            ["name", "email", "discord_identifier", "payment_status", "in_gryphlife"], // Column headers
         ]);
         const wb = utils.book_new();
         utils.book_append_sheet(wb, ws, "Sheet1");
@@ -84,13 +86,11 @@ function pullSpreadsheet() {
             email: "",
             discord_identifier: "",
             payment_status: "",
+            in_gryphlife: "",
         };
         for (const [key, value] of Object.entries(row)) {
             const translatedKey = REVERSE_COLUMN_NAME_MAPPING[key];
             if (translatedKey) {
-                if (translatedKey == "email") {
-                    console.log(value);
-                }
                 new_row[translatedKey as keyof Verification] = String(value);
             }
         }
@@ -98,9 +98,12 @@ function pullSpreadsheet() {
     });
 }
 pullSpreadsheet();
+fs.watchFile(FILE_PATH, () => {
+    pullSpreadsheet();
+});
 
 // Push to the spreadsheet file
-function pushSpreadsheet() {
+async function pushSpreadsheet() {
     const workbook = utils.book_new();
     const translated_spreadsheet = verification_spreadsheet.map((row: Verification) => {
         const new_row: SpreadsheetRow = {};
@@ -116,8 +119,19 @@ function pushSpreadsheet() {
 
     utils.book_append_sheet(workbook, worksheet, "Sheet1");
 
+    let retries: number = 0; // MAX RETRIES - 5
+
     // Write the workbook to the filesystem
-    writeFile(workbook, FILE_PATH);
+    while (retries < 5) {
+        try {
+            writeFile(workbook, FILE_PATH);
+            break;
+        } catch (_) {
+            // Failed to write to file usually due to something writing it already. Override it :D
+            retries += 1;
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before trying again
+        }
+    }
 }
 
 // Get all members in the guild who do not have the verification role
@@ -229,7 +243,7 @@ export async function handleVerification(message: Message) {
         // Make sure the email isn't already verified
         // If already verified make sure it's the same discord id
         const entry = verification_spreadsheet.find(entry => entry.email === message.content);
-        if (entry && entry.discord_identifier !== message.author.id) {
+        if (entry && entry.discord_identifier !== message.author.tag) {
             await message.reply("Email is already registered with a different account's discord ID.");
             return;
         }
@@ -261,7 +275,7 @@ export async function handleVerification(message: Message) {
                 message.reply({ content: "Failed to send email address. Make sure your email address is valid." });
                 return;
             });
-        await message.reply({ content: "Please **DM the bot** with a 7 digit code sent to the email address." });
+        await message.reply({ content: "Please **DM the bot** with a 7 digit code sent to the email address. Type `cancel` if you wish to cancel the verification code." });
     } else if (!user_row) {
         await message.reply({ content: `Your email is not registered. You have not submitted your application to the [form](<${FORM_LINK}>).` });
     } else {
@@ -281,6 +295,12 @@ export async function handleVerificationDM(client: Client, message: Message) {
         processing_members_code.delete(message.author.id);
         return;
     }
+    if (message.content === "cancel") {
+        // Verification cancelled
+        processing_members_code.delete(message.author.id);
+        await message.reply("Verification code cancelled. Please resend if your email address to get a new one");
+        return;
+    }
     if (verification_code.id === message.content) {
         const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
         const member = await guild.members.fetch(message.author.id);
@@ -289,12 +309,13 @@ export async function handleVerificationDM(client: Client, message: Message) {
         // Update spreadsheet
         const user_row = verification_spreadsheet.find(data => data.email === verification_code.email)!;
         user_row.discord_identifier = message.author.tag;
-        pushSpreadsheet();
+        const push_promise = pushSpreadsheet();
         processing_members_code.delete(message.author.id);
         await message.reply(`Verification successful! Welcome aboard, ${user_row.name}.`);
 
         const channel = guild.channels.resolve(process.env.VERIFICATION_CHANNEL!) as TextChannel;
         await channel.send(`${message.author.tag} has been successfully verified`);
+        await push_promise;
     } else {
         await message.reply("The code you entered is not correct. Please enter the **7 digit code.**");
     }
