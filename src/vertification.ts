@@ -88,6 +88,9 @@ function pullSpreadsheet() {
         for (const [key, value] of Object.entries(row)) {
             const translatedKey = REVERSE_COLUMN_NAME_MAPPING[key];
             if (translatedKey) {
+                if (translatedKey == "email") {
+                    console.log(value);
+                }
                 new_row[translatedKey as keyof Verification] = String(value);
             }
         }
@@ -217,7 +220,20 @@ function validateMembership(user_row: Verification): boolean {
 
 export async function handleVerification(message: Message) {
     // Ignore bots + users that are verified
-    if (message.author.bot || !members_to_monitor.has(message.author.id)) return;
+    if (message.author.bot || !members_to_monitor.has(message.author.id)) {
+        if (!message.author.bot) {
+            await message.reply("You are already verified");
+        }
+        return;
+    } else {
+        // Make sure the email isn't already verified
+        // If already verified make sure it's the same discord id
+        const entry = verification_spreadsheet.find(entry => entry.email === message.content);
+        if (entry && entry.discord_identifier !== message.author.id) {
+            await message.reply("Email is already registered with a different account's discord ID.");
+            return;
+        }
+    }
     const email = message.content;
     if (!validateEmail(email)) {
         await message.reply({ content: "Please send a valid email address. **Only @uoguelph.ca** domains are accepted." });
