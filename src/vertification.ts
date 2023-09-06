@@ -301,7 +301,7 @@ export async function handleVerificationDM(client: Client, message: Message) {
     if (message.content === "cancel") {
         // Verification cancelled
         processing_members_code.delete(message.author.id);
-        await message.reply("Verification code cancelled. Please resend if your email address to get a new one");
+        await message.reply("Verification code cancelled. Please resend your email address to get a new one");
         return;
     }
     if (verification_code.id === message.content) {
