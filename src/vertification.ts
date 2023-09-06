@@ -318,7 +318,6 @@ export async function handleVerificationDM(client: Client, message: Message) {
 
         const channel = guild.channels.resolve(process.env.VERIFICATION_CHANNEL!) as TextChannel;
         await channel.send(`${message.author.tag} has been successfully verified`);
-        await push_promise;
     } else {
         await message.reply("The code you entered is not correct. Please enter the **7 digit code.**");
     }
