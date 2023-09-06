@@ -127,9 +127,10 @@ async function pushSpreadsheet() {
         try {
             writeFile(workbook, FILE_PATH);
             break;
-        } catch (_) {
+        } catch (err) {
             // Failed to write to file usually due to something writing it already. Override it :D
             retries += 1;
+            console.log(`Failed to write to ${FILE_PATH}. Due to: `, err);
             await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before trying again
         }
     }
