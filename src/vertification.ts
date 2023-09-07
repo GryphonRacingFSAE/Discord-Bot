@@ -44,9 +44,11 @@ type SpreadsheetRow = {
 
 export const members_to_monitor: Set<string> = new Set();
 const processing_members_code: Map<string, { email: string; id: string; time_stamp: number }> = new Map(); // Members and their codes
-const FILE_PATH = "./onedrive/Verification Team Roster.xlsx";
-const FORM_LINK = "https://forms.office.com/r/pTGwYxBTHq";
-const GRYPHLIFE_LINK = "https://gryphlife.uoguelph.ca/organization/gryphonracing";
+const FILE_PATH: string = "./onedrive/Verification Team Roster.xlsx";
+const FORM_LINK: string = "https://forms.office.com/r/pTGwYxBTHq";
+const GRYPHLIFE_LINK: string = "https://gryphlife.uoguelph.ca/organization/gryphonracing";
+const PAYMENT_ACCEPT: string = "paid"; // What needs to be pu in the payment_status column to be considered as paid
+const GRYPHLIFE_ACCEPT: string = "yes"; // What needs to be put in the in_gryphlife column to be considered as accepted
 
 let verification_spreadsheet: Array<Verification>;
 // Spreadsheet column names are different from what we use internally, so we should convert between them
@@ -231,7 +233,7 @@ function validateMembership(user_row: Verification): boolean {
         return true;
     }
 
-    return user_row.payment_status === "paid";
+    return user_row.payment_status === PAYMENT_ACCEPT;
 }
 
 export async function handleVerification(message: Message) {
@@ -257,7 +259,7 @@ export async function handleVerification(message: Message) {
     }
     // Validate membership
     const user_row = verification_spreadsheet.find(data => data.email === email);
-    if (user_row && validateMembership(user_row) && user_row.in_gryphlife === "yes") {
+    if (user_row && validateMembership(user_row) && user_row.in_gryphlife === GRYPHLIFE_ACCEPT) {
         //processing_members.add(message.author.id);
         const verification_code = generateVerificationCode(message.author.id);
         processing_members_code.set(message.author.id, {
@@ -280,10 +282,12 @@ export async function handleVerification(message: Message) {
         await message.reply({ content: "Please **DM the bot** with a 7 digit code sent to the email address. Type `cancel` if you wish to cancel the verification code." });
     } else if (!user_row) {
         await message.reply({ content: `Your email is not registered. You have not submitted your application to the [form](<${FORM_LINK}>).` });
-    } else if (user_row.in_gryphlife !== "yes") {
+    } else if (user_row.in_gryphlife !== GRYPHLIFE_ACCEPT && user_row.payment_status === PAYMENT_ACCEPT) {
         await message.reply({ content: `You are not in the [GryphLife](<${GRYPHLIFE_LINK}>) organization.` });
-    } else {
+    } else if (user_row.in_gryphlife === GRYPHLIFE_ACCEPT && user_row.payment_status !== PAYMENT_ACCEPT) {
         await message.reply({ content: "Your email is registered, but you have not paid yet." });
+    } else if (user_row.in_gryphlife !== GRYPHLIFE_ACCEPT && user_row.payment_status !== PAYMENT_ACCEPT) {
+        await message.reply({ content: `You have not joined [GryphLife]<${GRYPHLIFE_LINK}> and have not paid yet.` });
     }
 }
 
