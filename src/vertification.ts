@@ -36,6 +36,7 @@ type Verification = {
     email: string;
     discord_identifier: string;
     payment_status: string;
+    in_gryphlife: string;
 };
 type SpreadsheetRow = {
     [key: string]: string | number;
@@ -43,8 +44,11 @@ type SpreadsheetRow = {
 
 export const members_to_monitor: Set<string> = new Set();
 const processing_members_code: Map<string, { email: string; id: string; time_stamp: number }> = new Map(); // Members and their codes
-const FILE_PATH = "./onedrive/Verification Team Roster.xlsx";
-const FORM_LINK = "https://forms.office.com/r/pTGwYxBTHq";
+const FILE_PATH: string = "./onedrive/Verification Team Roster.xlsx";
+const FORM_LINK: string = "https://forms.office.com/r/pTGwYxBTHq";
+const GRYPHLIFE_LINK: string = "https://gryphlife.uoguelph.ca/organization/gryphonracing";
+const PAYMENT_ACCEPT: string = "paid"; // What needs to be pu in the payment_status column to be considered as paid
+const GRYPHLIFE_ACCEPT: string = "yes"; // What needs to be put in the in_gryphlife column to be considered as accepted
 
 let verification_spreadsheet: Array<Verification>;
 // Spreadsheet column names are different from what we use internally, so we should convert between them
@@ -53,6 +57,7 @@ const COLUMN_NAME_MAPPING: { [key: string]: string } = {
     email: "Email",
     discord_identifier: "Discord ID",
     payment_status: "Has Paid",
+    in_gryphlife: "In GryphLife",
 };
 
 // Reverse mapping for easier look-up
@@ -66,7 +71,7 @@ function pullSpreadsheet() {
     // Check if the main file exists
     if (!fs.existsSync(FILE_PATH)) {
         const ws = utils.aoa_to_sheet([
-            ["name", "email", "discord_identifier", "payment_status"], // Column headers
+            ["name", "email", "discord_identifier", "payment_status", "in_gryphlife"], // Column headers
         ]);
         const wb = utils.book_new();
         utils.book_append_sheet(wb, ws, "Sheet1");
@@ -84,6 +89,7 @@ function pullSpreadsheet() {
             email: "",
             discord_identifier: "",
             payment_status: "",
+            in_gryphlife: "",
         };
         for (const [key, value] of Object.entries(row)) {
             const translatedKey = REVERSE_COLUMN_NAME_MAPPING[key];
@@ -95,9 +101,12 @@ function pullSpreadsheet() {
     });
 }
 pullSpreadsheet();
+fs.watchFile(FILE_PATH, () => {
+    pullSpreadsheet();
+});
 
 // Push to the spreadsheet file
-function pushSpreadsheet() {
+async function pushSpreadsheet() {
     const workbook = utils.book_new();
     const translated_spreadsheet = verification_spreadsheet.map((row: Verification) => {
         const new_row: SpreadsheetRow = {};
@@ -113,8 +122,20 @@ function pushSpreadsheet() {
 
     utils.book_append_sheet(workbook, worksheet, "Sheet1");
 
+    let retries: number = 0; // MAX RETRIES - 5
+
     // Write the workbook to the filesystem
-    writeFile(workbook, FILE_PATH);
+    while (retries < 5) {
+        try {
+            writeFile(workbook, FILE_PATH);
+            break;
+        } catch (err) {
+            // Failed to write to file usually due to something writing it already. Override it :D
+            retries += 1;
+            console.log(`Failed to write to ${FILE_PATH}. Due to: `, err);
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before trying again
+        }
+    }
 }
 
 // Get all members in the guild who do not have the verification role
@@ -212,12 +233,25 @@ function validateMembership(user_row: Verification): boolean {
         return true;
     }
 
-    return user_row.payment_status === "paid";
+    return user_row.payment_status === PAYMENT_ACCEPT;
 }
 
 export async function handleVerification(message: Message) {
     // Ignore bots + users that are verified
-    if (message.author.bot || !members_to_monitor.has(message.author.id)) return;
+    if (message.author.bot || !members_to_monitor.has(message.author.id)) {
+        if (!message.author.bot) {
+            await message.reply("You are already verified");
+        }
+        return;
+    } else {
+        // Make sure the email isn't already verified
+        // If already verified make sure it's the same discord id
+        const entry = verification_spreadsheet.find(entry => entry.email === message.content);
+        if (entry && entry.discord_identifier !== message.author.tag) {
+            await message.reply("Email is already registered with a different account's discord ID.");
+            return;
+        }
+    }
     const email = message.content;
     if (!validateEmail(email)) {
         await message.reply({ content: "Please send a valid email address. **Only @uoguelph.ca** domains are accepted." });
@@ -225,7 +259,7 @@ export async function handleVerification(message: Message) {
     }
     // Validate membership
     const user_row = verification_spreadsheet.find(data => data.email === email);
-    if (user_row && validateMembership(user_row)) {
+    if (user_row && validateMembership(user_row) && user_row.in_gryphlife === GRYPHLIFE_ACCEPT) {
         //processing_members.add(message.author.id);
         const verification_code = generateVerificationCode(message.author.id);
         processing_members_code.set(message.author.id, {
@@ -245,11 +279,15 @@ export async function handleVerification(message: Message) {
                 message.reply({ content: "Failed to send email address. Make sure your email address is valid." });
                 return;
             });
-        await message.reply({ content: "Please **DM the bot** with a 7 digit code sent to the email address." });
+        await message.reply({ content: "Please **DM the bot** with a 7 digit code sent to the email address. Type `cancel` if you wish to cancel the verification code." });
     } else if (!user_row) {
         await message.reply({ content: `Your email is not registered. You have not submitted your application to the [form](<${FORM_LINK}>).` });
-    } else {
+    } else if (user_row.in_gryphlife !== GRYPHLIFE_ACCEPT && user_row.payment_status === PAYMENT_ACCEPT) {
+        await message.reply({ content: `You are not in the [GryphLife](<${GRYPHLIFE_LINK}>) organization.` });
+    } else if (user_row.in_gryphlife === GRYPHLIFE_ACCEPT && user_row.payment_status !== PAYMENT_ACCEPT) {
         await message.reply({ content: "Your email is registered, but you have not paid yet." });
+    } else if (user_row.in_gryphlife !== GRYPHLIFE_ACCEPT && user_row.payment_status !== PAYMENT_ACCEPT) {
+        await message.reply({ content: `You have not joined [GryphLife]<${GRYPHLIFE_LINK}> and have not paid yet.` });
     }
 }
 
@@ -265,6 +303,12 @@ export async function handleVerificationDM(client: Client, message: Message) {
         processing_members_code.delete(message.author.id);
         return;
     }
+    if (message.content === "cancel") {
+        // Verification cancelled
+        processing_members_code.delete(message.author.id);
+        await message.reply("Verification code cancelled. Please resend your email address to get a new one");
+        return;
+    }
     if (verification_code.id === message.content) {
         const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
         const member = await guild.members.fetch(message.author.id);
@@ -273,7 +317,7 @@ export async function handleVerificationDM(client: Client, message: Message) {
         // Update spreadsheet
         const user_row = verification_spreadsheet.find(data => data.email === verification_code.email)!;
         user_row.discord_identifier = message.author.tag;
-        pushSpreadsheet();
+        await pushSpreadsheet();
         processing_members_code.delete(message.author.id);
         await message.reply(`Verification successful! Welcome aboard, ${user_row.name}.`);
 
