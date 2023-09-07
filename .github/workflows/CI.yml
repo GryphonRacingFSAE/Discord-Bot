@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v3
 
       - name: Install dependencies
@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
       - name: Setup PlatformIO
         run: pip install --upgrade platformio
@@ -56,7 +56,7 @@ jobs:
     runs-on: [ self-hosted, Linux, X64 ]
     needs: [Lint-Type-Build-Check-Bot, Lint-Build-Check-Door-Sensor]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # I installed docker using the docs here: https://docs.docker.com/desktop/install/ubuntu/
       - name: Deploy with Docker
