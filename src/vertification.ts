@@ -150,8 +150,8 @@ export async function verificationOnReady(client: Client) {
         }
     });
 
-    const verifiedRole = guild.roles.cache.find(role => role.name === "Verified");
-    if (!verifiedRole) return;
+    const verified_role = guild.roles.cache.find(role => role.name === "Verified");
+    if (!verified_role) return;
     // Start a new cron task to de-verify everyone who hasn't paid
     cron.schedule("0 0 * * *", () => {
         const current_month = new Date().getMonth();
@@ -163,9 +163,9 @@ export async function verificationOnReady(client: Client) {
                 if (member.roles.cache.some(role => role.name === "Verified") && !member.user.bot) {
                     // Search for row in spreadsheet
                     const user_row = verification_spreadsheet.find(data => data.discord_identifier === member.user.tag);
-                    if (!(user_row && validateMembership(user_row)) && member.roles.cache.has(verifiedRole.id)) {
+                    if (!(user_row && validateMembership(user_row)) && member.roles.cache.has(verified_role.id)) {
                         // User has Verified role + has not paid
-                        await member.roles.remove(verifiedRole);
+                        await member.roles.remove(verified_role);
                         // DM user that they have not paid and thus have been removed
                         await member.send("You have been unverified from UofGuelph Racing due to not paying the club fee.");
                         await channel.send(`${member.id} has been unverified.`);
