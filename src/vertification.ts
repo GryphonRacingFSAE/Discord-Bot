@@ -151,7 +151,10 @@ export async function verificationOnReady(client: Client) {
     });
 
     const verified_role = guild.roles.cache.find(role => role.name === "Verified");
-    if (!verified_role) return;
+    if (!verified_role) {
+        console.log("No verified role found!");
+        return;
+    }
     // Start a new cron task to de-verify everyone who hasn't paid
     cron.schedule("0 0 * * *", () => {
         const current_month = new Date().getMonth();
