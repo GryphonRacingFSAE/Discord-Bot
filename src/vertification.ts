@@ -100,10 +100,6 @@ function pullSpreadsheet() {
         return new_row;
     });
 }
-pullSpreadsheet();
-fs.watchFile(FILE_PATH, () => {
-    pullSpreadsheet();
-});
 
 // Push to the spreadsheet file
 async function pushSpreadsheet() {
@@ -142,6 +138,12 @@ async function pushSpreadsheet() {
 export async function verificationOnReady(client: Client) {
     const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
     if (!guild) return;
+
+    // Update spreadsheet
+    pullSpreadsheet();
+    fs.watchFile(FILE_PATH, () => {
+        pullSpreadsheet();
+    });
 
     const members = await guild.members.fetch();
     members.forEach(member => {
