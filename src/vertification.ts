@@ -172,7 +172,9 @@ export async function verificationOnReady(client: Client) {
                     }
                 }
             }),
-        );
+        ).catch(error => {
+            console.log("Failed to un-verify user due to:\n", error);
+        });
     });
 }
 
@@ -321,8 +323,12 @@ export async function handleVerificationDM(client: Client, message: Message) {
         processing_members_code.delete(message.author.id);
         await message.reply(`Verification successful! Welcome aboard, ${user_row.name}.`);
 
-        const channel = guild.channels.resolve(process.env.VERIFICATION_CHANNEL!) as TextChannel;
-        await channel.send(`${message.author.tag} has been successfully verified`);
+        try {
+            const channel = guild.channels.resolve(process.env.VERIFICATION_CHANNEL!) as TextChannel;
+            await channel.send(`${message.author.tag} has been successfully verified`);
+        } catch (err) {
+            console.log("Failed to send a message into verification channel due to:\n", err);
+        }
     } else {
         await message.reply("The code you entered is not correct. Please enter the **7 digit code.**");
     }
