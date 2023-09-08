@@ -97,7 +97,7 @@ export default {
             updateSubsectionRoles(member);
         }
 
-        watchVerificationSpreadsheetFile
+        watchVerificationSpreadsheetFile;
 
         await verificationOnReady(client);
         // Initialize the door status code (see door-status.ts)

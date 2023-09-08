@@ -1,4 +1,4 @@
-import {CommandInteraction, EmbedBuilder, GuildMember, SlashCommandBuilder} from "discord.js";
+import { CommandInteraction, EmbedBuilder, SlashCommandBuilder } from "discord.js";
 const FORM_LINK: string = "https://forms.office.com/r/pTGwYxBTHq";
 
 export default {
