@@ -150,8 +150,11 @@ export async function verificationOnReady(client: Client) {
         }
     });
 
-    const verifiedRole = guild.roles.cache.find(role => role.name === "Verified");
-    if (!verifiedRole) return;
+    const verified_role = guild.roles.cache.find(role => role.name === "Verified");
+    if (!verified_role) {
+        console.log("No verified role found!");
+        return;
+    }
     // Start a new cron task to de-verify everyone who hasn't paid
     cron.schedule("0 0 * * *", () => {
         const current_month = new Date().getMonth();
@@ -163,16 +166,18 @@ export async function verificationOnReady(client: Client) {
                 if (member.roles.cache.some(role => role.name === "Verified") && !member.user.bot) {
                     // Search for row in spreadsheet
                     const user_row = verification_spreadsheet.find(data => data.discord_identifier === member.user.tag);
-                    if (!(user_row && validateMembership(user_row)) && member.roles.cache.has(verifiedRole.id)) {
+                    if (!(user_row && validateMembership(user_row)) && member.roles.cache.has(verified_role.id)) {
                         // User has Verified role + has not paid
-                        await member.roles.remove(verifiedRole);
+                        await member.roles.remove(verified_role);
                         // DM user that they have not paid and thus have been removed
                         await member.send("You have been unverified from UofGuelph Racing due to not paying the club fee.");
                         await channel.send(`${member.id} has been unverified.`);
                     }
                 }
             }),
-        );
+        ).catch(error => {
+            console.log("Failed to un-verify user due to:\n", error);
+        });
     });
 }
 
@@ -261,7 +266,7 @@ export async function handleVerification(message: Message) {
     const user_row = verification_spreadsheet.find(data => data.email === email);
     if (user_row && validateMembership(user_row) && user_row.in_gryphlife === GRYPHLIFE_ACCEPT) {
         //processing_members.add(message.author.id);
-        const verification_code = generateVerificationCode(message.author.id);
+        const verification_code = generateVerificationCode(message.author.id + message.author.tag);
         processing_members_code.set(message.author.id, {
             email: email,
             id: verification_code,
@@ -321,8 +326,12 @@ export async function handleVerificationDM(client: Client, message: Message) {
         processing_members_code.delete(message.author.id);
         await message.reply(`Verification successful! Welcome aboard, ${user_row.name}.`);
 
-        const channel = guild.channels.resolve(process.env.VERIFICATION_CHANNEL!) as TextChannel;
-        await channel.send(`${message.author.tag} has been successfully verified`);
+        try {
+            const channel = guild.channels.resolve(process.env.VERIFICATION_CHANNEL!) as TextChannel;
+            await channel.send(`${message.author.tag} has been successfully verified`);
+        } catch (err) {
+            console.log("Failed to send a message into verification channel due to:\n", err);
+        }
     } else {
         await message.reply("The code you entered is not correct. Please enter the **7 digit code.**");
     }
