@@ -263,7 +263,7 @@ export async function handleVerification(message: Message) {
     const user_row = verification_spreadsheet.find(data => data.email === email);
     if (user_row && validateMembership(user_row) && user_row.in_gryphlife === GRYPHLIFE_ACCEPT) {
         //processing_members.add(message.author.id);
-        const verification_code = generateVerificationCode(message.author.id);
+        const verification_code = generateVerificationCode(message.author.id + message.author.tag);
         processing_members_code.set(message.author.id, {
             email: email,
             id: verification_code,
