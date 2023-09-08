@@ -252,7 +252,7 @@ export async function handleVerification(message: Message) {
         // Make sure the email isn't already verified
         // If already verified make sure it's the same discord id
         const entry = verification_spreadsheet.find(entry => entry.email === message.content);
-        if (entry && entry.discord_identifier !== message.author.tag) {
+        if (entry && entry.discord_identifier.length > 0 && entry.discord_identifier !== message.author.tag) {
             await message.reply("Email is already registered with a different account's discord ID.");
             return;
         }
