@@ -154,7 +154,7 @@ export async function updateMessage(
         if (error instanceof Error) {
             console.log("Error while fetching/editing message:", error.message);
 
-            if (error.message.includes("Unknown Message")) {
+            if (error.message.includes("Unknown Message") || error.message === "Missing Access") {
                 // Handle unknown message error separately if needed.
                 console.log("The message was not found.");
 
