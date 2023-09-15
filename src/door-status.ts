@@ -81,7 +81,7 @@ export async function initDoorStatus(client: Client) {
 async function sendDoorStatusMessage(channel: TextChannel, door_status: boolean | null) {
     try {
         // Fetch and delete all previous bot messages in the channel
-        await channel.messages.fetch();
+        await channel.messages.fetch({ limit: 50 });
         const messages_to_delete = channel.messages.cache.filter(message => message.author.bot);
         await channel.bulkDelete(messages_to_delete);
 
