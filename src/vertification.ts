@@ -157,7 +157,7 @@ export async function verificationOnReady(client: Client) {
         console.log("No verified role found!");
         return;
     }
-    // Start a new cron task to de-verify everyone who hasn't paid
+    // Start a new cron task to de-verify everyone who hasn't paid or TODO: verify those whose status has changed
     cron.schedule("0 0 * * *", () => {
         const current_month = new Date().getMonth();
         if (!(current_month >= 5 && current_month <= 8)) return;
@@ -226,9 +226,8 @@ export function validateEmail(email: string): boolean {
         )
     ) {
         return email.endsWith("@uoguelph.ca");
-    } else {
-        return false;
     }
+    return false;
 }
 
 // If it is between July-September, allow people who have not paid in. Otherwise,
@@ -250,23 +249,37 @@ export async function handleVerification(message: Message) {
             await message.reply("You are already verified");
         }
         return;
-    } else {
-        // Make sure the email isn't already verified
-        // If already verified make sure it's the same discord id
-        const entry = verification_spreadsheet.find(entry => entry.email === message.content);
-        if (entry && entry.discord_identifier.length > 0 && entry.discord_identifier !== message.author.tag) {
-            await message.reply("Email is already registered with a different account's discord ID.");
-            return;
-        }
     }
+
+    // Make sure the email isn't already verified
+    // If already verified make sure it's the same discord id
+    const entry = verification_spreadsheet.find(entry => entry.email === message.content);
+    if (entry && entry.discord_identifier.length > 0 && entry.discord_identifier !== message.author.tag) {
+        await message.reply("Email is already registered with a different account's discord ID, please contact a @Bot Developer to resolve this issue.");
+        return;
+    }
+
     const email = message.content;
     if (!validateEmail(email)) {
         await message.reply({ content: "Please send a valid email address. **Only @uoguelph.ca** domains are accepted." });
         return;
     }
+
     // Validate membership
     const user_row = verification_spreadsheet.find(data => data.email === email);
-    if (user_row && validateMembership(user_row) && user_row.in_gryphlife === GRYPHLIFE_ACCEPT) {
+    console.log(message.author, "verifying with: ", user_row);
+
+    if (!user_row) {
+        await message.reply({ content: `Your email is not yet registered. You may have not submitted your application to the [form](<${FORM_LINK}>), or your submission has not been reviewed yet.` });
+        return;
+    }
+
+    if (user_row.in_gryphlife !== GRYPHLIFE_ACCEPT) {
+        await message.reply({ content: `You are not in the [GryphLife](<${GRYPHLIFE_LINK}>) organization, please wait to be accepted into the organization.` });
+        return;
+    }
+
+    if (validateMembership(user_row)) {
         //processing_members.add(message.author.id);
         const verification_code = generateVerificationCode(message.author.id + message.author.tag);
         processing_members_code.set(message.author.id, {
@@ -287,14 +300,11 @@ export async function handleVerification(message: Message) {
                 return;
             });
         await message.reply({ content: "Please **DM the bot** with a 7 digit code sent to the email address. Type `cancel` if you wish to cancel the verification code." });
-    } else if (!user_row) {
-        await message.reply({ content: `Your email is not registered. You have not submitted your application to the [form](<${FORM_LINK}>).` });
-    } else if (user_row.in_gryphlife !== GRYPHLIFE_ACCEPT && user_row.payment_status === PAYMENT_ACCEPT) {
-        await message.reply({ content: `You are not in the [GryphLife](<${GRYPHLIFE_LINK}>) organization.` });
-    } else if (user_row.in_gryphlife === GRYPHLIFE_ACCEPT && user_row.payment_status !== PAYMENT_ACCEPT) {
-        await message.reply({ content: "Your email is registered, but you have not paid yet." });
-    } else if (user_row.in_gryphlife !== GRYPHLIFE_ACCEPT && user_row.payment_status !== PAYMENT_ACCEPT) {
-        await message.reply({ content: `You have not joined [GryphLife]<${GRYPHLIFE_LINK}> and have not paid yet.` });
+        return;
+    }
+
+    if (user_row.payment_status !== PAYMENT_ACCEPT) {
+        await message.reply({ content: "You may have not paid your team fee yet, this must be manually reviewed, please be patient." });
     }
 }
 
@@ -316,25 +326,26 @@ export async function handleVerificationDM(client: Client, message: Message) {
         await message.reply("Verification code cancelled. Please resend your email address to get a new one");
         return;
     }
-    if (verification_code.id === message.content) {
-        const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
-        const member = await guild.members.fetch(message.author.id);
-        const verified_role = guild.roles.cache.find(role => role.name === "Verified")!;
-        await member.roles.add(verified_role);
-        // Update spreadsheet
-        const user_row = verification_spreadsheet.find(data => data.email === verification_code.email)!;
-        user_row.discord_identifier = message.author.tag;
-        await pushSpreadsheet();
-        processing_members_code.delete(message.author.id);
-        await message.reply(`Verification successful! Welcome aboard, ${user_row.name}.`);
-
-        try {
-            const channel = guild.channels.resolve(process.env.VERIFICATION_CHANNEL!) as TextChannel;
-            await channel.send(`${message.author.tag} has been successfully verified`);
-        } catch (err) {
-            console.log("Failed to send a message into verification channel due to:\n", err);
-        }
-    } else {
+    if (verification_code.id !== message.content) {
         await message.reply("The code you entered is not correct. Please enter the **7 digit code.**");
+        return;
+    }
+
+    const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
+    const member = await guild.members.fetch(message.author.id);
+    const verified_role = guild.roles.cache.find(role => role.name === "Verified")!;
+    await member.roles.add(verified_role);
+    // Update spreadsheet
+    const user_row = verification_spreadsheet.find(data => data.email === verification_code.email)!;
+    user_row.discord_identifier = message.author.tag;
+    await pushSpreadsheet();
+    processing_members_code.delete(message.author.id);
+    await message.reply(`Verification successful! Welcome aboard, ${user_row.name}.`);
+
+    try {
+        const channel = guild.channels.resolve(process.env.VERIFICATION_CHANNEL!) as TextChannel;
+        await channel.send(`${message.author.tag} has been successfully verified`);
+    } catch (err) {
+        console.log("Failed to send a message into verification channel due to:\n", err);
     }
 }
