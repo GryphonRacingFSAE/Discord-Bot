@@ -14,7 +14,7 @@ export async function updateSubsectionRoles(member: GuildMember) {
 
     const category_mapping = {
         Dynamics: ["Frame", "Aerodynamics", "Suspension", "Brakes"],
-        Electrical: ["Low Voltage", "Embedded", "Tractive System"],
+        Electrical: ["Low Voltage", "Software", "Tractive System"],
         Business: ["Purchasing", "Marketing", "Sponsorship"],
     };
 
