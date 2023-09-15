@@ -225,7 +225,7 @@ export function validateEmail(email: string): boolean {
             email,
         )
     ) {
-        return email.endsWith("@uoguelph.ca");
+        return email.trim().endsWith("@uoguelph.ca");
     }
     return false;
 }
@@ -274,7 +274,7 @@ export async function handleVerification(message: Message) {
         return;
     }
 
-    if (user_row.in_gryphlife !== GRYPHLIFE_ACCEPT) {
+    if (user_row.in_gryphlife.trim() !== GRYPHLIFE_ACCEPT) {
         await message.reply({ content: `You are not in the [GryphLife](<${GRYPHLIFE_LINK}>) organization, please wait to be accepted into the organization.` });
         return;
     }
@@ -303,7 +303,7 @@ export async function handleVerification(message: Message) {
         return;
     }
 
-    if (user_row.payment_status !== PAYMENT_ACCEPT) {
+    if (user_row.payment_status.trim() !== PAYMENT_ACCEPT) {
         await message.reply({ content: "You may have not paid your team fee yet, this must be manually reviewed, please be patient." });
     }
 }
