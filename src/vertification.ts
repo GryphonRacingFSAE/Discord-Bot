@@ -255,7 +255,7 @@ export async function handleVerification(message: Message) {
     // If already verified make sure it's the same discord id
     const entry = verification_spreadsheet.find(entry => entry.email === message.content);
     if (entry && entry.discord_identifier.length > 0 && entry.discord_identifier !== message.author.tag) {
-        await message.reply("Email is already registered with a different account's discord ID.");
+        await message.reply("Email is already registered with a different account's discord ID, please contact a @Bot Developer to resolve this issue.");
         return;
     }
 
@@ -267,6 +267,8 @@ export async function handleVerification(message: Message) {
 
     // Validate membership
     const user_row = verification_spreadsheet.find(data => data.email === email);
+    console.log(message.author, "verifying with: ", user_row);
+
     if (!user_row) {
         await message.reply({ content: `Your email is not yet registered. You may have not submitted your application to the [form](<${FORM_LINK}>), or your submission has not been reviewed yet.` });
         return;
