@@ -305,6 +305,8 @@ export async function handleVerification(message: Message) {
 
     if (user_row.payment_status !== PAYMENT_ACCEPT) {
         await message.reply({ content: "You may have not paid your team fee yet, this must be manually reviewed, please be patient." });
+    } else if (user_row.in_gryphlife !== GRYPHLIFE_ACCEPT) {
+        await message.reply({ content: `You may have not joined [GryphLife](${GRYPHLIFE_LINK}) yet, this must be manually reviewed, please be patient.` });
     }
 }
 
