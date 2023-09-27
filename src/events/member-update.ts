@@ -2,7 +2,6 @@
 // The purpose of this is to auto-assign Dynamics, Electrical, and Business roles
 
 import { Events, GuildMember } from "discord.js";
-import { members_to_monitor } from "@/vertification.js";
 import { DiscordClient } from "@/discord-client.js";
 
 function arrayNotUndefined<T>(value: (T | undefined)[]): value is T[] {
@@ -50,13 +49,5 @@ export default {
     once: false,
     async execute(client: DiscordClient, old_member: GuildMember, new_member: GuildMember) {
         await updateSubsectionRoles(new_member);
-
-        const has_verified_before = old_member.roles.cache.some(role => role.name === "Verified");
-        const has_verified_now = new_member.roles.cache.some(role => role.name === "Verified");
-        if (!has_verified_before && has_verified_now) {
-            members_to_monitor.delete(new_member.id);
-        } else if (has_verified_before && !has_verified_now) {
-            members_to_monitor.add(new_member.id);
-        }
     },
 };
