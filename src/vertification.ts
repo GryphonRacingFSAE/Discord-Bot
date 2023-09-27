@@ -113,9 +113,13 @@ async function pushSpreadsheet() {
         pullSpreadsheet(); // Make sure we get an updated spreadsheet
 
         // Best way I could get it to only append
-        verification_spreadsheet_queue.forEach(change => {
+        while (verification_spreadsheet_queue.length) {
+            const change = verification_spreadsheet_queue.pop();
+            if (!change) {
+                break;
+            }
             verification_spreadsheet[change.index] = change.row;
-        });
+        }
 
         const workbook = utils.book_new();
         const translated_spreadsheet = verification_spreadsheet.map((row: Verification) => {
