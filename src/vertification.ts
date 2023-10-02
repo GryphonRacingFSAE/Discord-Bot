@@ -155,10 +155,52 @@ async function pushSpreadsheet() {
     });
 }
 
+// Checks the validity of verified members in the server
+async function checkMembershipVerified(client: Client) {
+    const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
+    if (!guild) return;
+    const members = await guild.members.fetch();
+    const verified_role = guild.roles.cache.find(role => role.name === "Verified");
+    if (!verified_role) {
+        console.log("No verified role found!");
+        return;
+    }
+    Promise.allSettled(
+        members.map(async member => {
+            // Ignore all bots
+            if (member.user.bot) {
+                return;
+            }
+            const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
+            const channel = (await guild.channels.fetch(process.env.VERIFICATION_CHANNEL!)) as TextChannel;
+            const user_row = verification_spreadsheet.find(data => data.discord_identifier === member.user.tag);
+            if (member.roles.cache.some(role => role.id === verified_role.id)) {
+                // Search for row in spreadsheet
+                if (!(user_row && validateMembership(user_row))) {
+                    // User has Verified role + has not paid
+                    await member.roles.remove(verified_role);
+                    // DM user that they have not paid and thus have been removed
+                    await member.send("You have been unverified from UofGuelph Racing due to not paying the club fee. Your user information may also be outdated and you may need to re-verify again.");
+                    await channel.send(`${member.user.tag} has been unverified.`);
+                }
+            } else if (user_row && validateMembership(user_row)) {
+                // User is valid member, but for some reason does not have their role...
+                await member.roles.add(verified_role);
+                await channel.send(`${member.user.tag} has been verified.`);
+            }
+        }),
+    ).catch(error => {
+        console.log("Failed to un-verify user due to:\n", error);
+    });
+}
+
 // Get all members in the guild who do not have the verification role
 export async function verificationOnReady(client: Client) {
     const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
-    if (!guild) return;
+    if (!guild) {
+        console.log("verification.ts could not find a guild!");
+        return;
+    }
 
     // Update spreadsheet
     pullSpreadsheet();
@@ -166,35 +208,15 @@ export async function verificationOnReady(client: Client) {
         pullSpreadsheet();
     });
 
-    const members = await guild.members.fetch();
     const verified_role = guild.roles.cache.find(role => role.name === "Verified");
     if (!verified_role) {
         console.log("No verified role found!");
         return;
     }
+    await checkMembershipVerified(client);
     // Start a new cron task to de-verify everyone who hasn't paid or TODO: verify those whose status has changed
     cron.schedule("0 0 * * *", () => {
-        const current_month = new Date().getMonth();
-        if (!(current_month >= 5 && current_month <= 8)) return;
-        Promise.all(
-            members.map(async member => {
-                const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
-                const channel = (await guild.channels.fetch(process.env.VERIFICATION_CHANNEL!)) as TextChannel;
-                if (member.roles.cache.some(role => role.name === "Verified") && !member.user.bot) {
-                    // Search for row in spreadsheet
-                    const user_row = verification_spreadsheet.find(data => data.discord_identifier === member.user.tag);
-                    if (!(user_row && validateMembership(user_row)) && member.roles.cache.has(verified_role.id)) {
-                        // User has Verified role + has not paid
-                        await member.roles.remove(verified_role);
-                        // DM user that they have not paid and thus have been removed
-                        await member.send("You have been unverified from UofGuelph Racing due to not paying the club fee.");
-                        await channel.send(`${member.id} has been unverified.`);
-                    }
-                }
-            }),
-        ).catch(error => {
-            console.log("Failed to un-verify user due to:\n", error);
-        });
+        checkMembershipVerified(client);
     });
 }
 
@@ -250,10 +272,9 @@ export function validateEmail(email: string): boolean {
 function validateMembership(user_row: Verification): boolean {
     const current_month = new Date().getMonth();
 
-    if (current_month >= 4 && current_month <= 9) {
+    if (current_month >= 5 && current_month <= 8) {
         return true;
     }
-
     return user_row.payment_status === PAYMENT_ACCEPT;
 }
 
@@ -283,7 +304,7 @@ export async function handleVerification(client: Client, message: Message) {
     // If already verified make sure it's the same discord id
     const entry = verification_spreadsheet.find(entry => entry.email === message.content);
     if (entry && entry.discord_identifier.length > 0 && entry.discord_identifier !== message.author.tag) {
-        await message.reply("Email is already registered with a different account's discord ID, please contact a @Bot Developer to resolve this issue.");
+        await message.reply("Email is already registered with a different account's discord ID, please contact a `@Bot Developer` to resolve this issue.");
         return;
     }
 
@@ -377,7 +398,7 @@ export async function handleVerificationDM(client: Client, message: Message) {
 
     try {
         const channel = guild.channels.resolve(process.env.VERIFICATION_CHANNEL!) as TextChannel;
-        await channel.send(`${message.author.tag} has been successfully verified`);
+        await channel.send(`${message.author.tag} has been successfully verified.`);
     } catch (err) {
         console.log("Failed to send a message into verification channel due to:\n", err);
     }
