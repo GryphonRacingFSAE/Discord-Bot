@@ -259,7 +259,7 @@ export async function handleVerification(message: Message) {
         return;
     }
 
-    const email = message.content;
+    const email = message.content.toLowerCase(); // emails are not case-sensitive!!
     if (!validateEmail(email)) {
         await message.reply({ content: "Please send a valid email address. **Only @uoguelph.ca** domains are accepted." });
         return;
