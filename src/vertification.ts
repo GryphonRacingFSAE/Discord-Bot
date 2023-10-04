@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import { Client, EmbedBuilder, GuildMember, Message, TextChannel } from "discord.js";
 import { createTransport } from "nodemailer";
 import { createHash } from "crypto";
+import { Mutex } from "async-mutex";
 import xlsx from "xlsx";
 const { readFile, writeFile, utils } = xlsx;
 import * as cron from "node-cron";
@@ -38,19 +39,24 @@ type Verification = {
     payment_status: string;
     in_gryphlife: string;
 };
+type SpreadsheetQueue = {
+    index: number;
+    row: Verification;
+};
 type SpreadsheetRow = {
     [key: string]: string | number;
 };
 
-export const members_to_monitor: Set<string> = new Set();
 const processing_members_code: Map<string, { email: string; id: string; time_stamp: number }> = new Map(); // Members and their codes
 const FILE_PATH: string = "./onedrive/Verification Team Roster.xlsx";
 const FORM_LINK: string = "https://forms.office.com/r/pTGwYxBTHq";
 const GRYPHLIFE_LINK: string = "https://gryphlife.uoguelph.ca/organization/gryphonracing";
-const PAYMENT_ACCEPT: string = "paid"; // What needs to be pu in the payment_status column to be considered as paid
+const PAYMENT_ACCEPT: string = "paid"; // What needs to be put in the payment_status column to be considered as paid
 const GRYPHLIFE_ACCEPT: string = "yes"; // What needs to be put in the in_gryphlife column to be considered as accepted
 
+const verification_spreadsheet_queue: Array<SpreadsheetQueue> = new Array<SpreadsheetQueue>();
 let verification_spreadsheet: Array<Verification>;
+const VERIFICATION_MUTEX = new Mutex();
 // Spreadsheet column names are different from what we use internally, so we should convert between them
 const COLUMN_NAME_MAPPING: { [key: string]: string } = {
     name: "Name",
@@ -103,35 +109,50 @@ function pullSpreadsheet() {
 
 // Push to the spreadsheet file
 async function pushSpreadsheet() {
-    const workbook = utils.book_new();
-    const translated_spreadsheet = verification_spreadsheet.map((row: Verification) => {
-        const new_row: SpreadsheetRow = {};
-        for (const [key, value] of Object.entries(row)) {
-            const translated_key = COLUMN_NAME_MAPPING[key];
-            if (translated_key) {
-                new_row[translated_key as keyof SpreadsheetRow] = String(value);
+    await VERIFICATION_MUTEX.runExclusive(async () => {
+        pullSpreadsheet(); // Make sure we get an updated spreadsheet
+
+        // Best way I could get it to only append
+        while (verification_spreadsheet_queue.length) {
+            const change = verification_spreadsheet_queue.pop();
+            if (!change) {
+                break;
+            }
+            verification_spreadsheet[change.index] = change.row;
+        }
+
+        const workbook = utils.book_new();
+        const translated_spreadsheet = verification_spreadsheet.map((row: Verification) => {
+            const new_row: SpreadsheetRow = {};
+            for (const [key, value] of Object.entries(row)) {
+                const translated_key = COLUMN_NAME_MAPPING[key];
+                if (translated_key) {
+                    new_row[translated_key as keyof SpreadsheetRow] = String(value);
+                }
+            }
+            return new_row;
+        });
+        const worksheet = utils.json_to_sheet(translated_spreadsheet);
+
+        utils.book_append_sheet(workbook, worksheet, "Sheet1");
+
+        const MAX_RETRIES: number = 10; // MAX RETRIES - 5
+        let retries = 0;
+
+        // Write the workbook to the filesystem
+        while (retries < MAX_RETRIES) {
+            try {
+                writeFile(workbook, FILE_PATH);
+                return true;
+            } catch (err) {
+                // Failed to write to file usually due to something writing it already. Override it :D
+                retries += 1;
+                console.log(`Failed to write to ${FILE_PATH}. Due to: `, err);
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before trying again
             }
         }
-        return new_row;
+        return false;
     });
-    const worksheet = utils.json_to_sheet(translated_spreadsheet);
-
-    utils.book_append_sheet(workbook, worksheet, "Sheet1");
-
-    let retries: number = 0; // MAX RETRIES - 5
-
-    // Write the workbook to the filesystem
-    while (retries < 5) {
-        try {
-            writeFile(workbook, FILE_PATH);
-            break;
-        } catch (err) {
-            // Failed to write to file usually due to something writing it already. Override it :D
-            retries += 1;
-            console.log(`Failed to write to ${FILE_PATH}. Due to: `, err);
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before trying again
-        }
-    }
 }
 
 // Get all members in the guild who do not have the verification role
@@ -146,12 +167,6 @@ export async function verificationOnReady(client: Client) {
     });
 
     const members = await guild.members.fetch();
-    members.forEach(member => {
-        if (!member.roles.cache.some(role => role.name === "Verified") && !member.user.bot) {
-            members_to_monitor.add(member.id);
-        }
-    });
-
     const verified_role = guild.roles.cache.find(role => role.name === "Verified");
     if (!verified_role) {
         console.log("No verified role found!");
@@ -242,12 +257,25 @@ function validateMembership(user_row: Verification): boolean {
     return user_row.payment_status === PAYMENT_ACCEPT;
 }
 
-export async function handleVerification(message: Message) {
-    // Ignore bots + users that are verified
-    if (message.author.bot || !members_to_monitor.has(message.author.id)) {
-        if (!message.author.bot) {
-            await message.reply("You are already verified");
-        }
+export async function handleVerification(client: Client, message: Message) {
+    const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
+    if (!guild) {
+        return;
+    }
+    // Ignore bots
+    if (message.author.bot) {
+        return;
+    }
+    // Get guild member from author
+    const guild_member = guild.members.cache.find(member => {
+        return member.id === message.author.id;
+    });
+    if (guild_member === undefined) {
+        await message.reply("You are not in the Gryphon racing server!");
+        return;
+    }
+    if (guild_member.roles.cache.some(role => role.name === "Verified")) {
+        await message.reply("You are already verified");
         return;
     }
 
@@ -310,7 +338,7 @@ export async function handleVerification(message: Message) {
 
 export async function handleVerificationDM(client: Client, message: Message) {
     if (!processing_members_code.has(message.author.id)) {
-        await handleVerification(message);
+        await handleVerification(client, message);
         return;
     } else if (message.author.bot) return;
     const verification_code = processing_members_code.get(message.author.id)!;
@@ -336,11 +364,16 @@ export async function handleVerificationDM(client: Client, message: Message) {
     const verified_role = guild.roles.cache.find(role => role.name === "Verified")!;
     await member.roles.add(verified_role);
     // Update spreadsheet
-    const user_row = verification_spreadsheet.find(data => data.email === verification_code.email)!;
-    user_row.discord_identifier = message.author.tag;
+    const USER_ROW_INDEX = verification_spreadsheet.findIndex(data => data.email === verification_code.email)!;
+    const VERIFICATION_ROW = verification_spreadsheet[USER_ROW_INDEX];
+    VERIFICATION_ROW.discord_identifier = message.author.tag;
+    verification_spreadsheet_queue.push({
+        index: USER_ROW_INDEX,
+        row: VERIFICATION_ROW,
+    });
     await pushSpreadsheet();
     processing_members_code.delete(message.author.id);
-    await message.reply(`Verification successful! Welcome aboard, ${user_row.name}.`);
+    await message.reply(`Verification successful! Welcome aboard, ${VERIFICATION_ROW.name}.`);
 
     try {
         const channel = guild.channels.resolve(process.env.VERIFICATION_CHANNEL!) as TextChannel;
