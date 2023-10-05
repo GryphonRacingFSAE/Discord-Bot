@@ -113,9 +113,13 @@ async function pushSpreadsheet() {
         pullSpreadsheet(); // Make sure we get an updated spreadsheet
 
         // Best way I could get it to only append
-        verification_spreadsheet_queue.forEach(change => {
+        while (verification_spreadsheet_queue.length) {
+            const change = verification_spreadsheet_queue.pop();
+            if (!change) {
+                break;
+            }
             verification_spreadsheet[change.index] = change.row;
-        });
+        }
 
         const workbook = utils.book_new();
         const translated_spreadsheet = verification_spreadsheet.map((row: Verification) => {
@@ -283,7 +287,7 @@ export async function handleVerification(client: Client, message: Message) {
         return;
     }
 
-    const email = message.content;
+    const email = message.content.toLowerCase(); // emails are not case-sensitive!!
     if (!validateEmail(email)) {
         await message.reply({ content: "Please send a valid email address. **Only @uoguelph.ca** domains are accepted." });
         return;
