@@ -11,7 +11,8 @@
         "lint-check": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --ignore-path .gitignore"
     },
     "dependencies": {
-        "discord-api-types": "^0.37.56",
+        "async-mutex": "^0.4.0",
+        "discord-api-types": "^0.37.59",
         "discord.js": "^14.13.0",
         "dotenv": "^16.3.1",
         "node-cron": "^3.0.2",
@@ -19,12 +20,12 @@
         "xlsx": "^0.18.5"
     },
     "devDependencies": {
-        "@types/node": "^20.6.2",
-        "@types/node-cron": "^3.0.8",
+        "@types/node": "^20.8.4",
+        "@types/node-cron": "^3.0.9",
         "@types/nodemailer": "^6.4.10",
         "@typescript-eslint/eslint-plugin": "^6.7.2",
         "@typescript-eslint/parser": "^6.7.2",
-        "eslint": "^8.49.0",
+        "eslint": "^8.51.0",
         "eslint-config-prettier": "^9.0.0",
         "eslint-plugin-prettier": "^5.0.0",
         "prettier": "^3.0.3",
