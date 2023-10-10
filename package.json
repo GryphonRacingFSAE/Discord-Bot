@@ -20,7 +20,7 @@
         "xlsx": "^0.18.5"
     },
     "devDependencies": {
-        "@types/node": "^20.6.2",
+        "@types/node": "^20.8.4",
         "@types/node-cron": "^3.0.9",
         "@types/nodemailer": "^6.4.10",
         "@typescript-eslint/eslint-plugin": "^6.7.2",
