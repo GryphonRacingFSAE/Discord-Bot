@@ -5,11 +5,11 @@
 // @description  A script to do something
 // @author       You
 // @match        https://gryphlife.uoguelph.ca/actioncenter/*
-// @grant        none
+// @grant        GM_xmlhttpRequest
 // ==/UserScript==
-setInterval(() => {
-    location.reload();
-}, 10000);
+//setInterval(() => {
+//    location.reload();
+//}, 10000);
 
 function getHrefFromHTMLString(htmlString, className) {
     var parser = new DOMParser();
@@ -63,19 +63,16 @@ async function processMembers() {
             memberInfo[memberName] = null;
         }
     }
-    fetch('http://localhost:5000/receive_data', {
-        method: 'POST',
+    GM_xmlhttpRequest({
+        method: "POST",
+        url: "http://127.0.0.1:5000/receive_data",
+        data: JSON.stringify(memberInfo),
         headers: {
-            'Content-Type': 'application/json'
+            "Content-Type": "application/json"
         },
-        body: JSON.stringify(memberInfo)
-    })
-    .then(response => response.text())
-    .then(data => {
-        console.log('Server Response:', data);
-    })
-    .catch((error) => {
-        console.error('Error:', error);
+        onload: function(response) {
+            console.log("Server response:", response.responseText);
+        }
     });
 
     console.log('Member Info:', memberInfo);

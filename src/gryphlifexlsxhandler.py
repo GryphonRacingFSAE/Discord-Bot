@@ -18,20 +18,20 @@ def receive_data():
         workbook = openpyxl.load_workbook(file_path)
         sheet = workbook.active
         
-        # Assume names are in column A, find the first empty row in that column
-        row = 1
-        while sheet[f"A{row}"].value is not None:
-            row += 1
-        
-        # Write the name to the first empty cell in column A
-        name = data.get("Name")  # Assuming the key in your JSON object is "Name"
-        if name:
-            sheet[f"A{row}"] = name
-        
-        # Write the email to the first empty cell in column B
-        email = data.get("email")  # Assuming the key in your JSON object is "email"
-        if email:
-            sheet[f"B{row}"] = email
+        # Iterate through the received data
+        for member in data:
+            # Assume names are in column A, find the first empty row in that column
+            row = 1
+            while sheet[f"A{row}"].value is not None:
+                row += 1
+            
+            # Write the name and email to the first empty cell in column A and B respectively
+            name = member.get("Name")
+            email = member.get("email")
+            if name:
+                sheet[f"A{row}"] = name
+            if email:
+                sheet[f"B{row}"] = email
         
         # Save the workbook
         workbook.save(file_path)
