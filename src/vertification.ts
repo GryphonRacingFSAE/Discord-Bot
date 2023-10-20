@@ -40,8 +40,8 @@ type Verification = {
     in_gryphlife: string;
 };
 type SpreadsheetQueue = {
-    index: number;
-    row: Verification;
+    index: number; // Row to override
+    row: Verification; // Data to override with
 };
 type SpreadsheetRow = {
     [key: string]: string | number;
@@ -54,6 +54,12 @@ const GRYPHLIFE_LINK: string = "https://gryphlife.uoguelph.ca/organization/gryph
 const PAYMENT_ACCEPT: string = "paid"; // What needs to be put in the payment_status column to be considered as paid
 const GRYPHLIFE_ACCEPT: string = "yes"; // What needs to be put in the in_gryphlife column to be considered as accepted
 
+// Since spreadsheets do not support appending well, we very easily run into overriding issues
+// To counter this, we use a queue where any user_row anything pushed into it is set to override user_row
+// (see: SpreadsheetQueue type)
+// To push these changes, call pushSpreadsheet()
+// It's highly recommended, if you are pushing multiple things at the same time, you batch them to best prevent
+// overriding errors from occurring
 const verification_spreadsheet_queue: Array<SpreadsheetQueue> = new Array<SpreadsheetQueue>();
 let verification_spreadsheet: Array<Verification>;
 const VERIFICATION_MUTEX = new Mutex();
@@ -156,6 +162,7 @@ async function pushSpreadsheet() {
 }
 
 // Checks the validity of verified members in the server
+// This is what unverifies people if they're not part of GryphLife
 async function checkMembershipVerified(client: Client) {
     const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
     if (!guild) return;
@@ -172,26 +179,54 @@ async function checkMembershipVerified(client: Client) {
                 return;
             }
             const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
-            const channel = (await guild.channels.fetch(process.env.VERIFICATION_CHANNEL!)) as TextChannel;
-            const user_row = verification_spreadsheet.find(data => data.discord_identifier === member.user.tag);
+            let user_row = verification_spreadsheet.find(data => data.discord_identifier === member.user.id);
+            // Convert all users from using the old tag system to new user id
+            if (!user_row) {
+                // Might be using legacy tag instead of id
+                const user_row_index = verification_spreadsheet.findIndex(data => data.discord_identifier === member.user.tag);
+                if (user_row_index > -1) {
+                    // Convert to the new user id system
+                    user_row = verification_spreadsheet[user_row_index];
+                    user_row.discord_identifier = member.user.id;
+                    verification_spreadsheet_queue.push({
+                        index: user_row_index,
+                        row: user_row,
+                    });
+                }
+            }
+            // ROLE REMOVAL/GIVING IS TEMPORARILY DISABLED
             if (member.roles.cache.some(role => role.id === verified_role.id)) {
                 // Search for row in spreadsheet
                 if (!(user_row && validateMembership(user_row))) {
                     // User has Verified role + has not paid
-                    await member.roles.remove(verified_role);
+                    //await member.roles.remove(verified_role);
                     // DM user that they have not paid and thus have been removed
-                    await member.send("You have been unverified from UofGuelph Racing due to not paying the club fee. Your user information may also be outdated and you may need to re-verify again.");
-                    await channel.send(`${member.user.tag} has been unverified.`);
+                    //await member.send("You have been unverified from UofGuelph Racing due to not paying the club fee. Your user information may also be outdated and you may need to re-verify again.");
+                    await member.send(
+                        "You have **not** been unverified. However, this is a test and we believe you are not properly entered into our system yet / have not paid membership fees & joined GryphLife. Please re-verify. You **do not need to sign up on GryphLife or redo the form**. Simply just follow through with the email verification.",
+                    );
+                    try {
+                        const channel = (await guild.channels.fetch(process.env.VERIFICATION_CHANNEL!)) as TextChannel;
+                        await channel.send(`${member.user.tag} has been unverified.`);
+                    } catch (err) {
+                        console.log("Failed to send a un-verification message due to: ", err);
+                    }
                 }
             } else if (user_row && validateMembership(user_row)) {
                 // User is valid member, but for some reason does not have their role...
-                await member.roles.add(verified_role);
-                await channel.send(`${member.user.tag} has been verified.`);
+                //await member.roles.add(verified_role);
+                try {
+                    const channel = (await guild.channels.fetch(process.env.VERIFICATION_CHANNEL!)) as TextChannel;
+                    await channel.send(`${member.user.tag} has been verified.`);
+                } catch (err) {
+                    console.log("Failed to send a un-verification message due to: ", err);
+                }
             }
         }),
     ).catch(error => {
         console.log("Failed to un-verify user due to:\n", error);
     });
+    await pushSpreadsheet();
 }
 
 // Get all members in the guild who do not have the verification role
@@ -275,9 +310,11 @@ function validateMembership(user_row: Verification): boolean {
     if (current_month >= 5 && current_month <= 8) {
         return true;
     }
-    return user_row.payment_status === PAYMENT_ACCEPT;
+    return user_row.payment_status === PAYMENT_ACCEPT && user_row.in_gryphlife === GRYPHLIFE_ACCEPT;
 }
 
+// This handles the process of sending a verification message out to the user, but not processing if the code.
+// Effectively, we check if a verification email could be sent out and if so, we send one
 export async function handleVerification(client: Client, message: Message) {
     const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
     if (!guild) {
@@ -303,7 +340,7 @@ export async function handleVerification(client: Client, message: Message) {
     // Make sure the email isn't already verified
     // If already verified make sure it's the same discord id
     const entry = verification_spreadsheet.find(entry => entry.email === message.content);
-    if (entry && entry.discord_identifier.length > 0 && entry.discord_identifier !== message.author.tag) {
+    if (entry && entry.discord_identifier.length > 0 && entry.discord_identifier !== message.author.id) {
         await message.reply("Email is already registered with a different account's discord ID, please contact a `@Bot Developer` to resolve this issue.");
         return;
     }
@@ -357,6 +394,10 @@ export async function handleVerification(client: Client, message: Message) {
     }
 }
 
+// This deals with processing DMs.
+// Ignores bots, users who are not trying to input their code (processing_members_code) will be dealt by
+// handleVerification
+// Users who are sending a code will be dealt with here
 export async function handleVerificationDM(client: Client, message: Message) {
     if (!processing_members_code.has(message.author.id)) {
         await handleVerification(client, message);
@@ -387,12 +428,12 @@ export async function handleVerificationDM(client: Client, message: Message) {
     // Update spreadsheet
     const USER_ROW_INDEX = verification_spreadsheet.findIndex(data => data.email === verification_code.email)!;
     const VERIFICATION_ROW = verification_spreadsheet[USER_ROW_INDEX];
-    // VERIFICATION_ROW.discord_identifier = message.author.tag;
-    // verification_spreadsheet_queue.push({
-    //     index: USER_ROW_INDEX,
-    //     row: VERIFICATION_ROW,
-    // });
-    // await pushSpreadsheet();
+    VERIFICATION_ROW.discord_identifier = message.author.id;
+    verification_spreadsheet_queue.push({
+        index: USER_ROW_INDEX,
+        row: VERIFICATION_ROW,
+    });
+    await pushSpreadsheet();
     processing_members_code.delete(message.author.id);
 
     if (fs.existsSync("./resources/verifications.txt")) {
