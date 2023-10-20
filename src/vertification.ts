@@ -193,6 +193,8 @@ async function checkMembershipVerified(client: Client) {
                         row: user_row,
                     });
                 }
+            } else {
+                console.log("Found", user_row.discord_identifier);
             }
             // ROLE REMOVAL/GIVING IS TEMPORARILY DISABLED
             if (member.roles.cache.some(role => role.id === verified_role.id)) {
@@ -342,7 +344,7 @@ export async function handleVerification(client: Client, message: Message) {
     // If already verified make sure it's the same discord id
     const entry = verification_spreadsheet.find(entry => entry.email === message.content);
     // If discord identifier contains a letter in it, it's using the legacy system and allow for re-verification
-    if (entry && entry.discord_identifier.length > 0 && (entry.discord_identifier !== message.author.id || /[a-zA-Z]/.test(entry.discord_identifier))) {
+    if (entry && entry.discord_identifier.length > 0 && entry.discord_identifier !== message.author.id && !(/[a-zA-Z]/.test(entry.discord_identifier))) {
         await message.reply("Email is already registered with a different account's discord ID, please contact a `@Bot Developer` to resolve this issue.");
         return;
     }
