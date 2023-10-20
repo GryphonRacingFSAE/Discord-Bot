@@ -9,12 +9,10 @@ function arrayNotUndefined<T>(value: (T | undefined)[]): value is T[] {
 }
 
 export async function updateSubsectionRoles(member: GuildMember) {
-    console.log(`Updating subsection roles for ${member.user.tag}`);
-
     const category_mapping = {
         Dynamics: ["Frame", "Aerodynamics", "Suspension", "Brakes"],
         Electrical: ["Low Voltage", "Software", "Tractive System"],
-        Business: ["Purchasing", "Marketing", "Sponsorship"],
+        Business: ["Finance", "Marketing", "Sponsorship"],
     };
 
     for (const [category, subsections] of Object.entries(category_mapping)) {
@@ -40,8 +38,6 @@ export async function updateSubsectionRoles(member: GuildMember) {
             await member.roles.remove(category_role);
         }
     }
-
-    console.log(`Done updating subsection roles for ${member.user.tag}`);
 }
 
 export default {

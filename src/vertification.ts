@@ -366,13 +366,21 @@ export async function handleVerificationDM(client: Client, message: Message) {
     // Update spreadsheet
     const USER_ROW_INDEX = verification_spreadsheet.findIndex(data => data.email === verification_code.email)!;
     const VERIFICATION_ROW = verification_spreadsheet[USER_ROW_INDEX];
-    VERIFICATION_ROW.discord_identifier = message.author.tag;
-    verification_spreadsheet_queue.push({
-        index: USER_ROW_INDEX,
-        row: VERIFICATION_ROW,
-    });
-    await pushSpreadsheet();
+    // VERIFICATION_ROW.discord_identifier = message.author.tag;
+    // verification_spreadsheet_queue.push({
+    //     index: USER_ROW_INDEX,
+    //     row: VERIFICATION_ROW,
+    // });
+    // await pushSpreadsheet();
     processing_members_code.delete(message.author.id);
+
+    if (fs.existsSync("./resources/verifications.txt")) {
+        const verifications = fs.readFileSync("./resources/verifications.txt", "utf8");
+        fs.writeFileSync("./resources/verifications.txt", verifications + verification_code.email + " " + message.author.tag + "\n");
+    } else {
+        fs.writeFileSync("./resources/verifications.txt", verification_code.email + " " + message.author.tag + "\n");
+    }
+
     await message.reply(`Verification successful! Welcome aboard, ${VERIFICATION_ROW.name}.`);
 
     try {
