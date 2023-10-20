@@ -310,7 +310,7 @@ export function validateEmail(email: string): boolean {
 function validateMembership(user_row: Verification): boolean {
     const current_month = new Date().getMonth();
 
-    if (current_month >= 5 && current_month <= 8) {
+    if (current_month >= 4 && current_month <= 8) {
         return true;
     }
     return user_row.payment_status === PAYMENT_ACCEPT && user_row.in_gryphlife === GRYPHLIFE_ACCEPT;
