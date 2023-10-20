@@ -204,9 +204,10 @@ async function checkMembershipVerified(client: Client) {
                     //await member.roles.remove(verified_role);
                     // DM user that they have not paid and thus have been removed
                     //await member.send("You have been unverified from UofGuelph Racing due to not paying the club fee. Your user information may also be outdated, and you may need to re-verify again.");
-                    await member.send(
-                        "You have **not** been unverified. However, this is a test and we believe you are not properly entered into our system yet / have not paid membership fees & joined GryphLife. Please re-verify. You **do not need to sign up on GryphLife or redo the form**. Simply just follow through with the email verification.",
-                    );
+                    //await member.send(
+                    //    "You have **not** been unverified. However, this is a test and we believe you are not properly entered into our system yet / have not paid membership fees & joined GryphLife. Please re-verify. You **do not need to sign up on GryphLife or redo the form**. Simply just follow through with the email verification.",
+                    //);
+                    console.log(`@${member.user.tag} will be unverified if they proceed with no action regarding verification.`);
                     try {
                         const channel = (await guild.channels.fetch(process.env.VERIFICATION_CHANNEL!)) as TextChannel;
                         await channel.send(`${member.user.tag} has been unverified.`);
