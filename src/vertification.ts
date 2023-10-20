@@ -196,14 +196,14 @@ async function checkMembershipVerified(client: Client) {
             } else {
                 console.log("Found", user_row.discord_identifier);
             }
-            // ROLE REMOVAL/GIVING IS TEMPORARILY DISABLED
+            // ROLE REMOVAL IS TEMPORARILY DISABLED
             if (member.roles.cache.some(role => role.id === verified_role.id)) {
                 // Search for row in spreadsheet
                 if (!(user_row && validateMembership(user_row))) {
                     // User has Verified role + has not paid
                     //await member.roles.remove(verified_role);
                     // DM user that they have not paid and thus have been removed
-                    //await member.send("You have been unverified from UofGuelph Racing due to not paying the club fee. Your user information may also be outdated and you may need to re-verify again.");
+                    //await member.send("You have been unverified from UofGuelph Racing due to not paying the club fee. Your user information may also be outdated, and you may need to re-verify again.");
                     await member.send(
                         "You have **not** been unverified. However, this is a test and we believe you are not properly entered into our system yet / have not paid membership fees & joined GryphLife. Please re-verify. You **do not need to sign up on GryphLife or redo the form**. Simply just follow through with the email verification.",
                     );
@@ -216,7 +216,7 @@ async function checkMembershipVerified(client: Client) {
                 }
             } else if (user_row && validateMembership(user_row)) {
                 // User is valid member, but for some reason does not have their role...
-                //await member.roles.add(verified_role);
+                await member.roles.add(verified_role);
                 try {
                     const channel = (await guild.channels.fetch(process.env.VERIFICATION_CHANNEL!)) as TextChannel;
                     await channel.send(`${member.user.tag} has been verified.`);
