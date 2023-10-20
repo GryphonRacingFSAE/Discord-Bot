@@ -172,7 +172,6 @@ async function checkMembershipVerified(client: Client) {
                 return;
             }
             const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
-            const channel = (await guild.channels.fetch(process.env.VERIFICATION_CHANNEL!)) as TextChannel;
             const user_row = verification_spreadsheet.find(data => data.discord_identifier === member.user.tag);
             if (member.roles.cache.some(role => role.id === verified_role.id)) {
                 // Search for row in spreadsheet
@@ -181,12 +180,22 @@ async function checkMembershipVerified(client: Client) {
                     await member.roles.remove(verified_role);
                     // DM user that they have not paid and thus have been removed
                     await member.send("You have been unverified from UofGuelph Racing due to not paying the club fee. Your user information may also be outdated and you may need to re-verify again.");
-                    await channel.send(`${member.user.tag} has been unverified.`);
+                    try {
+                        const channel = (await guild.channels.fetch(process.env.VERIFICATION_CHANNEL!)) as TextChannel;
+                        await channel.send(`${member.user.tag} has been unverified.`);
+                    } catch {
+                        console.log("No verification channel found.");
+                    }
                 }
             } else if (user_row && validateMembership(user_row)) {
                 // User is valid member, but for some reason does not have their role...
                 await member.roles.add(verified_role);
-                await channel.send(`${member.user.tag} has been verified.`);
+                try {
+                    const channel = (await guild.channels.fetch(process.env.VERIFICATION_CHANNEL!)) as TextChannel;
+                    await channel.send(`${member.user.tag} has been verified.`);
+                } catch {
+                    console.log("No verification channel found.");
+                }
             }
         }),
     ).catch(error => {
