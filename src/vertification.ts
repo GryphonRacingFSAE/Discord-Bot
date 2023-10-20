@@ -332,10 +332,11 @@ export async function handleVerification(client: Client, message: Message) {
         await message.reply("You are not in the Gryphon racing server!");
         return;
     }
-    if (guild_member.roles.cache.some(role => role.name === "Verified")) {
-        await message.reply("You are already verified");
-        return;
-    }
+    // Allow for re-verification
+    //if (guild_member.roles.cache.some(role => role.name === "Verified")) {
+    //    await message.reply("You are already verified");
+    //    return;
+    //}
 
     // Make sure the email isn't already verified
     // If already verified make sure it's the same discord id
