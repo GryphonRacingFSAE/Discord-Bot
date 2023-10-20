@@ -179,23 +179,7 @@ async function checkMembershipVerified(client: Client) {
                 return;
             }
             const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
-            let user_row = verification_spreadsheet.find(data => data.discord_identifier === member.user.id);
-            // Convert all users from using the old tag system to new user id
-            if (!user_row) {
-                // Might be using legacy tag instead of id
-                const user_row_index = verification_spreadsheet.findIndex(data => data.discord_identifier === member.user.tag);
-                if (user_row_index > -1) {
-                    // Convert to the new user id system
-                    user_row = verification_spreadsheet[user_row_index];
-                    user_row.discord_identifier = member.user.id;
-                    verification_spreadsheet_queue.push({
-                        index: user_row_index,
-                        row: user_row,
-                    });
-                }
-            } else {
-                console.log("Found", user_row.discord_identifier);
-            }
+            const user_row = verification_spreadsheet.find(data => data.discord_identifier === member.user.id);
             // ROLE REMOVAL IS TEMPORARILY DISABLED
             if (member.roles.cache.some(role => role.id === verified_role.id)) {
                 // Search for row in spreadsheet
@@ -205,7 +189,7 @@ async function checkMembershipVerified(client: Client) {
                     // DM user that they have not paid and thus have been removed
                     //await member.send("You have been unverified from UofGuelph Racing due to not paying the club fee. Your user information may also be outdated, and you may need to re-verify again.");
                     //await member.send(
-                    //    "You have **not** been unverified. However, this is a test and we believe you are not properly entered into our system yet / have not paid membership fees & joined GryphLife. Please re-verify. You **do not need to sign up on GryphLife or redo the form**. Simply just follow through with the email verification.",
+                    //    "You have **not** been unverified. However, this is a test, and we believe you are not properly entered into our system yet / have not paid membership fees & joined GryphLife. Please re-verify. You **do not need to sign up on GryphLife or redo the form**. Simply just follow through with the email verification.",
                     //);
                     console.log(`@${member.user.tag} will be unverified if they proceed with no action regarding verification.`);
                     try {
