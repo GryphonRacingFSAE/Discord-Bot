@@ -40,8 +40,8 @@ type Verification = {
     in_gryphlife: string;
 };
 type SpreadsheetQueue = {
-    index: number;
-    row: Verification;
+    index: number; // Row to override
+    row: Verification; // Data to override with
 };
 type SpreadsheetRow = {
     [key: string]: string | number;
@@ -54,6 +54,12 @@ const GRYPHLIFE_LINK: string = "https://gryphlife.uoguelph.ca/organization/gryph
 const PAYMENT_ACCEPT: string = "paid"; // What needs to be put in the payment_status column to be considered as paid
 const GRYPHLIFE_ACCEPT: string = "yes"; // What needs to be put in the in_gryphlife column to be considered as accepted
 
+// Since spreadsheets do not support appending well, we very easily run into overriding issues
+// To counter this, we use a queue where any user_row anything pushed into it is set to override user_row
+// (see: SpreadsheetQueue type)
+// To push these changes, call pushSpreadsheet()
+// It's highly recommended, if you are pushing multiple things at the same time, you batch them to best prevent
+// overriding errors from occurring
 const verification_spreadsheet_queue: Array<SpreadsheetQueue> = new Array<SpreadsheetQueue>();
 let verification_spreadsheet: Array<Verification>;
 const VERIFICATION_MUTEX = new Mutex();
@@ -155,10 +161,68 @@ async function pushSpreadsheet() {
     });
 }
 
+// Checks the validity of verified members in the server
+// This is what unverifies people if they're not part of GryphLife
+async function checkMembershipVerified(client: Client) {
+    const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
+    if (!guild) return;
+    const members = await guild.members.fetch();
+    const verified_role = guild.roles.cache.find(role => role.name === "Verified");
+    if (!verified_role) {
+        console.log("No verified role found!");
+        return;
+    }
+    Promise.allSettled(
+        members.map(async member => {
+            // Ignore all bots
+            if (member.user.bot) {
+                return;
+            }
+            const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
+            const user_row = verification_spreadsheet.find(data => data.discord_identifier === member.user.id);
+            // ROLE REMOVAL IS TEMPORARILY DISABLED
+            if (member.roles.cache.some(role => role.id === verified_role.id)) {
+                // Search for row in spreadsheet
+                if (!(user_row && validateMembership(user_row))) {
+                    // User has Verified role + has not paid
+                    //await member.roles.remove(verified_role);
+                    // DM user that they have not paid and thus have been removed
+                    //await member.send("You have been unverified from UofGuelph Racing due to not paying the club fee. Your user information may also be outdated, and you may need to re-verify again.");
+                    //await member.send(
+                    //    "You have **not** been unverified. However, this is a test, and we believe you are not properly entered into our system yet / have not paid membership fees & joined GryphLife. Please re-verify. You **do not need to sign up on GryphLife or redo the form**. Simply just follow through with the email verification.",
+                    //);
+                    console.log(`@${member.user.tag} will be unverified if they proceed with no action regarding verification.`);
+                    try {
+                        const channel = (await guild.channels.fetch(process.env.VERIFICATION_CHANNEL!)) as TextChannel;
+                        await channel.send(`${member.user.tag} has been unverified.`);
+                    } catch (err) {
+                        console.log("Failed to send a un-verification message due to: ", err);
+                    }
+                }
+            } else if (user_row && validateMembership(user_row)) {
+                // User is valid member, but for some reason does not have their role...
+                await member.roles.add(verified_role);
+                try {
+                    const channel = (await guild.channels.fetch(process.env.VERIFICATION_CHANNEL!)) as TextChannel;
+                    await channel.send(`${member.user.tag} has been verified.`);
+                } catch (err) {
+                    console.log("Failed to send a un-verification message due to: ", err);
+                }
+            }
+        }),
+    ).catch(error => {
+        console.log("Failed to un-verify user due to:\n", error);
+    });
+    await pushSpreadsheet();
+}
+
 // Get all members in the guild who do not have the verification role
 export async function verificationOnReady(client: Client) {
     const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
-    if (!guild) return;
+    if (!guild) {
+        console.log("verification.ts could not find a guild!");
+        return;
+    }
 
     // Update spreadsheet
     pullSpreadsheet();
@@ -166,35 +230,15 @@ export async function verificationOnReady(client: Client) {
         pullSpreadsheet();
     });
 
-    const members = await guild.members.fetch();
     const verified_role = guild.roles.cache.find(role => role.name === "Verified");
     if (!verified_role) {
         console.log("No verified role found!");
         return;
     }
+    await checkMembershipVerified(client);
     // Start a new cron task to de-verify everyone who hasn't paid or TODO: verify those whose status has changed
     cron.schedule("0 0 * * *", () => {
-        const current_month = new Date().getMonth();
-        if (!(current_month >= 5 && current_month <= 8)) return;
-        Promise.all(
-            members.map(async member => {
-                const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
-                const channel = (await guild.channels.fetch(process.env.VERIFICATION_CHANNEL!)) as TextChannel;
-                if (member.roles.cache.some(role => role.name === "Verified") && !member.user.bot) {
-                    // Search for row in spreadsheet
-                    const user_row = verification_spreadsheet.find(data => data.discord_identifier === member.user.tag);
-                    if (!(user_row && validateMembership(user_row)) && member.roles.cache.has(verified_role.id)) {
-                        // User has Verified role + has not paid
-                        await member.roles.remove(verified_role);
-                        // DM user that they have not paid and thus have been removed
-                        await member.send("You have been unverified from UofGuelph Racing due to not paying the club fee.");
-                        await channel.send(`${member.id} has been unverified.`);
-                    }
-                }
-            }),
-        ).catch(error => {
-            console.log("Failed to un-verify user due to:\n", error);
-        });
+        checkMembershipVerified(client);
     });
 }
 
@@ -250,13 +294,14 @@ export function validateEmail(email: string): boolean {
 function validateMembership(user_row: Verification): boolean {
     const current_month = new Date().getMonth();
 
-    if (current_month >= 4 && current_month <= 9) {
+    if (current_month >= 4 && current_month <= 8) {
         return true;
     }
-
-    return user_row.payment_status === PAYMENT_ACCEPT;
+    return user_row.payment_status === PAYMENT_ACCEPT && user_row.in_gryphlife === GRYPHLIFE_ACCEPT;
 }
 
+// This handles the process of sending a verification message out to the user, but not processing if the code.
+// Effectively, we check if a verification email could be sent out and if so, we send one
 export async function handleVerification(client: Client, message: Message) {
     const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
     if (!guild) {
@@ -274,16 +319,17 @@ export async function handleVerification(client: Client, message: Message) {
         await message.reply("You are not in the Gryphon racing server!");
         return;
     }
-    if (guild_member.roles.cache.some(role => role.name === "Verified")) {
-        await message.reply("You are already verified");
-        return;
-    }
+    // Allow for re-verification
+    //if (guild_member.roles.cache.some(role => role.name === "Verified")) {
+    //    await message.reply("You are already verified");
+    //    return;
+    //}
 
     // Make sure the email isn't already verified
     // If already verified make sure it's the same discord id
     const entry = verification_spreadsheet.find(entry => entry.email === message.content);
-    if (entry && entry.discord_identifier.length > 0 && entry.discord_identifier !== message.author.tag) {
-        await message.reply("Email is already registered with a different account's discord ID, please contact a @Bot Developer to resolve this issue.");
+    if (entry && entry.discord_identifier.length > 0 && entry.discord_identifier !== message.author.id) {
+        await message.reply("Email is already registered with a different account's discord ID, please contact a `@Bot Developer` to resolve this issue.");
         return;
     }
 
@@ -336,6 +382,10 @@ export async function handleVerification(client: Client, message: Message) {
     }
 }
 
+// This deals with processing DMs.
+// Ignores bots, users who are not trying to input their code (processing_members_code) will be dealt by
+// handleVerification
+// Users who are sending a code will be dealt with here
 export async function handleVerificationDM(client: Client, message: Message) {
     if (!processing_members_code.has(message.author.id)) {
         await handleVerification(client, message);
@@ -366,12 +416,12 @@ export async function handleVerificationDM(client: Client, message: Message) {
     // Update spreadsheet
     const USER_ROW_INDEX = verification_spreadsheet.findIndex(data => data.email === verification_code.email)!;
     const VERIFICATION_ROW = verification_spreadsheet[USER_ROW_INDEX];
-    // VERIFICATION_ROW.discord_identifier = message.author.tag;
-    // verification_spreadsheet_queue.push({
-    //     index: USER_ROW_INDEX,
-    //     row: VERIFICATION_ROW,
-    // });
-    // await pushSpreadsheet();
+    VERIFICATION_ROW.discord_identifier = message.author.id;
+    verification_spreadsheet_queue.push({
+        index: USER_ROW_INDEX,
+        row: VERIFICATION_ROW,
+    });
+    await pushSpreadsheet();
     processing_members_code.delete(message.author.id);
 
     if (fs.existsSync("./resources/verifications.txt")) {
@@ -387,7 +437,7 @@ export async function handleVerificationDM(client: Client, message: Message) {
 
     try {
         const channel = guild.channels.resolve(process.env.VERIFICATION_CHANNEL!) as TextChannel;
-        await channel.send(`${message.author.tag} has been successfully verified`);
+        await channel.send(`${message.author.tag} has been successfully verified.`);
     } catch (err) {
         console.log("Failed to send a message into verification channel due to:\n", err);
     }
