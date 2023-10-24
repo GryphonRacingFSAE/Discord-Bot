@@ -312,7 +312,7 @@ function validateMembership(user_row: Verification): boolean {
     if (current_month >= 4 && current_month <= 8) {
         return true;
     }
-    return user_row.payment_status === PAYMENT_ACCEPT && user_row.in_gryphlife === GRYPHLIFE_ACCEPT;
+    return user_row.payment_status.trim().toLowerCase() === PAYMENT_ACCEPT.trim().toLowerCase() && user_row.in_gryphlife.trim().toLowerCase() === GRYPHLIFE_ACCEPT.trim().toLowerCase();
 }
 
 // This handles the process of sending a verification message out to the user, but not processing if the code.
@@ -391,10 +391,10 @@ export async function handleVerification(client: Client, message: Message) {
             });
         await message.reply({ content: "Please **DM the bot** with a 7 digit code sent to the email address. Type `cancel` if you wish to cancel the verification code." });
         return;
-    }
-
-    if (user_row.payment_status.trim() !== PAYMENT_ACCEPT) {
+    } else if (user_row.payment_status.trim().toLowerCase() !== PAYMENT_ACCEPT.trim().toLowerCase()) {
         await message.reply({ content: "You may have not paid your team fee yet, this must be manually reviewed, please be patient." });
+    } else if (user_row.in_gryphlife.trim().toLowerCase() !== GRYPHLIFE_ACCEPT.trim().toLowerCase()) {
+        await message.reply({ content: "You may have not joined GrpyhLife yet, this must be manually reviewed, please be patient." });
     }
 }
 
