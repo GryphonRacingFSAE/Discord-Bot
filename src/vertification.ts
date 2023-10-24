@@ -442,11 +442,11 @@ export async function handleVerificationDM(client: Client, message: Message) {
 
     if (fs.existsSync("./resources/verifications.txt")) {
         const verifications = fs.readFileSync("./resources/verifications.txt", "utf8");
-        fs.writeFileSync("./resources/verifications.txt", verifications + verification_code.email + " " + message.author.tag + "\n");
+        fs.writeFileSync("./resources/verifications.txt", verifications + verification_code.email + " " + message.author.tag + message.author.id + "\n");
         console.log(verifications + verification_code.email + " " + message.author.tag + " " + message.author.id + "\n");
     } else {
         fs.writeFileSync("./resources/verifications.txt", verification_code.email + " " + message.author.tag + " " + message.author.id + "\n");
-        console.log(verification_code.email + " " + message.author.tag + "\n");
+        console.log(verification_code.email + " " + message.author.tag + " " + message.author.id + "\n");
     }
 
     await message.reply(`Verification successful! Welcome aboard, ${VERIFICATION_ROW.name}.`);
