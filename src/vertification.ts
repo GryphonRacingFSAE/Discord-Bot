@@ -376,6 +376,7 @@ export async function handleVerification(client: Client, message: Message) {
             id: verification_code,
             time_stamp: Date.now(),
         });
+        console.log("Attempting to send an email to:", user_row);
         await transporter
             .sendMail({
                 from: process.env.EMAIL_USERNAME,
