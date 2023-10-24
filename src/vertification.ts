@@ -244,10 +244,6 @@ export async function verificationOnReady(client: Client) {
 
     // Update spreadsheet
     await pullSpreadsheet();
-    fs.watch(FILE_PATH, () => {
-        console.log("Changes made! Pulling spreadsheet");
-        pullSpreadsheet();
-    });
 
     const verified_role = guild.roles.cache.find(role => role.name === "Verified");
     if (!verified_role) {
