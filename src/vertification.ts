@@ -1,12 +1,12 @@
-import fs from "node:fs";
+import "fs";
 import dotenv from "dotenv";
 import { Client, EmbedBuilder, GuildMember, Message, TextChannel } from "discord.js";
 import { createTransport } from "nodemailer";
 import { createHash } from "crypto";
 import { Mutex } from "async-mutex";
 import xlsx from "xlsx";
-const { readFile, writeFile, utils } = xlsx;
 import * as cron from "node-cron";
+import fs from "node:fs";
 
 dotenv.config(); // Load env parameters
 
@@ -78,24 +78,38 @@ for (const [key, value] of Object.entries(COLUMN_NAME_MAPPING)) {
     REVERSE_COLUMN_NAME_MAPPING[value] = key;
 }
 
+async function fileExists(filePath: string): Promise<boolean> {
+    try {
+        await fs.promises.access(filePath, fs.promises.constants.F_OK);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 // Pulls from the spreadsheet
-function pullSpreadsheet() {
+async function pullSpreadsheet() {
     // Check if the main file exists
-    if (!fs.existsSync(FILE_PATH)) {
-        const ws = utils.aoa_to_sheet([
-            ["name", "email", "discord_identifier", "payment_status", "in_gryphlife"], // Column headers
+    if (!(await fileExists(FILE_PATH))) {
+        const ws = xlsx.utils.aoa_to_sheet([
+            ["Name", "Email", "Discord ID", "Has Paid", "In GryphLife"], // Column headers
         ]);
-        const wb = utils.book_new();
-        utils.book_append_sheet(wb, ws, "Sheet1");
-        writeFile(wb, FILE_PATH);
+        const wb = xlsx.utils.book_new();
+        xlsx.utils.book_append_sheet(wb, ws, "Sheet1");
+        const buffer = xlsx.write(wb, {
+            type: "buffer",
+            bookType: "xlsx",
+        });
+        await fs.promises.writeFile(FILE_PATH, buffer);
         verification_spreadsheet = [];
         return;
     }
 
     // Read from the chosen path
-    const workbook = readFile(FILE_PATH);
+    const buffer = await fs.promises.readFile(FILE_PATH);
+    const workbook = xlsx.read(buffer);
     const sheet_name_list = workbook.SheetNames;
-    verification_spreadsheet = (utils.sheet_to_json(workbook.Sheets[sheet_name_list[0]]) as SpreadsheetRow[]).map((row: SpreadsheetRow) => {
+    verification_spreadsheet = (xlsx.utils.sheet_to_json(workbook.Sheets[sheet_name_list[0]]) as SpreadsheetRow[]).map((row: SpreadsheetRow) => {
         const new_row: Verification = {
             name: "",
             email: "",
@@ -116,7 +130,7 @@ function pullSpreadsheet() {
 // Push to the spreadsheet file
 async function pushSpreadsheet() {
     await VERIFICATION_MUTEX.runExclusive(async () => {
-        pullSpreadsheet(); // Make sure we get an updated spreadsheet
+        await pullSpreadsheet(); // Make sure we get an updated spreadsheet
 
         // Best way I could get it to only append
         while (verification_spreadsheet_queue.length) {
@@ -127,7 +141,7 @@ async function pushSpreadsheet() {
             verification_spreadsheet[change.index] = change.row;
         }
 
-        const workbook = utils.book_new();
+        const workbook = xlsx.utils.book_new();
         const translated_spreadsheet = verification_spreadsheet.map((row: Verification) => {
             const new_row: SpreadsheetRow = {};
             for (const [key, value] of Object.entries(row)) {
@@ -138,9 +152,9 @@ async function pushSpreadsheet() {
             }
             return new_row;
         });
-        const worksheet = utils.json_to_sheet(translated_spreadsheet);
+        const worksheet = xlsx.utils.json_to_sheet(translated_spreadsheet);
 
-        utils.book_append_sheet(workbook, worksheet, "Sheet1");
+        xlsx.utils.book_append_sheet(workbook, worksheet, "Sheet1");
 
         const MAX_RETRIES: number = 10; // MAX RETRIES - 5
         let retries = 0;
@@ -148,7 +162,11 @@ async function pushSpreadsheet() {
         // Write the workbook to the filesystem
         while (retries < MAX_RETRIES) {
             try {
-                writeFile(workbook, FILE_PATH);
+                const buffer = xlsx.write(workbook, {
+                    type: "buffer",
+                    bookType: "xlsx",
+                });
+                await fs.promises.writeFile(FILE_PATH, buffer);
                 return true;
             } catch (err) {
                 // Failed to write to file usually due to something writing it already. Override it :D
@@ -225,10 +243,7 @@ export async function verificationOnReady(client: Client) {
     }
 
     // Update spreadsheet
-    pullSpreadsheet();
-    fs.watchFile(FILE_PATH, () => {
-        pullSpreadsheet();
-    });
+    await pullSpreadsheet();
 
     const verified_role = guild.roles.cache.find(role => role.name === "Verified");
     if (!verified_role) {
@@ -297,7 +312,7 @@ function validateMembership(user_row: Verification): boolean {
     if (current_month >= 4 && current_month <= 8) {
         return true;
     }
-    return user_row.payment_status === PAYMENT_ACCEPT && user_row.in_gryphlife === GRYPHLIFE_ACCEPT;
+    return user_row.payment_status.trim().toLowerCase() === PAYMENT_ACCEPT.trim().toLowerCase() && user_row.in_gryphlife.trim().toLowerCase() === GRYPHLIFE_ACCEPT.trim().toLowerCase();
 }
 
 // This handles the process of sending a verification message out to the user, but not processing if the code.
@@ -361,6 +376,7 @@ export async function handleVerification(client: Client, message: Message) {
             id: verification_code,
             time_stamp: Date.now(),
         });
+        console.log("Attempting to send an email to:", user_row);
         await transporter
             .sendMail({
                 from: process.env.EMAIL_USERNAME,
@@ -375,10 +391,10 @@ export async function handleVerification(client: Client, message: Message) {
             });
         await message.reply({ content: "Please **DM the bot** with a 7 digit code sent to the email address. Type `cancel` if you wish to cancel the verification code." });
         return;
-    }
-
-    if (user_row.payment_status.trim() !== PAYMENT_ACCEPT) {
+    } else if (user_row.payment_status.trim().toLowerCase() !== PAYMENT_ACCEPT.trim().toLowerCase()) {
         await message.reply({ content: "You may have not paid your team fee yet, this must be manually reviewed, please be patient." });
+    } else if (user_row.in_gryphlife.trim().toLowerCase() !== GRYPHLIFE_ACCEPT.trim().toLowerCase()) {
+        await message.reply({ content: "You may have not joined GrpyhLife yet, this must be manually reviewed, please be patient." });
     }
 }
 
@@ -427,9 +443,9 @@ export async function handleVerificationDM(client: Client, message: Message) {
     if (fs.existsSync("./resources/verifications.txt")) {
         const verifications = fs.readFileSync("./resources/verifications.txt", "utf8");
         fs.writeFileSync("./resources/verifications.txt", verifications + verification_code.email + " " + message.author.tag + "\n");
-        console.log(verifications + verification_code.email + " " + message.author.tag + "\n");
+        console.log(verifications + verification_code.email + " " + message.author.tag + " " + message.author.id + "\n");
     } else {
-        fs.writeFileSync("./resources/verifications.txt", verification_code.email + " " + message.author.tag + "\n");
+        fs.writeFileSync("./resources/verifications.txt", verification_code.email + " " + message.author.tag + " " + message.author.id + "\n");
         console.log(verification_code.email + " " + message.author.tag + "\n");
     }
 
