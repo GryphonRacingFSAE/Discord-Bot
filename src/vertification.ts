@@ -58,9 +58,11 @@ export class SpreadsheetSingleton {
     private static instance: SpreadsheetSingleton;
     public mutex: Mutex;
     public _data: Array<Verification>;
+    public _data_queue: Array<SpreadsheetQueue>;
     private constructor() {
         this.mutex = new Mutex();
         this._data = new Array<Verification>();
+        this._data_queue = new Array<SpreadsheetQueue>();
     }
 
     public static getInstance(): SpreadsheetSingleton {
@@ -77,7 +79,6 @@ export class SpreadsheetSingleton {
 // To push these changes, call pushSpreadsheet()
 // It's highly recommended, if you are pushing multiple things at the same time, you batch them to best prevent
 // overriding errors from occurring
-const verification_spreadsheet_queue: Array<SpreadsheetQueue> = new Array<SpreadsheetQueue>();
 const verification_spreadsheet = SpreadsheetSingleton.getInstance();
 // Spreadsheet column names are different from what we use internally, so we should convert between them
 const COLUMN_NAME_MAPPING: { [key: string]: string } = {
@@ -104,9 +105,9 @@ async function fileExists(filePath: string): Promise<boolean> {
 }
 
 // Pulls from the spreadsheet
-export async function pullSpreadsheet() {
+export async function pullSpreadsheet(spreadsheet_singleton: SpreadsheetSingleton) {
     // Check if the main file exists
-    await verification_spreadsheet.mutex.runExclusive(async () => {
+    await spreadsheet_singleton.mutex.runExclusive(async () => {
         if (!(await fileExists(FILE_PATH))) {
             const ws = xlsx.utils.aoa_to_sheet([
                 ["Name", "Email", "Discord ID", "Has Paid", "In GryphLife"], // Column headers
@@ -118,7 +119,7 @@ export async function pullSpreadsheet() {
                 bookType: "xlsx",
             });
             await fs.promises.writeFile(FILE_PATH, buffer);
-            verification_spreadsheet._data = [];
+            spreadsheet_singleton._data = [];
             return;
         }
 
@@ -126,7 +127,7 @@ export async function pullSpreadsheet() {
         const buffer = await fs.promises.readFile(FILE_PATH);
         const workbook = xlsx.read(buffer);
         const sheet_name_list = workbook.SheetNames;
-        verification_spreadsheet._data = (xlsx.utils.sheet_to_json(workbook.Sheets[sheet_name_list[0]]) as SpreadsheetRow[]).map((row: SpreadsheetRow) => {
+        spreadsheet_singleton._data = (xlsx.utils.sheet_to_json(workbook.Sheets[sheet_name_list[0]]) as SpreadsheetRow[]).map((row: SpreadsheetRow) => {
             const new_row: Verification = {
                 name: "",
                 email: "",
@@ -146,20 +147,20 @@ export async function pullSpreadsheet() {
 }
 
 // Push to the spreadsheet file
-export async function pushSpreadsheet() {
-    await pullSpreadsheet().then(async () => {
-        await verification_spreadsheet.mutex.runExclusive(async () => {
+export async function pushSpreadsheet(spreadsheet_singleton: SpreadsheetSingleton) {
+    await pullSpreadsheet(spreadsheet_singleton).then(async () => {
+        await spreadsheet_singleton.mutex.runExclusive(async () => {
             // Best way I could get it to only append
-            while (verification_spreadsheet_queue.length) {
-                const change = verification_spreadsheet_queue.pop();
+            while (verification_spreadsheet._data_queue.length) {
+                const change = verification_spreadsheet._data_queue.pop();
                 if (!change) {
                     break;
                 }
-                verification_spreadsheet._data[change.index] = change.row;
+                spreadsheet_singleton._data[change.index] = change.row;
             }
 
             const workbook = xlsx.utils.book_new();
-            const translated_spreadsheet = verification_spreadsheet._data.map((row: Verification) => {
+            const translated_spreadsheet = spreadsheet_singleton._data.map((row: Verification) => {
                 const new_row: SpreadsheetRow = {};
                 for (const [key, value] of Object.entries(row)) {
                     const translated_key = COLUMN_NAME_MAPPING[key];
@@ -251,7 +252,7 @@ async function checkMembershipVerified(client: Client) {
             console.log("Failed to un-verify user due to:\n", error);
         });
     });
-    await pushSpreadsheet();
+    await pushSpreadsheet(verification_spreadsheet);
 }
 
 // Get all members in the guild who do not have the verification role
@@ -263,7 +264,7 @@ export async function verificationOnReady(client: Client) {
     }
 
     // Update spreadsheet
-    await pullSpreadsheet();
+    await pullSpreadsheet(verification_spreadsheet);
 
     const verified_role = guild.roles.cache.find(role => role.name === "Verified");
     if (!verified_role) {
@@ -460,12 +461,12 @@ export async function handleVerificationDM(client: Client, message: Message) {
         USER_ROW_INDEX = verification_spreadsheet._data.findIndex(data => data.email === verification_code.email)!;
         VERIFICATION_ROW = verification_spreadsheet._data[USER_ROW_INDEX];
         VERIFICATION_ROW.discord_identifier = message.author.id;
-        verification_spreadsheet_queue.push({
+        verification_spreadsheet._data_queue.push({
             index: USER_ROW_INDEX,
             row: VERIFICATION_ROW,
         });
     });
-    await pushSpreadsheet();
+    await pushSpreadsheet(verification_spreadsheet);
     processing_members_code.delete(message.author.id);
 
     if (fs.existsSync("./resources/verifications.txt")) {
