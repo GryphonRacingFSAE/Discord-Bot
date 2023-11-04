@@ -120,7 +120,16 @@ export default {
                                 // Does not exist! Cannot remove at all.
                                 await interaction.reply({ content: `Could not find \`${TARGET}\``, ephemeral: true });
                             } else {
-                                verification_spreadsheet._data.splice(USER_ROW_INDEX, 1);
+                                verification_spreadsheet._data_queue.push({
+                                    index: USER_ROW_INDEX,
+                                    row: {
+                                        email: "",
+                                        discord_identifier: "",
+                                        in_gryphlife: "",
+                                        payment_status: "",
+                                        name: "",
+                                    },
+                                });
                                 await interaction.reply({ content: `Removed \`${TARGET}\` 's data`, ephemeral: true });
                             }
                         }),
