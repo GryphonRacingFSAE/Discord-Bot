@@ -3,13 +3,12 @@
 // @namespace    http://tampermonkey.net/
 // @version      0.1
 // @description  A script to do something
-// @author       You
+// @author       Mani Rash Ahmadi
 // @match        https://gryphlife.uoguelph.ca/actioncenter/*
 // @grant        GM_xmlhttpRequest
 // ==/UserScript==
-//setInterval(() => {
-//    location.reload();
-//}, 10000);
+
+//load this script in TamperMonkey
 
 function getHrefFromHTMLString(htmlString, className) {
     var parser = new DOMParser();
@@ -22,6 +21,14 @@ function getHrefFromHTMLString(htmlString, className) {
     }
 }
 
+function approveMembers() {
+    // Find all buttons with the specified aria-label
+    const approveButtons = document.querySelectorAll('[aria-label="Approve member"]');
+
+    // Click each button
+    // approveButtons.forEach(button => console.log(button));
+    approveButtons.forEach(button => button.click());
+}
 async function fetchURLContent(url) {
     try {
         const response = await fetch(url);
@@ -46,7 +53,7 @@ async function getTextContentFromHref(href, className) {
 
 async function processMembers() {
     const members = document.getElementsByClassName('member-modal');
-    const memberInfo = {};
+    const memberInfoArray = [];
 
     for(let member of members) {
         if (member.textContent.includes("Gryphon SAE Racing Team")) {
@@ -58,15 +65,22 @@ async function processMembers() {
         if(memberHref) {
             var email = await getTextContentFromHref(memberHref, 'email');
             email = email.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)[0]
-            memberInfo[memberName] = email;
+            memberInfoArray.push({
+                Name: memberName,
+                email: email
+            });
         } else {
-            memberInfo[memberName] = null;
+            memberInfoArray.push({
+                Name: memberName,
+                email: null
+            });
         }
     }
+
     GM_xmlhttpRequest({
         method: "POST",
         url: "http://127.0.0.1:5000/receive_data",
-        data: JSON.stringify(memberInfo),
+        data: JSON.stringify(memberInfoArray),
         headers: {
             "Content-Type": "application/json"
         },
@@ -75,8 +89,12 @@ async function processMembers() {
         }
     });
 
-    console.log('Member Info:', memberInfo);
+    console.log('Member Info:', memberInfoArray);
+    approveMembers();
 }
 
 // Example usage
 processMembers();
+setTimeout(function() {
+    window.location.reload();
+}, 120000); // 120000 milliseconds = 120 seconds
