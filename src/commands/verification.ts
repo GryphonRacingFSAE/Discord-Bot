@@ -32,7 +32,6 @@ export default {
 
     async execute(interaction: CommandInteraction) {
         if (!interaction.isChatInputCommand()) return;
-        /*
         {
             // Determine permission to use
             const guild = interaction.guild;
@@ -54,7 +53,6 @@ export default {
                 return;
             }
         }
-        */
         const options = interaction.options;
         switch (options.getSubcommand()) {
             case "edit": {
