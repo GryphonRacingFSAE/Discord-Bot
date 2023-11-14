@@ -13,8 +13,8 @@
 function getHrefFromHTMLString(htmlString, className) {
     var parser = new DOMParser();
     var doc = parser.parseFromString(htmlString, "text/html");
-    var element = doc.querySelector('.' + className);
-    if(element && element.href) {
+    var element = doc.querySelector("." + className);
+    if (element && element.href) {
         return element.href;
     } else {
         return null;
@@ -42,7 +42,7 @@ async function fetchURLContent(url) {
 
 async function getTextContentFromHref(href, className) {
     const htmlContent = await fetchURLContent(href);
-    if(htmlContent) {
+    if (htmlContent) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlContent, "text/html");
         const element = doc.querySelector('.' + className);
@@ -55,16 +55,16 @@ async function processMembers() {
     const members = document.getElementsByClassName("member-modal");
     const memberInfoArray = [];
 
-    for(let member of members) {
+    for (let member of members) {
         if (member.textContent.includes("Gryphon SAE Racing Team")) {
             continue; // Skip this iteration
         }
         const memberName = member.textContent.trim();
         const memberHref = getHrefFromHTMLString(member.outerHTML, "member-modal");
 
-        if(memberHref) {
+        if (memberHref) {
             var email = await getTextContentFromHref(memberHref, "email");
-            email = email.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)[0]
+            email = email.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)[0];
             memberInfoArray.push({
                 Name: memberName,
                 email: email
@@ -84,7 +84,7 @@ async function processMembers() {
         headers: {
             "Content-Type": "application/json"
         },
-        onload: function(response) {
+        onload: function (response) {
             console.log("Server response:", response.responseText);
         }
     });
@@ -95,6 +95,6 @@ async function processMembers() {
 
 // Example usage
 processMembers();
-setTimeout(function() {
+setTimeout(function () {
     window.location.reload();
 }, 120000); // 120000 milliseconds = 120 seconds
