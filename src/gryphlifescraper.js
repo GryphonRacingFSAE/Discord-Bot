@@ -45,7 +45,7 @@ async function getTextContentFromHref(href, className) {
     if (htmlContent) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlContent, "text/html");
-        const element = doc.querySelector('.' + className);
+        const element = doc.querySelector("." + className);
         return element ? element.textContent : null;
     }
     return null;

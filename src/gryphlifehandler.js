@@ -18,7 +18,6 @@ async function processExcelData(client, data) {
 
     // Your Excel file path
 
-
     // Load the workbook and select the first worksheet
     const workbook = new ExcelJS.default.Workbook();
     await workbook.xlsx.readFile(filePath);
