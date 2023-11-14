@@ -67,12 +67,12 @@ async function processMembers() {
             email = email.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)[0];
             memberInfoArray.push({
                 Name: memberName,
-                email: email
+                email: email,
             });
         } else {
             memberInfoArray.push({
                 Name: memberName,
-                email: null
+                email: null,
             });
         }
     }
@@ -82,11 +82,11 @@ async function processMembers() {
         url: "http://127.0.0.1:5000/receive_data",
         data: JSON.stringify(memberInfoArray),
         headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
         onload: function (response) {
             console.log("Server response:", response.responseText);
-        }
+        },
     });
 
     console.log("Member Info:", memberInfoArray);

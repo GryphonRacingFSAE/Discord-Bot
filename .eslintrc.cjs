@@ -31,4 +31,12 @@ module.exports = {
         ecmaVersion: "latest",
         sourceType: "module",
     },
+    env: {
+        node: true,
+        browser: true,
+    },
+    globals: {
+        GM_xmlhttpRequest: "readonly",
+        DOMParser: "readonly",
+    },
 };

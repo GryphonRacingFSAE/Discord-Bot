@@ -1,77 +1,77 @@
 name: GRacing Bot CI
 
 on:
-  push:
+    push:
 
 jobs:
-  Lint-Type-Build-Check-Bot:
-    runs-on: ubuntu-latest
+    Lint-Type-Build-Check-Bot:
+        runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
 
-      - name: Install dependencies
-        run: npm i
+            - name: Install dependencies
+              run: npm i
 
-        # Run all the checks, and report all the results
-      - name: Lint check
-        if: always()
-        run: npm run lint-check
+              # Run all the checks, and report all the results
+            - name: Lint check
+              if: always()
+              run: npm run lint-check
 
-      - name: Type Check
-        if: always()
-        run: npm run type-check
+            - name: Type Check
+              if: always()
+              run: npm run type-check
 
-      - name: Compile TypeScript
-        if: always()
-        run: npm run build
-    
-  Lint-Build-Check-Door-Sensor:
-    runs-on: ubuntu-latest
+            - name: Compile TypeScript
+              if: always()
+              run: npm run build
 
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-      - name: Setup PlatformIO
-        run: pip install --upgrade platformio
+    Lint-Build-Check-Door-Sensor:
+        runs-on: ubuntu-latest
 
-      # Clang Format
-      - name: Format Check
-        uses: DoozyX/clang-format-lint-action@v0.16
-        if: always()
-        with:
-          source: esp32
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-python@v4
+            - name: Setup PlatformIO
+              run: pip install --upgrade platformio
 
-      # PlatformIO
-      - name: Compile Door Sensor
-        if: always()
-        run: |
-          cd esp32
-          pio run
+            # Clang Format
+            - name: Format Check
+              uses: DoozyX/clang-format-lint-action@v0.16
+              if: always()
+              with:
+                  source: esp32
 
-  # Currently we deploy via docker on our shop server, which is set up has a runner
-  Deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: [ self-hosted, Linux, X64 ]
-    needs: [Lint-Type-Build-Check-Bot, Lint-Build-Check-Door-Sensor]
-    steps:
-      - uses: actions/checkout@v4
+            # PlatformIO
+            - name: Compile Door Sensor
+              if: always()
+              run: |
+                  cd esp32
+                  pio run
 
-      # I installed docker using the docs here: https://docs.docker.com/desktop/install/ubuntu/
-      - name: Deploy with Docker
-        env:
-          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
-          DISCORD_APPLICATION_ID: ${{ secrets.DISCORD_APPLICATION_ID }}
-          DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
-          EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
-          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-          EMAIL_SERVICE: ${{ vars.EMAIL_SERVICE }}
-          EMAIL_HOST: ${{ vars.EMAIL_HOST }}
-          EMAIL_PORT: ${{ vars.EMAIL_PORT }}
-          VERIFICATION_CHANNEL: ${{ vars.VERIFICATION_CHANNEL }}
-        run: |
-          docker build . --tag gracingbot
-          docker stop GRacingBot || true # It's okay if these fail, as the bot might not be active or existant
-          docker rm GRacingBot || true
-          docker run -d --restart unless-stopped -e DISCORD_BOT_TOKEN -e DISCORD_APPLICATION_ID -e DISCORD_GUILD_ID -e EMAIL_USERNAME -e EMAIL_PASSWORD -e EMAIL_HOST -e EMAIL_SERVICE -e EMAIL_PORT -e VERIFICATION_CHANNEL -p 80:80 -p 587:587 --name GRacingBot -v /home/grc0/GRacingBotFiles:/usr/app/resources -v "/home/grc0/OneDrive/Gryphon Racing Administrative/Team Roster":/usr/app/onedrive gracingbot
+    # Currently we deploy via docker on our shop server, which is set up has a runner
+    Deploy:
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        runs-on: [self-hosted, Linux, X64]
+        needs: [Lint-Type-Build-Check-Bot, Lint-Build-Check-Door-Sensor]
+        steps:
+            - uses: actions/checkout@v4
+
+            # I installed docker using the docs here: https://docs.docker.com/desktop/install/ubuntu/
+            - name: Deploy with Docker
+              env:
+                  DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+                  DISCORD_APPLICATION_ID: ${{ secrets.DISCORD_APPLICATION_ID }}
+                  DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+                  EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
+                  EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+                  EMAIL_SERVICE: ${{ vars.EMAIL_SERVICE }}
+                  EMAIL_HOST: ${{ vars.EMAIL_HOST }}
+                  EMAIL_PORT: ${{ vars.EMAIL_PORT }}
+                  VERIFICATION_CHANNEL: ${{ vars.VERIFICATION_CHANNEL }}
+              run: |
+                  docker build . --tag gracingbot
+                  docker stop GRacingBot || true # It's okay if these fail, as the bot might not be active or existant
+                  docker rm GRacingBot || true
+                  docker run -d --restart unless-stopped -e DISCORD_BOT_TOKEN -e DISCORD_APPLICATION_ID -e DISCORD_GUILD_ID -e EMAIL_USERNAME -e EMAIL_PASSWORD -e EMAIL_HOST -e EMAIL_SERVICE -e EMAIL_PORT -e VERIFICATION_CHANNEL -p 80:80 -p 587:587 --name GRacingBot -v /home/grc0/GRacingBotFiles:/usr/app/resources -v "/home/grc0/OneDrive/Gryphon Racing Administrative/Team Roster":/usr/app/onedrive gracingbot

@@ -49,7 +49,7 @@ Fetch latest team roster + payment status from OneDrive using rclone and verify 
 
 Syncing to the onedrive team verification roster xlsx file is done through rclone + a cron task. Syncing is done every 5 minutes using a [crontab](https://en.wikipedia.org/wiki/Cron) which executes an [rclone sync](https://rclone.org/commands/rclone_sync/) command. To edit the synchronization file, please run `crontab -e` on the dev box/server to access the cron task configuration + synchronization command.
 
-We currently sync between `~/Documents/onedrive-sync` and `/Gryphon Racing Administration/Team Roster` folder. 
+We currently sync between `~/Documents/onedrive-sync` and `/Gryphon Racing Administration/Team Roster` folder.
 
 ### Countdown - Danny
 

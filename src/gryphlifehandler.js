@@ -26,7 +26,8 @@ async function processExcelData(client, data) {
     // Find the column with the header "In GryphLife"
     let gryphLifeColNum = null;
     sheet.eachRow((row, rowNumber) => {
-        if (rowNumber === 1) {  // Assuming the headers are in the first row
+        if (rowNumber === 1) {
+            // Assuming the headers are in the first row
             row.eachCell((cell, colNumber) => {
                 if (cell.value === "In GryphLife") {
                     gryphLifeColNum = colNumber;
@@ -101,7 +102,7 @@ function respondToRequest(client, req, res) {
 }
 
 export async function initiateGryphlifeListener(client) {
-    console.log("init ran successfully")
+    console.log("init ran successfully");
     const server = http.createServer((req, res) => {
         respondToRequest(client, req, res);
     });
