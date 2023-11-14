@@ -12,7 +12,7 @@
 
 function getHrefFromHTMLString(htmlString, className) {
     var parser = new DOMParser();
-    var doc = parser.parseFromString(htmlString, 'text/html');
+    var doc = parser.parseFromString(htmlString, "text/html");
     var element = doc.querySelector('.' + className);
     if(element && element.href) {
         return element.href;
@@ -23,7 +23,7 @@ function getHrefFromHTMLString(htmlString, className) {
 
 function approveMembers() {
     // Find all buttons with the specified aria-label
-    const approveButtons = document.querySelectorAll('[aria-label="Approve member"]');
+    const approveButtons = document.querySelectorAll("[aria-label='Approve member']");
 
     // Click each button
     // approveButtons.forEach(button => console.log(button));
@@ -35,7 +35,7 @@ async function fetchURLContent(url) {
         const data = await response.text();
         return data;
     } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error("Error fetching data:", error);
         return null;
     }
 }
@@ -44,7 +44,7 @@ async function getTextContentFromHref(href, className) {
     const htmlContent = await fetchURLContent(href);
     if(htmlContent) {
         const parser = new DOMParser();
-        const doc = parser.parseFromString(htmlContent, 'text/html');
+        const doc = parser.parseFromString(htmlContent, "text/html");
         const element = doc.querySelector('.' + className);
         return element ? element.textContent : null;
     }
@@ -52,7 +52,7 @@ async function getTextContentFromHref(href, className) {
 }
 
 async function processMembers() {
-    const members = document.getElementsByClassName('member-modal');
+    const members = document.getElementsByClassName("member-modal");
     const memberInfoArray = [];
 
     for(let member of members) {
@@ -60,10 +60,10 @@ async function processMembers() {
             continue; // Skip this iteration
         }
         const memberName = member.textContent.trim();
-        const memberHref = getHrefFromHTMLString(member.outerHTML, 'member-modal');
+        const memberHref = getHrefFromHTMLString(member.outerHTML, "member-modal");
 
         if(memberHref) {
-            var email = await getTextContentFromHref(memberHref, 'email');
+            var email = await getTextContentFromHref(memberHref, "email");
             email = email.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)[0]
             memberInfoArray.push({
                 Name: memberName,
@@ -89,7 +89,7 @@ async function processMembers() {
         }
     });
 
-    console.log('Member Info:', memberInfoArray);
+    console.log("Member Info:", memberInfoArray);
     approveMembers();
 }
 
