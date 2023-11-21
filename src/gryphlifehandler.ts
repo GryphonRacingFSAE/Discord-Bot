@@ -3,7 +3,7 @@ import * as ExcelJS from "exceljs";
 import * as url from "url";
 import cors from "cors";
 import dotenv from "dotenv";
-// import { Client, TextChannel } from 'discord.js';
+import { Client } from "discord.js";
 
 dotenv.config();
 
@@ -18,7 +18,7 @@ interface Member {
     email: string;
 }
 
-async function processExcelData(client: any, data: Member[]) {
+async function processExcelData(client: Client, data: Member[]) {
     console.log("Data received:", data);
 
     const workbook = new ExcelJS.Workbook();
@@ -31,7 +31,7 @@ async function processExcelData(client: any, data: Member[]) {
     }
 
     let gryphLifeColNum: number | null = null;
-    
+
     sheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) {
             row.eachCell((cell, colNumber) => {
@@ -43,7 +43,7 @@ async function processExcelData(client: any, data: Member[]) {
     });
 
     if (gryphLifeColNum !== null) {
-        for (let member of data) {
+        for (const member of data) {
             let row = 1;
             while (sheet.getCell(`A${row}`).value !== null) {
                 row += 1;
@@ -69,7 +69,7 @@ async function processExcelData(client: any, data: Member[]) {
     return { status: "Data received", data: data };
 }
 
-function respondToRequest(client: any, req: http.IncomingMessage, res: http.ServerResponse) {
+function respondToRequest(client: Client, req: http.IncomingMessage, res: http.ServerResponse) {
     if (req.method === "POST" && url.parse(req.url!).pathname === "/receive_data") {
         let body = "";
         req.on("data", (chunk: Buffer) => {
@@ -95,7 +95,7 @@ function respondToRequest(client: any, req: http.IncomingMessage, res: http.Serv
     }
 }
 
-export async function initiateGryphlifeListener(client: any) {
+export async function initiateGryphlifeListener(client: Client) {
     console.log("init ran successfully");
     const server = http.createServer((req, res) => {
         respondToRequest(client, req, res);
@@ -106,6 +106,10 @@ export async function initiateGryphlifeListener(client: any) {
     });
 
     client.once("ready", () => {
-        console.log(`Logged in as ${client.user.tag}!`);
+        if (client.user) {
+            console.log(`Logged in as ${client.user.tag}!`);
+        } else {
+            console.log("Client user is not available.");
+        }
     });
 }
