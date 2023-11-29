@@ -1,7 +1,7 @@
 import { AttachmentBuilder, Client, EmbedBuilder, TextChannel } from "discord.js";
 import http from "node:http";
 
-const image_file = new AttachmentBuilder("../assets/shop-location.png");
+const image_file = new AttachmentBuilder("assets/shop-location.png");
 
 let last_update_time: number = 0;
 let previous_door_state: boolean | null = null;
