@@ -1,5 +1,7 @@
-import { Client, EmbedBuilder, TextChannel } from "discord.js";
+import { AttachmentBuilder, Client, EmbedBuilder, TextChannel } from "discord.js";
 import http from "node:http";
+
+const image_file = new AttachmentBuilder("assets/shop-location.png");
 
 let last_update_time: number = 0;
 let previous_door_state: boolean | null = null;
@@ -89,7 +91,7 @@ async function sendDoorStatusMessage(channel: TextChannel, door_status: boolean 
         const embed = createDoorStatusEmbed(door_status);
 
         // Send the embed as a message
-        await channel.send({ embeds: [embed] });
+        await channel.send({ embeds: [embed], files: [image_file] });
     } catch (error) {
         console.error("Error while sending the door status message:", error);
     }
@@ -112,7 +114,7 @@ function createDoorStatusEmbed(door_status: boolean | null): EmbedBuilder {
             { name: "Last Updated", value: new Date().toLocaleString("en-US", { timeZone: "America/New_York", weekday: "long", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }) },
             { name: "\u200B", value: "[Google Maps](https://goo.gl/maps/f17ShXLsfcKVjqaGA)" },
         )
-        .setImage("https://i.imgur.com/uw8zfkV.png");
+        .setImage("attachment://shop-location.png");
 
     return status_embed;
 }
