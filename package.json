@@ -30,6 +30,6 @@
         "eslint-plugin-prettier": "^5.0.1",
         "prettier": "^3.0.3",
         "tsc-alias": "^1.8.8",
-        "typescript": "^5.2.2"
+        "typescript": "^5.3.3"
     }
 }
