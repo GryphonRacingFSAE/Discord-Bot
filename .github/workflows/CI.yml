@@ -30,11 +30,11 @@ jobs:
     Lint-Build-Check-Door-Sensor:
         runs-on: ubuntu-latest
 
-        steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-python@v4
-            - name: Setup PlatformIO
-              run: pip install --upgrade platformio
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+      - name: Setup PlatformIO
+        run: pip install --upgrade platformio
 
             # Clang Format
             - name: Format Check
