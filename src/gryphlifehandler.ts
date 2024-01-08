@@ -1,8 +1,8 @@
 import * as http from "http";
-import * as ExcelJS from "exceljs";
 import * as url from "url";
 import cors from "cors";
 import dotenv from "dotenv";
+import { pushSpreadsheet, pullSpreadsheet, SpreadsheetSingleton } from "./vertification";
 import { Client } from "discord.js";
 
 dotenv.config();
@@ -18,53 +18,46 @@ interface Member {
     email: string;
 }
 
-async function processExcelData(client: Client, data: Member[]) {
+async function processExcelData(client: Client, data: Member[]): Promise<{ status: string; data: Member[] }> {
     console.log("Data received:", data);
 
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.readFile(filePath);
-    const sheet = workbook.getWorksheet(1);
+    // Use the singleton to get the spreadsheet data
+    const spreadsheetSingleton = SpreadsheetSingleton.getInstance();
+    await pullSpreadsheet(spreadsheetSingleton);
 
-    if (!sheet) {
-        console.error("Worksheet not found in the workbook");
-        return { status: "Worksheet not found", data: [] };
+    // Iterate through the received data
+    for (const member of data) {
+        const nameToSearch = member.Name;
+        const email = member.email;
+
+        // Find the member by name in the existing spreadsheet data
+        const existingMember = spreadsheetSingleton._data.find(row => row.name === nameToSearch);
+
+        if (existingMember) {
+            // If the member is found, update their information
+            existingMember.email = email;
+            existingMember.in_gryphlife = "yes"; // Set the "In GryphLife" column cell to "yes"
+        } else {
+            // If the member is not found, insert the data in the first empty row
+            const newRow = {
+                name: nameToSearch,
+                email: email,
+                discord_identifier: "", // You can set this value if needed
+                payment_status: "", // You can set this value if needed
+                in_gryphlife: "yes", // Set the "In GryphLife" column cell to "yes"
+            };
+            spreadsheetSingleton._data.push(newRow);
+        }
     }
 
-    let gryphLifeColNum: number | null = null;
+    // Push the updated data back to the spreadsheet
+    await pushSpreadsheet(spreadsheetSingleton);
 
-    sheet.eachRow((row, rowNumber) => {
-        if (rowNumber === 1) {
-            row.eachCell((cell, colNumber) => {
-                if (cell.value === "In GryphLife") {
-                    gryphLifeColNum = colNumber;
-                }
-            });
-        }
-    });
-
-    if (gryphLifeColNum !== null) {
-        for (const member of data) {
-            let row = 1;
-            while (sheet.getCell(`A${row}`).value !== null) {
-                row += 1;
-            }
-
-            const name = member.Name;
-            const email = member.email;
-            if (name) {
-                sheet.getCell(`A${row}`).value = name;
-            }
-            if (email) {
-                sheet.getCell(`B${row}`).value = email;
-            }
-
-            sheet.getCell(`E${row}`).value = "yes";
-        }
-    } else {
-        console.error("Column 'In GryphLife' not found");
-    }
-
-    await workbook.xlsx.writeFile(filePath);
+    // Code block below is for testing and debugging
+    // const channel = client.channels.cache.get(channelId);
+    // if (channel) {
+    //     await channel.send('Member added');
+    // }
 
     return { status: "Data received", data: data };
 }
@@ -73,7 +66,7 @@ function respondToRequest(client: Client, req: http.IncomingMessage, res: http.S
     if (req.method === "POST" && url.parse(req.url!).pathname === "/receive_data") {
         let body = "";
         req.on("data", (chunk: Buffer) => {
-            body += chunk.toString();
+            body += chunk.toString(); // convert Buffer to string
         });
         req.on("end", async () => {
             const data = JSON.parse(body);
@@ -109,7 +102,7 @@ export async function initiateGryphlifeListener(client: Client) {
         if (client.user) {
             console.log(`Logged in as ${client.user.tag}!`);
         } else {
-            console.log("Client user is not available.");
+            console.log("Client user is not defined.");
         }
     });
 }

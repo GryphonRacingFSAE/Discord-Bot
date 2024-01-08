@@ -1,73 +1,77 @@
-// ==UserScript==
-// @name         My Script
-// @namespace    http://tampermonkey.net/
-// @version      0.1
-// @description  A script to do something
-// @author       Mani Rash Ahmadi
-// @match        https://gryphlife.uoguelph.ca/actioncenter/*
-// @grant        GM_xmlhttpRequest
-// ==/UserScript==
+import puppeteer from "puppeteer";
 
-//load this script in TamperMonkey
-
-function getHrefFromHTMLString(htmlString, className) {
-    var parser = new DOMParser();
-    var doc = parser.parseFromString(htmlString, "text/html");
-    var element = doc.querySelector("." + className);
-    if (element && element.href) {
-        return element.href;
+async function getHrefFromHTMLString(htmlString, className) {
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.setContent(htmlString);
+    const element = await page.$("." + className);
+    if (element) {
+        const href = await page.evaluate(el => el.href, element);
+        await browser.close();
+        return href;
     } else {
+        await browser.close();
         return null;
     }
 }
 
-function approveMembers() {
+async function approveMembers(page) {
     // Find all buttons with the specified aria-label
-    const approveButtons = document.querySelectorAll("[aria-label='Approve member']");
+    const approveButtons = await page.$$("[aria-label='Approve member']");
 
     // Click each button
-    // approveButtons.forEach(button => console.log(button));
-    approveButtons.forEach(button => button.click());
-}
-async function fetchURLContent(url) {
-    try {
-        const response = await fetch(url);
-        const data = await response.text();
-        return data;
-    } catch (error) {
-        console.error("Error fetching data:", error);
-        return null;
+    for (const button of approveButtons) {
+        await button.click();
     }
+}
+
+async function fetchURLContent(url) {
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.goto(url);
+    const content = await page.content();
+    await browser.close();
+    return content;
 }
 
 async function getTextContentFromHref(href, className) {
     const htmlContent = await fetchURLContent(href);
     if (htmlContent) {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(htmlContent, "text/html");
-        const element = doc.querySelector("." + className);
-        return element ? element.textContent : null;
+        const browser = await puppeteer.launch();
+        const page = await browser.newPage();
+        await page.setContent(htmlContent);
+        const element = await page.$("." + className);
+        if (element) {
+            const textContent = await page.evaluate(el => el.textContent, element);
+            await browser.close();
+            return textContent.trim();
+        } else {
+            await browser.close();
+            return null;
+        }
     }
     return null;
 }
 
-async function processMembers() {
-    const members = document.getElementsByClassName("member-modal");
+export async function processMembers() {
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.goto("https://gryphlife.uoguelph.ca/actioncenter/");
+    const members = await page.$$(".member-modal");
     const memberInfoArray = [];
 
-    for (let member of members) {
-        if (member.textContent.includes("Gryphon SAE Racing Team")) {
-            continue; // Skip this iteration
-        }
-        const memberName = member.textContent.trim();
-        const memberHref = getHrefFromHTMLString(member.outerHTML, "member-modal");
+    for (const member of members) {
+        const memberName = await member.evaluate(el => el.textContent.trim());
+        const memberOuterHTML = await member.evaluate(el => el.outerHTML);
+        const memberHref = await getHrefFromHTMLString(memberOuterHTML, "member-modal");
 
         if (memberHref) {
-            var email = await getTextContentFromHref(memberHref, "email");
-            email = email.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)[0];
+            const email = await getTextContentFromHref(memberHref, "email");
+            const emailMatch = email.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+            const emailValue = emailMatch ? emailMatch[0] : null;
             memberInfoArray.push({
                 Name: memberName,
-                email: email,
+                email: emailValue,
             });
         } else {
             memberInfoArray.push({
@@ -77,24 +81,34 @@ async function processMembers() {
         }
     }
 
-    GM_xmlhttpRequest({
-        method: "POST",
-        url: "http://127.0.0.1:5000/receive_data",
-        data: JSON.stringify(memberInfoArray),
-        headers: {
-            "Content-Type": "application/json",
-        },
-        onload: function (response) {
-            console.log("Server response:", response.responseText);
-        },
+    await page.setRequestInterception(true);
+    page.on("request", request => {
+        if (request.url() === "http://127.0.0.1:5000/receive_data") {
+            request.continue({
+                method: "POST",
+                postData: JSON.stringify(memberInfoArray),
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+        } else {
+            request.continue();
+        }
+    });
+
+    page.on("response", response => {
+        if (response.url() === "http://127.0.0.1:5000/receive_data") {
+            console.log("Server response:", response.text());
+        }
     });
 
     console.log("Member Info:", memberInfoArray);
-    approveMembers();
+    await approveMembers(page);
+    await browser.close();
 }
 
 // Example usage
 processMembers();
 setTimeout(function () {
-    window.location.reload();
+    location.reload();
 }, 120000); // 120000 milliseconds = 120 seconds

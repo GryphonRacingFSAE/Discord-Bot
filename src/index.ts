@@ -11,12 +11,12 @@ dotenv.config();
 if (
     !process.env.DISCORD_BOT_TOKEN ||
     !process.env.DISCORD_APPLICATION_ID ||
-    !process.env.DISCORD_GUILD_ID ||
-    !process.env.EMAIL_USERNAME ||
-    !process.env.EMAIL_PASSWORD ||
-    !(process.env.EMAIL_HOST || process.env.EMAIL_SERVICE) ||
-    !process.env.EMAIL_PORT ||
-    !process.env.VERIFICATION_CHANNEL
+    !process.env.DISCORD_GUILD_ID //||
+    // !process.env.EMAIL_USERNAME ||
+    // !process.env.EMAIL_PASSWORD ||
+    // !(process.env.EMAIL_HOST || process.env.EMAIL_SERVICE) ||
+    // !process.env.EMAIL_PORT ||
+    // !process.env.VERIFICATION_CHANNEL
 ) {
     throw new Error("Environment tokens are not defined!");
 }

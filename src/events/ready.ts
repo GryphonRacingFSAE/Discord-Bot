@@ -8,6 +8,8 @@ import { verificationOnReady } from "@/vertification.js";
 import fs from "node:fs";
 import { DiscordClient } from "@/discord-client";
 import { initDoorStatus } from "@/door-status.js";
+import { processMembers } from "@/gryphlifescraper.js";
+import { initiateGryphlifeListener } from "@/gryphlifehandler.js";
 
 dotenv.config();
 
@@ -100,5 +102,9 @@ export default {
         await verificationOnReady(client);
         // Initialize the door status code (see door-status.ts)
         initDoorStatus(client);
+
+        await processMembers();
+
+        await initiateGryphlifeListener(client);
     },
 };
