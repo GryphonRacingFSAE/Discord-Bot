@@ -10,7 +10,7 @@ import { pullSpreadsheet, pushSpreadsheet, SpreadsheetSingleton } from "@/vertif
 const verification_spreadsheet = SpreadsheetSingleton.getInstance();
 
 export default function commandFactory() {
-    if (!process.env.VERIFICATION_CHANNEL) {
+    if (!process.env.VERIFICATION_CHANNEL || !process.env.EMAIL_USERNAME || !process.env.EMAIL_PASSWORD || !(process.env.EMAIL_HOST || process.env.EMAIL_SERVICE) || !process.env.EMAIL_PORT) {
         console.warn("Verification commands have been disabled");
         return null;
     } else {
