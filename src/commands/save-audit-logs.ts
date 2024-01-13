@@ -7,35 +7,37 @@ import type { Command } from "@/types.js";
 import fs from "node:fs";
 import path from "node:path";
 
-export default {
-    data: new SlashCommandBuilder()
-        .setName("save-audit-logs")
-        .setDescription("Save audit logs from the past week.")
-        .addStringOption(option => option.setName("start-date").setDescription("The start date in the format YYYY-MM-DD.").setRequired(false)),
+export default function commandFactory() {
+    return {
+        data: new SlashCommandBuilder()
+            .setName("save-audit-logs")
+            .setDescription("Save audit logs from the past week.")
+            .addStringOption(option => option.setName("start-date").setDescription("The start date in the format YYYY-MM-DD.").setRequired(false)),
 
-    async execute(interaction: CommandInteraction) {
-        const guild = interaction.guild;
-        if (!guild) {
-            await interaction.reply("This command can only be used in a server (guild).");
-            return;
-        }
+        async execute(interaction: CommandInteraction) {
+            const guild = interaction.guild;
+            if (!guild) {
+                await interaction.reply("This command can only be used in a server (guild).");
+                return;
+            }
 
-        // Get the member who invoked the command and check if they have the required role
-        const member = guild.members.cache.get(interaction.user.id);
-        const required_role = guild.roles.cache.find(role => role.name === "Verified");
+            // Get the member who invoked the command and check if they have the required role
+            const member = guild.members.cache.get(interaction.user.id);
+            const required_role = guild.roles.cache.find(role => role.name === "Verified");
 
-        if (!member || !required_role || !member.roles.cache.has(required_role.id)) {
-            await interaction.reply("You don't have the required role to use this command.");
-            return;
-        }
+            if (!member || !required_role || !member.roles.cache.has(required_role.id)) {
+                await interaction.reply("You don't have the required role to use this command.");
+                return;
+            }
 
-        // Get the start date from the interaction options, if provided
-        const start_date = interaction.options.get("start-date")?.value?.toString();
+            // Get the start date from the interaction options, if provided
+            const start_date = interaction.options.get("start-date")?.value?.toString();
 
-        // Call the function to save the audit logs, with interaction provided to indicate the manual scenario
-        await saveAuditLogs(interaction, guild, start_date);
-    },
-} as Command;
+            // Call the function to save the audit logs, with interaction provided to indicate the manual scenario
+            await saveAuditLogs(interaction, guild, start_date);
+        },
+    } as Command;
+}
 
 export async function saveAuditLogs(interaction: CommandInteraction | null, guild: Guild, start_date?: string) {
     // Calculate the filtered start date based on the provided start date or default to one week ago
