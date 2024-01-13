@@ -33,21 +33,26 @@ const RUNNING_TASKS = new Set<string>(); // Prevent cron from re-running tasks t
 
 // Deserialize messages
 const FILE_RW = new Mutex();
-const message_dictionary: Countdowns = await FILE_RW.runExclusive(() => {
-    return fs.existsSync("./resources/messages.json")
-        ? JSON.parse(fs.readFileSync("./resources/messages.json", "utf8"), (key, value) => {
-              if (key === "event_date") {
-                  return new Date(value);
-              }
-              return value;
-          })
-        : {};
+const message_dictionary: Countdowns = await FILE_RW.runExclusive(async () => {
+    try {
+        await fs.promises.access("./resources/messages.json");
+        const fileContent = await fs.promises.readFile("./resources/messages.json", "utf8");
+        return JSON.parse(fileContent, (key, value) => {
+            if (key === "event_date") {
+                return new Date(value);
+            }
+            return value;
+        });
+    } catch (error) {
+        await fs.promises.writeFile("./messages.json", JSON.stringify({}), "utf8");
+        return {};
+    }
 });
 
 // Function to write current message dictionary info to file
 function updateMessageDictionary() {
-    return FILE_RW.runExclusive(() => {
-        fs.writeFileSync("./resources/messages.json", JSON.stringify(message_dictionary));
+    return FILE_RW.runExclusive(async () => {
+        await fs.promises.writeFile("./resources/messages.json", JSON.stringify(message_dictionary));
     });
 }
 
