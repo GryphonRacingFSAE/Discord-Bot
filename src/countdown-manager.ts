@@ -7,6 +7,7 @@ import fs from "node:fs";
 import type { Client } from "discord.js";
 import { TextChannel, Message, EmbedBuilder } from "discord.js";
 import { ScheduledTask } from "node-cron";
+import { Mutex } from "async-mutex";
 
 export type CountdownMessageInput = {
     event_date: Date;
@@ -31,18 +32,28 @@ type Countdowns = {
 const RUNNING_TASKS = new Set<string>(); // Prevent cron from re-running tasks too close together
 
 // Deserialize messages
-const message_dictionary: Countdowns = fs.existsSync("./resources/messages.json")
-    ? JSON.parse(fs.readFileSync("./resources/messages.json", "utf8"), (key, value) => {
-          if (key === "event_date") {
-              return new Date(value);
-          }
-          return value;
-      })
-    : {};
+const FILE_RW = new Mutex();
+const message_dictionary: Countdowns = await FILE_RW.runExclusive(async () => {
+    try {
+        await fs.promises.access("./resources/messages.json");
+        const fileContent = await fs.promises.readFile("./resources/messages.json", "utf8");
+        return JSON.parse(fileContent, (key, value) => {
+            if (key === "event_date") {
+                return new Date(value);
+            }
+            return value;
+        });
+    } catch (error) {
+        await fs.promises.writeFile("./messages.json", JSON.stringify({}), "utf8");
+        return {};
+    }
+});
 
 // Function to write current message dictionary info to file
 function updateMessageDictionary() {
-    fs.writeFileSync("./resources/messages.json", JSON.stringify(message_dictionary));
+    return FILE_RW.runExclusive(async () => {
+        await fs.promises.writeFile("./resources/messages.json", JSON.stringify(message_dictionary));
+    });
 }
 
 // Get # of messages between the given message and the most recent. Max is 100.
@@ -82,7 +93,7 @@ export async function updateMessage(
             console.log(`Failed to find countdown message: ${error}`);
         } finally {
             delete message_dictionary[channel_id];
-            updateMessageDictionary();
+            await updateMessageDictionary();
         }
         return;
     }
@@ -138,7 +149,7 @@ export async function updateMessage(
             }
         }
     }
-    updateMessageDictionary();
+    await updateMessageDictionary();
 
     // Create embedded message
     let message: Message | null = null;
@@ -170,7 +181,7 @@ export async function updateMessage(
                     console.log("Generating emergency message");
                     message = await channel.send({ embeds: [embedded] });
                     message_dictionary[channel_id].message_id = message.id;
-                    updateMessageDictionary();
+                    await updateMessageDictionary();
                 } catch (sendError) {
                     if (sendError instanceof Error) {
                         console.error("Could not send a new message:", sendError.message);
@@ -195,7 +206,7 @@ export async function updateMessage(
 
             const new_message = await channel.send({ embeds: [embedded] });
             message_dictionary[channel_id].message_id = new_message.id;
-            updateMessageDictionary();
+            await updateMessageDictionary();
         }
     } catch (error) {
         console.error("Error during message handling:", message?.id, error);
@@ -204,7 +215,7 @@ export async function updateMessage(
     }
 }
 
-export function addCountdown(client: Client, channel_id: string, message_input: CountdownMessageInput) {
+export async function addCountdown(client: Client, channel_id: string, message_input: CountdownMessageInput) {
     if (!message_dictionary[channel_id]) {
         message_dictionary[channel_id] = {
             message_id: "",
@@ -215,13 +226,13 @@ export function addCountdown(client: Client, channel_id: string, message_input: 
         event_date: message_input.event_date,
         event_link: message_input.event_link === null ? "https://www.youtube.com/watch?v=dQw4w9WgXcQ" : message_input.event_link,
     };
-    updateMessageDictionary();
+    await updateMessageDictionary();
 }
 
-export function deleteCountdown(client: Client, channel_id: string, event_name: string) {
+export async function deleteCountdown(client: Client, channel_id: string, event_name: string) {
     if (!message_dictionary[channel_id] || !message_dictionary[channel_id].events[event_name]) {
         return;
     }
     delete message_dictionary[channel_id].events[event_name];
-    updateMessageDictionary();
+    await updateMessageDictionary();
 }

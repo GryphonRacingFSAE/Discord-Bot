@@ -22,9 +22,14 @@ for (const file of commmand_files) {
     // I genuinely have zero clue why I need to do this, but this imports it!
     const filePath = path.join(command_path, file);
     const resolvedPath = pathToFileURL(filePath).href;
-    const command: Command = (await import(resolvedPath)).default;
-    // Set command to be sent to discord servers to be registered
-    commands.push(command.data.toJSON());
+    const commandFactory = (await import(resolvedPath)).default;
+    if (typeof commandFactory === "function") {
+        const command: Command | null = commandFactory();
+        if (command) {
+            // Set command to be sent to discord servers to be registered
+            commands.push(command.data.toJSON());
+        }
+    }
 }
 
 // Construct and prepare an instance of the REST module
