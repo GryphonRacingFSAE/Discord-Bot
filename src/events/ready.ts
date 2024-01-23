@@ -31,7 +31,7 @@ export default {
     // Run only once (binds to client.once())
     once: true,
     // Define execution function which in this case is just print out bot user tag
-    async execute(discord_client: DiscordClient, client: Client) {
+    async execute(_: DiscordClient, client: Client) {
         if (!client.user) {
             throw new Error("client.user is null");
         }
@@ -94,12 +94,11 @@ export default {
 
         await guild.members.fetch();
         for (const member of guild.members.cache.values()) {
-            await updateSubsectionRoles(member);
+            updateSubsectionRoles(member);
         }
-        if (discord_client.commands.has("verify")) {
-            await verificationOnReady(client);
-        }
+
+        await verificationOnReady(client);
         // Initialize the door status code (see door-status.ts)
-        await initDoorStatus(client);
+        initDoorStatus(client);
     },
 };
