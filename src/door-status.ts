@@ -1,4 +1,4 @@
-import { AttachmentBuilder, Client, EmbedBuilder, TextChannel } from "discord.js";
+import { AttachmentBuilder, Client, EmbedBuilder, Message, TextChannel } from "discord.js";
 import http from "node:http";
 
 const image_file = new AttachmentBuilder("assets/shop-location.png");
@@ -83,9 +83,16 @@ export async function initDoorStatus(client: Client) {
 async function sendDoorStatusMessage(channel: TextChannel, door_status: boolean | null) {
     try {
         // Fetch and delete all previous bot messages in the channel
-        await channel.messages.fetch({ limit: 50 });
-        const messages_to_delete = channel.messages.cache.filter(message => message.author.bot);
-        await channel.bulkDelete(messages_to_delete);
+        const messages = await channel.messages.fetch({ limit: 50 });
+        messages.forEach(async (msg: Message) => {
+            if (msg.author.bot) {
+                try {
+                    await msg.delete();
+                } catch (error) {
+                    console.error("Error deleting message:", error);
+                }
+            }
+        });
 
         // Create an embed with the door status
         const embed = createDoorStatusEmbed(door_status);
