@@ -91,7 +91,6 @@ async function sendDoorStatusMessage(channel: TextChannel, door_status: boolean 
                 } catch (error) {
                     console.error("Error deleting message:", error);
                 }
-                await msg.delete();
             }
         });
 
