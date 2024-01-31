@@ -8,7 +8,16 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 dotenv.config();
 
 // Check for all environments
-if (!process.env.DISCORD_BOT_TOKEN || !process.env.DISCORD_APPLICATION_ID || !process.env.DISCORD_GUILD_ID) {
+if (
+    !process.env.DISCORD_BOT_TOKEN ||
+    !process.env.DISCORD_APPLICATION_ID ||
+    !process.env.DISCORD_GUILD_ID ||
+    !process.env.EMAIL_USERNAME ||
+    !process.env.EMAIL_PASSWORD ||
+    !(process.env.EMAIL_HOST || process.env.EMAIL_SERVICE) ||
+    !process.env.EMAIL_PORT ||
+    !process.env.VERIFICATION_CHANNEL
+) {
     throw new Error("Environment tokens are not defined!");
 }
 
@@ -30,15 +39,10 @@ const client = new DiscordClient({
     for (const file of command_sources) {
         const command_path = path.join(command_directory, file);
         const resolved_path = pathToFileURL(command_path).href;
-        const command_factory = (await import(resolved_path)).default;
+        const command: Command = (await import(resolved_path)).default;
         // Set a new item in the Collection with the key as the command name and the value as the exported module
-        if (typeof command_factory === "function") {
-            const command: Command | null = command_factory();
-            if (command) {
-                client.commands.set(command.data.name, command);
-                console.log(`Loaded command ${command.data.name}`);
-            }
-        }
+        client.commands.set(command.data.name, command);
+        console.log(`Loaded command ${command.data.name}`);
     }
 }
 
