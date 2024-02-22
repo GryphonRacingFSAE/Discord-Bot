@@ -11,7 +11,7 @@
         "lint-check": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --ignore-path .gitignore"
     },
     "dependencies": {
-        "async-mutex": "^0.4.0",
+        "async-mutex": "^0.4.1",
         "discord-api-types": "^0.37.68",
         "discord.js": "^14.14.1",
         "dotenv": "^16.4.4",
