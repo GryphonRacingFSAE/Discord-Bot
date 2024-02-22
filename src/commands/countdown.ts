@@ -1,6 +1,7 @@
 // A countdown timer that tries to stay as recent as possible as well
 // updates the message every couple of minutes
 import { CommandInteraction, SlashCommandBuilder } from "discord.js";
+import moment from "moment-timezone";
 import type { Command } from "@/types";
 import * as cron from "node-cron";
 import type { CountdownMessageInput } from "@/countdown-manager.js";
@@ -68,7 +69,7 @@ export default {
                     return;
                 }
                 const [year, month, day] = [match![1], match![2], match![3]];
-                const date = new Date(Number(year), Number(month) - 1, Number(day));
+                const date = moment.tz(`${year}-${month}-${day}`, "YYYY-MM-DD", "America/Toronto").toDate();
                 if (date.getTime() - Date.now() <= 0) {
                     // All countdowns must be in the future
                     await interaction.reply({ content: "Date specified should be in the future", ephemeral: true });

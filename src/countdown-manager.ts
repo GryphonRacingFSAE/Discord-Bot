@@ -7,6 +7,7 @@ import fs from "node:fs";
 import type { Client } from "discord.js";
 import { TextChannel, Message, EmbedBuilder } from "discord.js";
 import { ScheduledTask } from "node-cron";
+import moment from "moment-timezone";
 
 export type CountdownMessageInput = {
     event_date: Date;
@@ -72,7 +73,7 @@ export async function updateMessage(
         return;
     }
     RUNNING_TASKS.add(channel_id);
-    const now = new Date();
+    const now = moment.tz("America/Toronto").toDate();
     const fields: { name: string; value: string }[] = [];
     if (Object.keys(message_dictionary[channel_id].events).length == 0) {
         // Message has no events so delete it
