@@ -1,13 +1,17 @@
 import { Events, Client } from "discord.js";
 import cron from "node-cron";
-import dotenv from "dotenv";
+import dotenv, { config } from "dotenv";
 import { saveAuditLogs } from "@/commands/save-audit-logs.js";
 import { updateMessage } from "@/countdown-manager.js";
 import { updateSubsectionRoles } from "@/events/member-update.js";
-import { verificationOnReady } from "@/vertification.js";
 import fs from "node:fs";
 import { DiscordClient } from "@/discord-client";
 import { initDoorStatus } from "@/door-status.js";
+import mysql from "mysql2/promise";
+import { drizzle } from "drizzle-orm/mysql2";
+import puppeteer from "puppeteer";
+import * as schema from "@/schema.js";
+import * as email_webscrapper from "@/scrapper/email_webscrapper.js";
 
 dotenv.config();
 
@@ -25,6 +29,8 @@ const info_file_path = "./resources/messages.json";
 // Load existing message info from file, or initialize to empty object
 const message_info: MessageInfo = fs.existsSync(info_file_path) ? JSON.parse(fs.readFileSync(info_file_path, "utf8")) : {};
 
+const RUNNING_IN_DOCKER = process.env.RUNNING_IN_DOCKER === "true";
+
 export default {
     // Bind to ClientReady event
     name: Events.ClientReady,
@@ -36,6 +42,12 @@ export default {
             throw new Error("client.user is null");
         }
         console.log(`Ready! Logged in as ${client.user.tag}`);
+
+        // Start web-scrapping
+        const browser = await puppeteer.launch({ headless: RUNNING_IN_DOCKER ? "new" : false, args: RUNNING_IN_DOCKER ? ["--no-sandbox", "--disable-setuid-sandbox"] : [] });
+
+        // Initialize email web-scrapper
+        await Promise.all([email_webscrapper.on_ready(browser)]);
 
         // Iterate over all the stored message info and start the countdowns
         for (const channel_id in message_info) {
@@ -95,9 +107,6 @@ export default {
         await guild.members.fetch();
         for (const member of guild.members.cache.values()) {
             await updateSubsectionRoles(member);
-        }
-        if (discord_client.commands.has("verify")) {
-            await verificationOnReady(client);
         }
         // Initialize the door status code (see door-status.ts)
         await initDoorStatus(client);

@@ -9,10 +9,37 @@ import path from "node:path";
 import type { Command } from "@/types.js";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { REST, Routes } from "discord.js";
+import { promisify } from "node:util";
+import * as Service from "@/service.js";
 dotenv.config(); // Load env parameters
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const stat = promisify(fs.stat);
 
 const commands = [];
+
+// Deploy all commands in services
+const service_folder = path.join(__dirname, "services");
+const service_files = fs.readdirSync(service_folder);
+for (const source of service_files) {
+    const service_path = path.join(service_folder, source);
+    const stats = await stat(service_path);
+    let resolved_path: string;
+    if (stats.isDirectory()) {
+        const serviceFilePath = path.join(service_path, "service.js");
+        if (fs.existsSync(serviceFilePath)) {
+            resolved_path = pathToFileURL(serviceFilePath).href;
+        } else {
+            continue;
+        }
+    } else if (service_path.endsWith(".js")) {
+        resolved_path = pathToFileURL(service_path).href;
+    } else {
+        continue;
+    }
+    const service_factory: Service.Service = (await import(resolved_path)).default;
+    if (service_factory.commands === undefined) continue;
+    service_factory.commands.map(cmd => commands.push(cmd.data.toJSON()));
+}
 
 // Grab all the command files from the commands directory you created earlier
 const command_path = path.join(__dirname, "commands");
@@ -42,6 +69,7 @@ const rest = new REST().setToken(process.env.DISCORD_BOT_TOKEN);
 try {
     console.log(`Started refreshing ${commands.length} application (/) commands.`);
     // The put method is used to fully refresh all commands in the guild with the current set
+    console.log(`sending: ${commands}`);
     const data = (await rest.put(Routes.applicationGuildCommands(process.env.DISCORD_APPLICATION_ID, process.env.DISCORD_GUILD_ID), { body: commands })) as Command[];
     console.log(`Successfully reloaded ${data.length} application (/) commands.`);
 } catch (error) {

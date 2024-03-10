@@ -37,19 +37,20 @@ node dist/index.js # Run Discord bot
 
 ## Development
 
+### Services - Danny
+`./src/services.ts` allows us to disable services if certain validation requirements were not met. It consolidates the
+files who share the same behavior to help with DX.
+
 ### Shop Status Monitoring - Evan
 
 We have an ESP32 at the main shop entrance monitoring if it's open or closed, if the status changes, it sends a POST request to an HTTP server with the Discord bot, which then sends a message to the server.
 
-### Semi-Automatic Verification (WIP) - Danny
+### Database - Danny
+We use [Drizzle ORM](https://orm.drizzle.team/) for our database needs with MySQL running in a separate docker container.
 
-Fetch latest team roster + payment status from OneDrive using rclone and verify email. If passing all requirements, the user is given the role "Verified".
-
-#### Onedrive sync
-
-Syncing to the onedrive team verification roster xlsx file is done through rclone + a cron task. Syncing is done every 5 minutes using a [crontab](https://en.wikipedia.org/wiki/Cron) which executes an [rclone sync](https://rclone.org/commands/rclone_sync/) command. To edit the synchronization file, please run `crontab -e` on the dev box/server to access the cron task configuration + synchronization command.
-
-We currently sync between `~/Documents/onedrive-sync` and `/Gryphon Racing Administration/Team Roster` folder. 
+### Permissions - Danny
+Throughout the users and servers, the bot will determine which users are not allowed access to the server and rermove the
+verified role from them. We make db calls to drizzle to determine if the user should be removed.
 
 ### Countdown - Danny
 
