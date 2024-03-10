@@ -2,6 +2,7 @@
 
 import { Events, CommandInteraction } from "discord.js";
 import { DiscordClient } from "@/discord-client.js";
+import { int } from "drizzle-orm/mysql-core";
 
 export default {
     name: Events.InteractionCreate,
@@ -9,6 +10,12 @@ export default {
     async execute(client: DiscordClient, interaction: CommandInteraction) {
         // Discard all non-command usages (slash commands)
         if (!interaction.isChatInputCommand()) return;
+
+        // iterate services and check if they have the correct command
+        for (const [_, service] of client.services) {
+            if (service.commands === undefined) continue;
+            await service.commands.filter(command => command.data.name === interaction.commandName)[0].execution(client, interaction);
+        }
 
         // Find command via commands
         // We extended this from the base discord.js client to include a commands member

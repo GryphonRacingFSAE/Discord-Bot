@@ -3,6 +3,7 @@
 
 import { Client, type ClientOptions, Collection } from "discord.js";
 import type { Command } from "@/types.js";
+import * as Service from "@/service.js";
 
 export class DiscordClient extends Client {
     /**
@@ -11,9 +12,15 @@ export class DiscordClient extends Client {
      */
     commands: Collection<string, Command>;
 
+    /**
+     * @description Contains services that are active
+     */
+    services: Collection<string, Service.Service>;
+
     constructor(options: ClientOptions) {
         super(options);
         // Leave blank
         this.commands = new Collection();
+        this.services = new Collection();
     }
 }
