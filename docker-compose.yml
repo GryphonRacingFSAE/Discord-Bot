@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+
+  mysql:
+    image: mysql:latest
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - "33060:3306"
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - app-network  # Define the network
+
+  app:
+    image: gracingbot
+    depends_on:
+      - mysql
+    build: .
+    command: ["sh", "-c", "npm run build && dockerize -wait tcp://mysql:3306 -timeout 60s && ./db_migration.sh && npm run deploy-commands && npm run preview"] # run after mysql
+    ports:
+      - "80:80"
+      - "587:587"
+      - "3300:3000"
+    volumes:
+      - app-resources:/usr/app/resources
+      - app-onedrive:/usr/app/onedrive
+      - app-migrations:/usr/app/migrations
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - app-network  # Define the network
+
+networks:
+  app-network:  # Define the network
+    driver: bridge
+
+volumes:
+  app-resources:
+  app-onedrive:
+  app-migrations:
+  mysql-data:
