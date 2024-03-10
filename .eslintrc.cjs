@@ -2,9 +2,9 @@
 
 module.exports = {
     root: true,
-    extends: ["eslint:recommended", "plugin:@typescript-eslint/recommended", "prettier", "plugin:prettier/recommended"],
+    extends: ["eslint:recommended", "plugin:@typescript-eslint/recommended", "prettier", "plugin:prettier/recommended", "plugin:drizzle/recommended"],
     parser: "@typescript-eslint/parser",
-    plugins: ["@typescript-eslint"],
+    plugins: ["@typescript-eslint", "eslint-plugin-drizzle"],
     rules: {
         "prettier/prettier": [
             "error",
