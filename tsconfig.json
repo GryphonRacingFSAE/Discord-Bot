@@ -6,7 +6,10 @@
         "esModuleInterop": true,
         "sourceMap": true,
         "strict": true,
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
         "forceConsistentCasingInFileNames": true,
+        "skipLibCheck": true,
         "noImplicitAny": true,
         "outDir": "dist",
         "rootDir": "./src",
@@ -15,8 +18,9 @@
         ],
         "paths": {
             "@/*": ["./src/*"]
-        },
+        }
     },
     "include": ["src/**/*"],
+    "exclude": ["node_modules"],
     "lib": ["es2021"]
 }
