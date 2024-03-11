@@ -92,6 +92,7 @@ async function prune_members(client: Client, users: { discord: GuildMember; reas
     return Promise.all(
         users.map(async user => {
             if (!user.discord.roles.cache.has(verified_role.id) || user.discord.id !== "676195749800968192") return undefined;
+            console.log(`Sending to ${user.discord.user.tag} is out!`);
             try {
                 //await user.discord.roles.remove(verified_role); we do not roles for now.
                 await user.discord.send({ embeds: build_denial_message(user.reason) });
@@ -108,7 +109,7 @@ async function prune_members(client: Client, users: { discord: GuildMember; reas
  * @description Checks members in the server whether they're actually verified or not.
  * @returns List of people removed
  **/
-export async function check_members(client: Client, members: GuildMember[], db: MySql2Database<schema.User>) {
+export async function check_members(client: Client, members: GuildMember[], db: MySql2Database<typeof schema>) {
     // we first find all database occurances of the discord id. if it doesn't exist, get them out of here
     const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
     const verified_role = guild.roles.cache.find(role => role.name === "Verified");
@@ -138,7 +139,7 @@ export async function check_members(client: Client, members: GuildMember[], db: 
             // POSSIBLE OPTIMIZATION: we store index rather than guild member (unsure of benefits)
             const dbUsers: { db: schema.User; discord: GuildMember }[] = [];
             const invalidUsers = results.reduce((acc: { discord: GuildMember; reason: UserStatus }[], result, index) => {
-                if (result && result.length === 0) {
+                if (result && result.length > 0) {
                     // Assuming `dbUsers` and `results` are correctly types
                     dbUsers.push({ db: result[0], discord: members[index] });
                 } else {
@@ -159,9 +160,17 @@ export async function check_members(client: Client, members: GuildMember[], db: 
                 // is user not allowed? then include them
                 const status = user_allowed(user.db);
                 if (status !== UserStatus.success) {
+                    console.log(`${user.discord.user.tag} - ${status}`);
                     acc.push({
                         discord: user.discord,
                         reason: status,
+                    });
+                } else if (!user.discord.roles.cache.has(verified_role.id)) {
+                    // somehow meet the requirements but don't have the role...
+                    user.discord.roles.add(verified_role.id).then(_ => {
+                        return user.discord.send({
+                            embeds: [format_embed(new EmbedBuilder().setTitle("Access granted").setDescription("You now have access to the UofG FSAE discord server."), "yellow")],
+                        });
                     });
                 }
                 return acc;
