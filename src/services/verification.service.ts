@@ -30,6 +30,14 @@ async function get_email_html(code: string): Promise<string> {
  * @returns Promise to completion of email
  */
 async function send_verification_email(client: DiscordClient, db: MySql2Database<typeof schema>, message: Message) {
+    // Handle the cases where a duplicate email may exist
+    if ((await db.query.users.findFirst({ where: eq(schema.users.email, message.content.toLowerCase()) })) !== undefined) {
+        return message.author
+            .send({
+                embeds: [format_embed(new EmbedBuilder().setTitle("Email exists").setDescription("This email is already registered."), "red")],
+            })
+            .then(_ => false);
+    }
     const verification_code = generate_verification_code();
     const transporter = nodemailer.createTransport({
         service: process.env.EMAIL_SERVICE,
@@ -119,7 +127,8 @@ const on_message_send_event: OnMessageCreate = {
                 // eslint-disable-next-line no-control-regex
                 "(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\\\[\x01-\x09\x0b\x0c\x0e-\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\\])",
             );
-            if (regex.test(message.content.toLowerCase())) {
+            const match = message.content.toLowerCase().match(regex);
+            if (match && match.length == 0 && match[0] === message.content.toLowerCase()) {
                 // new verification session start
                 return send_verification_email(client, db, message).then(_ => {});
             } else {
