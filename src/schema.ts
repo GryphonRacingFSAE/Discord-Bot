@@ -4,7 +4,7 @@ import { sql } from "drizzle-orm";
 
 export const users = mysqlTable("users", {
     email: varchar("email", { length: 255 }).primaryKey().notNull(),
-    discordId: text("discord_id"),
+    discordId: text("discord_id").notNull().default(""),
     paymentStatus: boolean("payment_status").notNull().default(false),
     gryphLife: boolean("in_gryphlife").notNull().default(false),
 });

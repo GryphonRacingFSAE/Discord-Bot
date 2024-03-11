@@ -31,7 +31,6 @@ const service: Service = {
     validate: async client => {
         return (
             process.env.MYSQL_HOST !== undefined &&
-            process.env.MYSQL_ROOT_PASSWORD !== undefined &&
             process.env.MYSQL_USER !== undefined &&
             process.env.MYSQL_PASSWORD !== undefined &&
             process.env.MYSQL_DATABASE !== undefined &&

@@ -8,6 +8,7 @@ import { APIEmbedField, Client, EmbedBuilder, GuildMember, Message, Role } from 
 import { eq } from "drizzle-orm";
 import { MySql2Database } from "drizzle-orm/mysql2";
 import * as schema from "@/schema.js";
+import { format_embed } from "@/util.js";
 
 // Error codes to make it easier for us to scream at the user
 // No email? 🗿 No discord? 🗿 No gryphlife? 🗿 And most importantly no payment? 🗿🗿🗿
@@ -23,9 +24,8 @@ enum UserStatus {
     noDataBase = 1 << 4, // 16
 }
 
-const FAQ_SECTION = new EmbedBuilder()
-    .setTitle("Frequently asked Questions")
-    .addFields(
+const FAQ_SECTION = format_embed(
+    new EmbedBuilder().setTitle("Frequently asked Questions").addFields(
         {
             name: "No email?",
             value: "For some reason beyond our human comprehension, you do not have an email associated with your account. Please contact `@Bot Developer` for assistance.",
@@ -38,9 +38,9 @@ const FAQ_SECTION = new EmbedBuilder()
             name: "I did do these things, but I'm still not in!",
             value: "Please be patient our servers are either dead or super bogged down with requests. Wait at most 24 hours before contacting a `@Bot Developer` for assistance.",
         },
-    )
-    .setColor("#FFC72A")
-    .setFooter({ text: "UofG Racing Bot will never ask for passwords, credit card information, SSNs, ID, security tokens that are not from us, and/or personal information. Stay safe!" });
+    ),
+    "yellow",
+);
 
 // We consolidate checking of user fields in here to see if users should be allowed or not
 function user_allowed(user: schema.User | undefined): UserStatus {
@@ -76,12 +76,13 @@ function build_denial_message(status: UserStatus): EmbedBuilder[] {
     }
 
     return [
-        new EmbedBuilder()
-            .setTitle("Removal")
-            .setDescription("Your access to the server has been revoked. We have provided the reasons below why you have not been given access.")
-            .addFields(fields)
-            .setColor("#C20430")
-            .setFooter({ text: "UofG Racing Bot will never ask for passwords, credit card information, SSNs, ID, security tokens that are not from us, and/or personal information. Stay safe!" }),
+        format_embed(
+            new EmbedBuilder()
+                .setTitle("Removal")
+                .setDescription("Your access to the server has been revoked. We have provided the reasons below why you have not been given access.")
+                .addFields(fields),
+            "red",
+        ),
         FAQ_SECTION,
     ];
 }
