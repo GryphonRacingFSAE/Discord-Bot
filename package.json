@@ -24,7 +24,8 @@
         "nodemailer": "^6.9.7",
         "otpauth": "^9.2.2",
         "puppeteer": "^21.7.0",
-        "pure-rand": "^6.0.4"
+        "pure-rand": "^6.0.4",
+        "xlsx": "^0.18.5"
     },
     "devDependencies": {
         "@types/node": "^20.11.25",
