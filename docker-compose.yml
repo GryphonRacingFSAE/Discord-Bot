@@ -11,6 +11,8 @@ services:
       - "33060:33060"
     env_file:
       - .env
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: 1
     restart: unless-stopped
 
   app:
@@ -18,7 +20,7 @@ services:
     depends_on:
       - mysql
     build: .
-    command: ["sh", "-c", "npm run build && dockerize -wait tcp://mysql:3306 -timeout 60s && ./db_migration.sh && npm run deploy-commands && npm run preview"] # run after mysql
+    command: ["sh", "-c", "npm run build && dockerize -wait tcp://mysql:3306 -timeout 60s && ./db_migration.sh && echo start && npm run deploy-commands && echo 'hi' && npm run preview"] # run after mysql
     ports:
       - "80:80"
       - "587:587"
