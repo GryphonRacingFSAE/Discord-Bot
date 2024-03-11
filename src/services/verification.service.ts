@@ -6,11 +6,23 @@ import { eq, sql } from "drizzle-orm";
 import type { OnMessageCreate, OnReady, Service } from "@/service.js";
 import nodemailer from "nodemailer";
 import cron from "node-cron";
+import path from "node:path";
+import fs from "node:fs/promises";
+import { format_embed } from "@/util.js";
 const CODE_LENGTH = 8;
 
 // Generates a code randomly
 function generate_verification_code(): number {
     return new Date().getTime() % 10 ** CODE_LENGTH;
+}
+
+/**
+ * @description Generates an html verification page
+ */
+async function get_email_html(code: string): Promise<string> {
+    return fs.readFile(path.join(process.cwd(), "./verification-email.html"), { encoding: "utf-8" }).then(content => {
+        return content.replace("{{verificationCode}}", code);
+    });
 }
 
 /**
@@ -23,34 +35,59 @@ async function send_verification_email(client: DiscordClient, db: MySql2Database
         service: process.env.EMAIL_SERVICE,
         auth: {
             user: process.env.EMAIL_USERNAME, // Your email address
-            pass: process.env.EMAIL_PASSWORD, // Your email password
+            pass: process.env.EMAIL_APP_PASSWORD, // Your email password
         },
     });
-
-    transporter.sendMail(
-        {
-            from: process.env.EMAIL_USERNAME,
-            to: message.content.toLowerCase(),
-            subject: "Verification Code",
-            html: `<h1>Your password is here</h1> <p>Your verification code is ${verification_code}<p>`,
-        },
-        function (error, info) {
-            if (error) {
-                console.log(error);
-            } else {
-                console.log("Email sent: " + info.response);
-            }
-        },
-    );
-
-    await db
-        .insert(schema.verifying_users)
-        .values({
-            verificationCode: verification_code,
-            discordId: message.author.id,
-            email: message.content.toLowerCase(),
+    console.log(`Sending verification email!`);
+    return get_email_html(`${verification_code.toString().substring(0, 4)} ${verification_code.toString().substring(4)}`).then(async content => {
+        return new Promise((resolve, reject) => {
+            console.log("Sending!");
+            transporter.sendMail(
+                {
+                    from: process.env.EMAIL_USERNAME,
+                    to: message.content.toLowerCase(),
+                    subject: "Verification Code",
+                    html: content,
+                },
+                function (error, info) {
+                    if (error) {
+                        console.error(error);
+                        reject(error);
+                    } else {
+                        resolve(info);
+                    }
+                },
+            );
         })
-        .execute();
+            .then(_ => {
+                return db
+                    .insert(schema.verifying_users)
+                    .values({
+                        verificationCode: verification_code,
+                        discordId: message.author.id,
+                        email: message.content.toLowerCase(),
+                    })
+                    .execute();
+            })
+            .then(async _ => {
+                await message.reply({
+                    embeds: [
+                        format_embed(
+                            new EmbedBuilder().setTitle("Sent!").setDescription("We have sent the email address an **8-digit** code. Please send message the bot the code to link the account."),
+                            "yellow",
+                        ),
+                    ],
+                });
+                return true;
+            })
+            .catch(err => {
+                console.log(err);
+                message.reply({
+                    embeds: [format_embed(new EmbedBuilder().setTitle("Error").setDescription("Seems like our mailing service is down currently. Please be patient as we try to fix it."), "yellow")],
+                });
+                return false;
+            });
+    });
 }
 
 /**
@@ -74,6 +111,7 @@ const on_message_send_event: OnMessageCreate = {
         const guild = client.guilds.cache.get(process.env.DISCORD_GUILD_ID!) as Guild;
         if (!guild.members.cache.has(message.author.id)) return Promise.resolve(undefined);
         const user = await has_verification_session(db, message.author);
+        console.log(`${user}`);
         if (user === undefined) {
             // make a new entry
             // https://stackoverflow.com/questions/201323/how-can-i-validate-an-email-address-using-a-regular-expression
@@ -83,29 +121,64 @@ const on_message_send_event: OnMessageCreate = {
             );
             if (regex.test(message.content.toLowerCase())) {
                 // new verification session start
-                await send_verification_email(client, db, message);
+                return send_verification_email(client, db, message).then(_ => {});
+            } else {
+                return message
+                    .reply({
+                        embeds: [
+                            format_embed(new EmbedBuilder().setTitle("Invalid email address").setDescription(`Your email address of \`${message.content}\` is not a valid email address.`), "red"),
+                        ],
+                    })
+                    .then(_ => {});
             }
-        } else if (message.content === user.verificationCode.toString()) {
-            await db.delete(schema.verifying_users).where(eq(schema.verifying_users.discordId, message.author.id)).execute();
-            await message.reply({
-                embeds: [
-                    new EmbedBuilder().setTitle("Linked!").setDescription("You now have successfully linked your discord and email account.").setColor("#C20430").setFooter({
-                        text: "UofG Racing Bot will never ask for passwords, credit card information, SSNs, ID, security tokens that are not from us, and/or personal information. Stay safe!",
-                    }),
-                ],
-            });
+        } else if (Number(message.content) === user.verificationCode) {
+            return db
+                .insert(schema.users)
+                .values({
+                    email: user.email,
+                    discordId: user.discordId,
+                } satisfies schema.NewUser)
+                .onDuplicateKeyUpdate({ set: { discordId: user.discordId, email: user.email } })
+                .then(async _ => {
+                    return db.delete(schema.verifying_users).where(eq(schema.verifying_users.discordId, message.author.id)).execute();
+                })
+                .then(async _ => {
+                    return message.reply({
+                        embeds: [format_embed(new EmbedBuilder().setTitle("Linked!").setDescription("You now have successfully linked your discord and email account."), "yellow")],
+                    });
+                })
+                .then(_ => {});
+        } else if (message.content.toLowerCase().trim() === "cancel") {
+            return db
+                .delete(schema.verifying_users)
+                .where(eq(schema.verifying_users.discordId, message.author.id))
+                .execute()
+                .then(_ => {
+                    return message.reply({
+                        embeds: [format_embed(new EmbedBuilder().setTitle("Cancelled!").setDescription("Verification process has been cancelled."), "yellow")],
+                    });
+                })
+                .then(_ => {});
+        } else {
+            return message
+                .reply({
+                    embeds: [
+                        format_embed(
+                            new EmbedBuilder().setTitle("Invalid code").setDescription("The code you have entered is not the correct code. Type `cancel` to stop the verification process."),
+                            "yellow",
+                        ),
+                    ],
+                })
+                .then(_ => {});
         }
-        return Promise.resolve(undefined);
     },
     once: false,
     run_on: [Events.MessageCreate],
     validate(client: DiscordClient): Promise<boolean> {
         return Promise.resolve(
             process.env.EMAIL_USERNAME !== undefined &&
-                process.env.EMAIL_PASSWORD !== undefined &&
+                process.env.EMAIL_APP_PASSWORD !== undefined &&
                 process.env.EMAIL_SERVICE !== undefined &&
-                process.env.MYSQL_HOST !== undefined &&
-                process.env.MYSQL_ROOT_PASSWORD !== undefined &&
                 process.env.MYSQL_USER !== undefined &&
                 process.env.MYSQL_PASSWORD !== undefined &&
                 process.env.MYSQL_DATABASE !== undefined &&
