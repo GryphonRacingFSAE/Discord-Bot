@@ -14,7 +14,14 @@ export default {
         // iterate services and check if they have the correct command
         for (const [_, service] of client.services) {
             if (service.commands === undefined) continue;
-            await service.commands.filter(command => command.data.name === interaction.commandName)[0].execution(client, interaction);
+            try {
+                return service.commands
+                    .filter(command => command.data.name === interaction.commandName)[0]
+                    .execution(client, interaction)
+                    .then(_ => {});
+            } catch (e) {
+                console.error(`Failed executing for ${interaction.commandName}: ${e}`);
+            }
         }
 
         // Find command via commands
