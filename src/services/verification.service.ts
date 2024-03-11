@@ -138,7 +138,7 @@ const on_message_send_event: OnMessageCreate = {
                     email: user.email,
                     discordId: user.discordId,
                 } satisfies schema.NewUser)
-                .onDuplicateKeyUpdate({ set: { discordId: user.discordId, email: user.email } })
+                .onDuplicateKeyUpdate({ set: { email: user.email } })
                 .then(async _ => {
                     return db.delete(schema.verifying_users).where(eq(schema.verifying_users.discordId, message.author.id)).execute();
                 })
