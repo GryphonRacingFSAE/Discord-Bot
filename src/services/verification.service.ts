@@ -17,7 +17,7 @@ function generate_verification_code(): number {
 }
 
 /**
- * @description Generates an html verification page
+ * @description Generates a html verification page
  */
 async function get_email_html(code: string): Promise<string> {
     return fs.readFile(path.join(process.cwd(), "./verification-email.html"), { encoding: "utf-8" }).then(content => {
