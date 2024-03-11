@@ -9,6 +9,7 @@
         "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --ignore-path .gitignore --fix",
         "type-check": "tsc --strict --noEmit",
         "lint-check": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --ignore-path .gitignore",
+        "docker-debug": "docker compose up --build -d && npx drizzle-kit studio --host 0.0.0.0",
         "generate": "drizzle-kit generate:mysql"
     },
     "dependencies": {

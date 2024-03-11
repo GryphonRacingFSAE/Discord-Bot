@@ -77,10 +77,7 @@ function build_denial_message(status: UserStatus): EmbedBuilder[] {
 
     return [
         format_embed(
-            new EmbedBuilder()
-                .setTitle("Removal")
-                .setDescription("Your access to the server has been revoked. We have provided the reasons below why you have not been given access.")
-                .addFields(fields),
+            new EmbedBuilder().setTitle("Removal").setDescription("Your access to the server has been revoked. We have provided the reasons below why your access was removed.").addFields(fields),
             "red",
         ),
         FAQ_SECTION,
