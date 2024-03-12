@@ -9,7 +9,7 @@ import { sql } from "drizzle-orm";
  */
 export const users = mysqlTable("users", {
     email: varchar("email", { length: 255 }).primaryKey().notNull(),
-    discordId: varchar("discord_id", { length: 32 }).notNull().default("").unique(),
+    discordId: varchar("discord_id", { length: 32 }).unique(),
     paymentStatus: boolean("payment_status").notNull().default(false),
     gryphLife: boolean("in_gryphlife").notNull().default(false),
     firstName: varchar("first_name", { length: 64 }),
