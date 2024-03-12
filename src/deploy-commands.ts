@@ -15,6 +15,7 @@ dotenv.config(); // Load env parameters
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function main() {
+    console.log("Deploying!");
     const stat = promisify(fs.stat);
 
     const commands = [];
@@ -83,8 +84,7 @@ async function main() {
         console.error(error);
     }
     console.log("Commands deployed!");
+    return Promise.resolve();
 }
 
-main()
-    .catch(err => console.error(`Failure to deploy: ${err}`))
-    .finally(process.exit(0));
+await main().catch(err => console.error(`Failure to deploy: ${err}`));
