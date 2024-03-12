@@ -20,7 +20,7 @@ services:
     depends_on:
       - mysql
     build: .
-    command: ["sh", "-c", "npm run build && dockerize -wait tcp://mysql:3306 -timeout 60s && ./db_migration.sh && echo start && npm run deploy-commands && echo 'hi' && npm run preview"] # run after mysql
+    command: ["sh", "-c", "npm run build && dockerize -wait tcp://mysql:3306 -timeout 60s && ./db_migration.sh && DEPLOY=1 npm run deploy-commands && DEPLOY=0 npm run preview"] # run after mysql
     ports:
       - "80:80"
       - "587:587"
@@ -28,7 +28,7 @@ services:
     volumes:
       - app-resources:/usr/app/resources
       - app-onedrive:/usr/app/onedrive
-      - app-migrations:/usr/app/migrations
+      - app-drizzle:/usr/app/drizzle
     env_file:
       - .env
     restart: unless-stopped
@@ -36,5 +36,5 @@ services:
 volumes:
   app-resources:
   app-onedrive:
-  app-migrations:
+  app-drizzle:
   mysql-data:
