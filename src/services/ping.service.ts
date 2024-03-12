@@ -19,7 +19,7 @@ const service: Service.Service = {
              */
             execution: async (client, interaction) => {
                 const delta = Math.abs((Date.now() - interaction.createdTimestamp) / 1000).toFixed(2);
-                await interaction.reply(`Pong in ${delta} seconds!`);
+                await interaction.reply({ content: `Pong in ${delta} seconds!`, ephemeral: true });
             },
 
             validate: async () => {
