@@ -3,7 +3,7 @@ FROM node:latest
 ENV RUNNING_IN_DOCKER true
 ENV DOCKERIZE_VERSION v0.7.0
 
-WORKDIR /usr/app
+WORKDIR /usr/app/
 
 # Install puppeteer
 RUN apt-get update && apt-get install -y \
@@ -39,5 +39,7 @@ RUN apt-get install -y wget \
 
 COPY package*.json ./
 RUN npm i
+
+COPY *.dockerignore .
 
 COPY . .
