@@ -42,6 +42,7 @@ async function main() {
             await migrate(db, { migrationsFolder: path.resolve(__dirname, "../drizzle") });
         } catch (_) {
             /* block empty */
+            console.warn("Failed migration!");
         }
     } else {
         console.warn("Failed to load db!");
