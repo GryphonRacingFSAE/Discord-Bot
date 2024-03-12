@@ -1,14 +1,17 @@
 import { DiscordClient } from "@/discord-client";
 import * as schema from "@/schema.js";
 import { MySql2Database } from "drizzle-orm/mysql2";
-import { EmbedBuilder, Events, Guild, Message, User } from "discord.js";
-import { eq, sql } from "drizzle-orm";
-import type { OnMessageCreate, OnReady, Service } from "@/service.js";
+import { EmbedBuilder, Events, Guild, Message, SlashCommandBuilder, User } from "discord.js";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
+import type { Command, OnMessageCreate, OnReady, Service } from "@/service.js";
 import nodemailer from "nodemailer";
 import cron from "node-cron";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { format_embed } from "@/util.js";
+import { check_members, prune_members, UserStatus } from "@/services/permissions/index.js";
+import { db } from "@/db.js";
+
 const CODE_LENGTH = 8;
 
 // Generates a code randomly
@@ -25,13 +28,23 @@ async function get_email_html(code: string): Promise<string> {
     });
 }
 
+// Prepared statement to check if an email is already linked
+const email_linked =
+    db !== undefined
+        ? db.query.users
+              .findFirst({
+                  where: and(eq(schema.users.email, sql.placeholder("email")), isNotNull(schema.users.discordId)),
+              })
+              .prepare()
+        : undefined;
+
 /**
  * @description Sends a permissions email to the user parameter. **User parameter are not checked here**.
  * @returns Promise to completion of email
  */
 async function send_verification_email(client: DiscordClient, db: MySql2Database<typeof schema>, message: Message) {
     // Handle the cases where a duplicate email may exist
-    if ((await db.query.users.findFirst({ where: eq(schema.users.email, message.content.toLowerCase()) })) !== undefined) {
+    if ((await email_linked?.execute({ email: message.content.toLowerCase() })) !== undefined) {
         return message.author
             .send({
                 embeds: [format_embed(new EmbedBuilder().setTitle("Email exists").setDescription("This email is already registered."), "red")],
@@ -103,19 +116,27 @@ async function send_verification_email(client: DiscordClient, db: MySql2Database
  * @returns The active verification session if there is one
  */
 async function has_verification_session(db: MySql2Database<typeof schema>, sender: User): Promise<schema.VerifyingUser | undefined> {
-    return db
-        .select()
-        .from(schema.verifying_users)
-        .where(eq(schema.verifying_users.discordId, sender.id))
-        .execute()
-        .then(res => {
-            return res.length > 0 ? res[0] : undefined;
-        });
+    return db.query.verifying_users.findFirst({
+        where: eq(schema.verifying_users.discordId, sender.id),
+    });
+}
+
+/**
+ * @description Since verification is a pretty expensive process, we need to rate limit people to only 15 messages/minute
+ */
+const sending_rates: Map<string, number> = new Map();
+const RATE_LIMIT = 15; // max messages/minute
+function is_rated_limited(user: User) {
+    console.log(`rate is: ${sending_rates.get(user.id)}`);
+    return (sending_rates.get(user.id) || 1) > RATE_LIMIT;
 }
 
 const on_message_send_event: OnMessageCreate = {
     async execution(_, client: DiscordClient, db, message): Promise<void> {
         if (db === undefined || message.author.bot) return Promise.resolve(undefined);
+        if (is_rated_limited(message.author)) return Promise.resolve(undefined);
+        const user_rate = sending_rates.get(message.author.id) || 0;
+        sending_rates.set(message.author.id, user_rate + 1);
         const guild = client.guilds.cache.get(process.env.DISCORD_GUILD_ID!) as Guild;
         if (!guild.members.cache.has(message.author.id)) return Promise.resolve(undefined);
         const user = await has_verification_session(db, message.author);
@@ -125,10 +146,9 @@ const on_message_send_event: OnMessageCreate = {
             // https://stackoverflow.com/questions/201323/how-can-i-validate-an-email-address-using-a-regular-expression
             const regex: RegExp = new RegExp(
                 // eslint-disable-next-line no-control-regex
-                "(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\\\[\x01-\x09\x0b\x0c\x0e-\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\\])",
+                "^(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\\\[\x01-\x09\x0b\x0c\x0e-\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\\])$",
             );
-            const match = message.content.toLowerCase().match(regex);
-            if (match && match.length == 0 && match[0] === message.content.toLowerCase()) {
+            if (regex.test(message.content.toLowerCase())) {
                 // new verification session start
                 return send_verification_email(client, db, message).then(_ => {});
             } else {
@@ -141,14 +161,22 @@ const on_message_send_event: OnMessageCreate = {
                     .then(_ => {});
             }
         } else if (Number(message.content) === user.verificationCode) {
+            if ((await email_linked?.execute({ email: user.email })) !== undefined) {
+                return message.author
+                    .send({
+                        embeds: [format_embed(new EmbedBuilder().setTitle("Email exists").setDescription("This email is already registered."), "red")],
+                    })
+                    .then(_ => {});
+            }
             return db
                 .insert(schema.users)
                 .values({
                     email: user.email,
                     discordId: user.discordId,
                 } satisfies schema.NewUser)
-                .onDuplicateKeyUpdate({ set: { email: user.email } })
-                .then(async _ => {
+                .onDuplicateKeyUpdate({ set: { email: user.email, discordId: user.discordId } })
+                .then(async () => check_members(client, [guild.members.cache.get(message.author.id)!]))
+                .then(async () => {
                     return db.delete(schema.verifying_users).where(eq(schema.verifying_users.discordId, message.author.id)).execute();
                 })
                 .then(async _ => {
@@ -199,37 +227,70 @@ const on_message_send_event: OnMessageCreate = {
 
 const on_ready: OnReady = {
     execution(_, client: DiscordClient, db): Promise<void> {
+        // remove session older than one hour
         if (db === undefined) return Promise.resolve(undefined);
-        cron.schedule("0 0 0 15 *", async () => {
+        cron.schedule("*/15 * * * *", async () => {
             const now = new Date().getTime();
             await db
                 .delete(schema.verifying_users)
-                .where(sql`${schema.verifying_users.dateCreated} < now - 60*60*1000`)
+                .where(sql`${schema.verifying_users.dateCreated} < (${now} - 60*60*1000)`)
                 .execute();
         });
+        setInterval(() => {
+            sending_rates.clear();
+        }, 60 * 1000);
         return Promise.resolve(undefined);
     },
     once: true,
     run_on: [Events.ClientReady],
-    validate(client: DiscordClient): Promise<boolean> {
-        return Promise.resolve(
+    validate: async () => {
+        const validation =
             process.env.MYSQL_HOST !== undefined &&
-                process.env.MYSQL_ROOT_PASSWORD !== undefined &&
-                process.env.MYSQL_USER !== undefined &&
-                process.env.MYSQL_PASSWORD !== undefined &&
-                process.env.MYSQL_DATABASE !== undefined &&
-                process.env.MYSQL_PORT !== undefined &&
-                process.env.DISCORD_GUILD_ID !== undefined,
-        );
+            process.env.MYSQL_ROOT_PASSWORD !== undefined &&
+            process.env.MYSQL_USER !== undefined &&
+            process.env.MYSQL_PASSWORD !== undefined &&
+            process.env.MYSQL_DATABASE !== undefined &&
+            process.env.MYSQL_PORT !== undefined &&
+            process.env.DISCORD_GUILD_ID !== undefined;
+        console.log(`you got! ${validation}`);
+        return validation;
     },
 };
+
+const cmd_unlink = {
+    data: new SlashCommandBuilder()
+        .setName("verify")
+        .setDescription("Commands relating to the verification process")
+        .addSubcommand(sub_command => sub_command.setName("unlink").setDescription("If you have a linked email, this will unlink it entirely.")) as SlashCommandBuilder,
+    validate: async () => {
+        return Promise.resolve(true);
+    },
+    execution: async (client, interaction) => {
+        if (db === undefined || interaction.guild === undefined) {
+            return interaction.reply({ ephemeral: true, content: "DB is down." }).then(_ => {});
+        }
+        return (db as unknown as MySql2Database<typeof schema>)
+            .update(schema.users)
+            .set({ discordId: sql`NULL` })
+            .where(eq(schema.users.discordId, interaction.user.id))
+            .then(_ =>
+                interaction.reply({
+                    ephemeral: true,
+                    embeds: [format_embed(new EmbedBuilder().setTitle("Unliked").setDescription("Successfully unlinked email from your discord account."), "yellow")],
+                }),
+            )
+            .then(_ => check_members(client, [interaction.guild!.members.cache.get(interaction.user.id)!]))
+            .then(_ => {});
+    },
+} satisfies Command;
 
 const verificationService: Service = {
     name: "verification",
     validate: async () => {
         return process.env.DISCORD_GUILD_ID !== undefined;
     },
-    events: [on_message_send_event],
+    events: [on_message_send_event, on_ready],
+    commands: [cmd_unlink],
 };
 
 export default verificationService;
