@@ -4,18 +4,19 @@
  */
 
 import cron from "node-cron";
-import { APIEmbedField, Client, EmbedBuilder, GuildMember, Message, Role } from "discord.js";
-import { eq } from "drizzle-orm";
+import { APIEmbedField, Client, EmbedBuilder, GuildMember, Message, Role, User } from "discord.js";
+import { eq, sql } from "drizzle-orm";
 import { MySql2Database } from "drizzle-orm/mysql2";
 import * as schema from "@/schema.js";
 import { format_embed } from "@/util.js";
+import { db } from "@/db.js";
 
 // Error codes to make it easier for us to scream at the user
 // No email? 🗿 No discord? 🗿 No gryphlife? 🗿 And most importantly no payment? 🗿🗿🗿
 /**
  * @description Indicates the reason why the user is getting their access revoked
  */
-enum UserStatus {
+export enum UserStatus {
     success = 0,
     noEmail = 1 << 0, // 1
     noDiscord = 1 << 1, // 2
@@ -41,6 +42,11 @@ const FAQ_SECTION = format_embed(
     ),
     "yellow",
 );
+
+// Commonly used prepared sql queries
+export const user_by_email = db !== undefined ? db.query.users.findFirst({ where: eq(schema.users.email, sql.placeholder("email")) }).prepare() : undefined;
+
+export const user_by_discord_id = db !== undefined ? db.query.users.findFirst({ where: eq(schema.users.discordId, sql.placeholder("discord_id")) }).prepare() : undefined;
 
 // We consolidate checking of user fields in here to see if users should be allowed or not
 function user_allowed(user: schema.User | undefined): UserStatus {
@@ -88,7 +94,7 @@ function build_denial_message(status: UserStatus): EmbedBuilder[] {
  * @description Responsible for removing the permissions role + sending a message to users passed in
  * @returns Array of users unverified
  */
-async function prune_members(client: Client, users: { discord: GuildMember; reason: UserStatus }[], verified_role: Role) {
+export async function prune_members(client: Client, users: { discord: GuildMember; reason: UserStatus }[], verified_role: Role) {
     return Promise.all(
         users.map(async user => {
             if (!user.discord.roles.cache.has(verified_role.id) || user.discord.id !== "676195749800968192") return undefined;
@@ -109,7 +115,7 @@ async function prune_members(client: Client, users: { discord: GuildMember; reas
  * @description Checks members in the server whether they're actually verified or not.
  * @returns List of people removed
  **/
-export async function check_members(client: Client, members: GuildMember[], db: MySql2Database<typeof schema>) {
+export async function check_members(client: Client, members: GuildMember[]) {
     // we first find all database occurances of the discord id. if it doesn't exist, get them out of here
     const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
     const verified_role = guild.roles.cache.find(role => role.name === "Verified");
@@ -121,27 +127,15 @@ export async function check_members(client: Client, members: GuildMember[], db: 
     return Promise.all(
         members.map(async member => {
             // get all db users that have the same discord id
-            return db
-                .select()
-                .from(schema.users)
-                .where(eq(schema.users.discordId, member.id))
-                .execute()
-                .catch(_ => undefined);
+            return user_by_discord_id?.execute({ discord_id: member.user.id });
         }),
     )
         .then(results => {
-            // If the user does not exist in the db, they shall no longer exist.
-            // Prune members that exist in the DB and create a list of valid and invalid members
-
-            // Contains the db table as well their discord account
-            // We keep the discord in the same as while it may take up more data, we will have to do significantly
-            // less api calls (Caching however may be a valid option if performance is that bad).
             // POSSIBLE OPTIMIZATION: we store index rather than guild member (unsure of benefits)
             const dbUsers: { db: schema.User; discord: GuildMember }[] = [];
             const invalidUsers = results.reduce((acc: { discord: GuildMember; reason: UserStatus }[], result, index) => {
-                if (result && result.length > 0) {
-                    // Assuming `dbUsers` and `results` are correctly types
-                    dbUsers.push({ db: result[0], discord: members[index] });
+                if (result !== undefined) {
+                    dbUsers.push({ db: result, discord: members[index] });
                 } else {
                     acc.push({
                         discord: members[index],
@@ -159,13 +153,14 @@ export async function check_members(client: Client, members: GuildMember[], db: 
             return dbUsers.reduce((acc, user) => {
                 // is user not allowed? then include them
                 const status = user_allowed(user.db);
-                if (status !== UserStatus.success) {
+                const has_verification_role = user.discord.roles.cache.has(verified_role.id);
+                if (status !== UserStatus.success && has_verification_role) {
                     console.log(`${user.discord.user.tag} - ${status}`);
                     acc.push({
                         discord: user.discord,
                         reason: status,
                     });
-                } else if (!user.discord.roles.cache.has(verified_role.id)) {
+                } else if (status === UserStatus.success && !has_verification_role) {
                     // somehow meet the requirements but don't have the role...
                     user.discord.roles.add(verified_role.id).then(_ => {
                         return user.discord.send({
