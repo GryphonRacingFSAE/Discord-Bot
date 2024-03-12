@@ -244,16 +244,7 @@ const on_ready: OnReady = {
     once: true,
     run_on: [Events.ClientReady],
     validate: async () => {
-        const validation =
-            process.env.MYSQL_HOST !== undefined &&
-            process.env.MYSQL_ROOT_PASSWORD !== undefined &&
-            process.env.MYSQL_USER !== undefined &&
-            process.env.MYSQL_PASSWORD !== undefined &&
-            process.env.MYSQL_DATABASE !== undefined &&
-            process.env.MYSQL_PORT !== undefined &&
-            process.env.DISCORD_GUILD_ID !== undefined;
-        console.log(`you got! ${validation}`);
-        return validation;
+        return db !== undefined && process.env.DISCORD_GUILD_ID !== undefined;
     },
 };
 
