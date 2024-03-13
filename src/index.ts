@@ -1,4 +1,4 @@
-import { GatewayIntentBits, Partials } from "discord.js";
+import { Events, GatewayIntentBits, Partials } from "discord.js";
 import dotenv from "dotenv";
 import { DiscordClient } from "@/discord-client.js";
 import type { Command, Event } from "@/types.js";
@@ -28,7 +28,7 @@ const RUNNING_IN_DOCKER = process.env.RUNNING_IN_DOCKER === "true";
 const stat = promisify(fs.stat);
 
 const client = new DiscordClient({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.DirectMessages],
+    intents: [GatewayIntentBits.MessageContent, GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.DirectMessages, GatewayIntentBits.GuildMessages],
     partials: [Partials.Message, Partials.Channel, Partials.User],
 });
 
@@ -76,7 +76,7 @@ async function main() {
 
                 // TODO: USE ZOD OR SOME DYNAMIC TYPE VALIDATOR!!!
                 const service_factory: Service.Service = (await import(resolved_path)).default;
-
+                console.log(`Loading service ${service_factory.name}`);
                 if (!(await service_factory.validate(client))) {
                     console.log(`${service_factory.name} failed validation. Turning off!`);
                     return undefined;
@@ -180,6 +180,10 @@ async function main() {
             console.log(`Loaded event ${event.name}`);
         }
     }
+
+    client.on(Events.Error, error => {
+        console.error(`An error occurred: ${error}`);
+    });
 
     // Login using token
     await client.login(process.env.DISCORD_BOT_TOKEN);
