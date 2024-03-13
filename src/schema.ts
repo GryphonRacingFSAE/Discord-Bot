@@ -37,7 +37,7 @@ export const countdown = mysqlTable("countdown", {
         .references(() => countdown_channel.channel_id)
         .notNull(),
     title: text("name").notNull(),
-    link: text("link").default("https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
+    link: text("link").default("https://shattereddisk.github.io/rickroll/rickroll.mp4"),
     expiration: datetime("end_time").notNull(),
 });
 
