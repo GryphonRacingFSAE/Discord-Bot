@@ -1,6 +1,6 @@
 /* tslint:disable:no-unused-variable */
-import { mysqlTable, text, boolean, int, datetime, varchar, unique } from "drizzle-orm/mysql-core";
-import { sql } from "drizzle-orm";
+import { mysqlTable, text, boolean, int, datetime, varchar, serial, date } from "drizzle-orm/mysql-core";
+import { relations, sql } from "drizzle-orm";
 
 /**
  * @description Schema for how we store the credentials of everyone
@@ -25,8 +25,38 @@ export const verifying_users = mysqlTable("verifying_users", {
         .notNull(),
 });
 
+export const countdown_channel = mysqlTable("countdown_channel", {
+    channel_id: varchar("channel_id", { length: 48 }).primaryKey(),
+    message_id: text("message_id"),
+    messages_since: int("messages_since").notNull().default(0),
+});
+
+export const countdown = mysqlTable("countdown", {
+    id: serial("id").primaryKey(),
+    channel_id: varchar("channel_id", { length: 48 })
+        .references(() => countdown_channel.channel_id)
+        .notNull(),
+    title: text("name").notNull(),
+    link: text("link").default("https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
+    expiration: datetime("end_time").notNull(),
+});
+
+export const ChannelRelations = relations(countdown_channel, ({ many }) => ({
+    countdowns: many(countdown),
+}));
+
+export const CountdownRelations = relations(countdown, ({ one }) => ({
+    channel: one(countdown_channel, { fields: [countdown.channel_id], references: [countdown_channel.channel_id] }),
+}));
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 
 export type VerifyingUser = typeof verifying_users.$inferSelect;
 export type NewVerifyingUser = typeof verifying_users.$inferInsert;
+
+export type Countdown = typeof countdown.$inferSelect;
+export type NewCountdown = typeof countdown.$inferInsert;
+
+export type ChannelCountdown = typeof countdown_channel.$inferSelect;
+export type NewChannelCountdown = typeof countdown_channel.$inferInsert;

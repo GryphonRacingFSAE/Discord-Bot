@@ -1,7 +1,7 @@
 import { DiscordClient } from "@/discord-client";
 import * as schema from "@/schema.js";
 import { MySql2Database } from "drizzle-orm/mysql2";
-import { EmbedBuilder, Events, Guild, Message, SlashCommandBuilder, User } from "discord.js";
+import { ChannelType, EmbedBuilder, Events, Guild, Message, SlashCommandBuilder, User } from "discord.js";
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 import type { Command, OnMessageCreate, OnReady, Service } from "@/service.js";
 import nodemailer from "nodemailer";
@@ -9,7 +9,7 @@ import cron from "node-cron";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { format_embed } from "@/util.js";
-import { check_members, prune_members, UserStatus } from "@/services/permissions/index.js";
+import { check_members } from "@/services/permissions/index.js";
 import { db } from "@/db.js";
 
 const CODE_LENGTH = 8;
@@ -133,7 +133,7 @@ function is_rated_limited(user: User) {
 
 const on_message_send_event: OnMessageCreate = {
     async execution(_, client: DiscordClient, db, message): Promise<void> {
-        if (db === undefined || message.author.bot) return Promise.resolve(undefined);
+        if (db === undefined || message.author.bot || message.channel.type !== ChannelType.DM) return Promise.resolve(undefined);
         if (is_rated_limited(message.author)) return Promise.resolve(undefined);
         const user_rate = sending_rates.get(message.author.id) || 0;
         sending_rates.set(message.author.id, user_rate + 1);
