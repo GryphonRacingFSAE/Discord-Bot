@@ -32,13 +32,14 @@ export type Event<T extends unknown[]> = {
      * @description Validates if a event should be included or not
      */
     validate: (client: DiscordClient) => Promise<boolean>;
-    execution: (eventName: keyof ClientEvents, ...args: T) => Promise<void>;
+    execution: (eventName: keyof ClientEvents, client: DiscordClient, db: MySql2Database<typeof schema> | undefined, ...args: T) => Promise<void>;
 };
 
 // Define commonly used events
-export type OnReady = Event<[DiscordClient, MySql2Database<typeof schema> | undefined]>;
-export type OnMessageCreate = Event<[DiscordClient, MySql2Database<typeof schema> | undefined, Message]>;
-export type OnMemberUpdate = Event<[DiscordClient, MySql2Database<typeof schema> | undefined, GuildMember, GuildMember]>;
+export type OnReady = Event<[undefined]>;
+export type OnMessageCreate = Event<[Message]>;
+export type OnMemberUpdate = Event<[GuildMember]>;
+export type OnInteractCreate = Event<[CommandInteraction]>;
 
 /**
  * @description The bare minimum a verificationService can have
@@ -60,5 +61,5 @@ export type Service = {
     /**
      * @description Defines events of the command
      */
-    events?: (Event<unknown[]> | OnReady | OnMemberUpdate | OnMessageCreate)[];
+    events?: (Event<unknown[]> | OnReady | OnMemberUpdate | OnMessageCreate | OnInteractCreate)[];
 };
