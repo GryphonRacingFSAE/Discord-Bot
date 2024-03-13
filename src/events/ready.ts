@@ -2,7 +2,6 @@ import { Events, Client } from "discord.js";
 import cron from "node-cron";
 import dotenv, { config } from "dotenv";
 import { saveAuditLogs } from "@/commands/save-audit-logs.js";
-import { updateMessage } from "@/countdown-manager.js";
 import { updateSubsectionRoles } from "@/events/member-update.js";
 import fs from "node:fs";
 import { DiscordClient } from "@/discord-client";
@@ -48,24 +47,6 @@ export default {
 
         // Initialize email web-scrapper
         await Promise.all([email_webscrapper.on_ready(browser)]);
-
-        // Iterate over all the stored message info and start the countdowns
-        for (const channel_id in message_info) {
-            // Create a new update schedule for each message, but will destruct
-            // if the message it is editing is destroyed
-            // Janky? Yeah, but to be honest it works *good enough*
-            updateMessage(client, channel_id, false, false, null).then(() => {
-                const task = cron.schedule("*/5 * * * *", () => {
-                    try {
-                        console.log("Updating message");
-                        updateMessage(client, channel_id, true, false, task);
-                    } catch (error) {
-                        console.log("Error while updating cron startup task: ", error);
-                    }
-                });
-                task.start();
-            });
-        }
 
         // Schedule weekly audit log saving:
         // Saturday @ 11:59 PM
