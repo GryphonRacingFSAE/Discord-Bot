@@ -105,8 +105,8 @@ async function get_message_by_channel_id(client: DiscordClient, channel_id: stri
 export async function update_countdown(channel: schema.ChannelCountdown & { countdowns: schema.Countdown[] }, guild: Guild, force_new_message?: boolean) {
     if (!guild.channels.cache.has(channel.channel_id)) return Promise.reject("No channel");
     const discord_channel = guild.channels.cache.get(channel.channel_id);
-    if (discord_channel === undefined) return Promise.reject("No channel found");
-    const text_channel = discord_channel as TextChannel;
+    if (discord_channel === undefined || discord_channel.type !== ChannelType.GuildText) return Promise.reject("No correct channel found");
+    const text_channel = discord_channel;
     const message = channel.message_id !== null ? await text_channel.messages.fetch(channel.message_id) : undefined;
     if (!guild.channels.cache.has(channel.channel_id)) return Promise.reject("No channel");
 
