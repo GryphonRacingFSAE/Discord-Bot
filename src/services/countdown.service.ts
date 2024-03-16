@@ -2,7 +2,7 @@
  * @description Responsible for handling countdowns in the server.
  */
 import { Command, OnMessageCreate, OnReady, Service } from "@/service.js";
-import { APIEmbedField, ChannelType, EmbedBuilder, Events, Guild, SlashCommandBuilder, TextChannel } from "discord.js";
+import { APIEmbedField, ChannelType, EmbedBuilder, Events, Guild, Message, MessageType, SlashCommandBuilder, TextChannel } from "discord.js";
 import { db } from "@/db.js";
 import * as schema from "@/schema.js";
 import { countdown } from "@/schema.js";
@@ -59,6 +59,47 @@ async function get_countdown_embed(channel: schema.ChannelCountdown & { countdow
 }
 
 /**
+ * @description Try to delete the annoying ___ has pinned message.
+ */
+async function delete_pinned_message(discord_channel: TextChannel) {
+    return discord_channel.messages.fetch({ limit: 10 }).then(messages => {
+        const pinned = messages.find(message => message.type === MessageType.ChannelPinnedMessage && message.system);
+        if (pinned !== undefined) {
+            // eslint-disable-next-line drizzle/enforce-delete-with-where
+            return pinned.delete();
+        }
+    });
+}
+
+/**
+ * @description A simple cache for message ids, so we don't need to spam db calls
+ */
+const message_id_cache: Map<string, Message> = new Map();
+
+/**
+ * @description Grabs the countdown message id by channel id using the cache primarily and **does not update the cache if it already exists.**
+ * Reason for not updating as we're only mainly concerned about the order of message ids.
+ * @param client
+ * @param channel_id
+ */
+async function get_message_by_channel_id(client: DiscordClient, channel_id: string): Promise<Message | undefined> {
+    const guild = client.guilds.cache.get(process.env.DISCORD_GUILD_ID!);
+    if (guild === undefined || db === undefined) return undefined;
+    const channel = guild.channels.cache.get(channel_id);
+    if (channel === undefined || channel.type !== ChannelType.GuildText) return undefined;
+    return db.query.countdown_channel
+        .findFirst({ where: eq(schema.countdown_channel.channel_id, channel_id) })
+        .execute()
+        .then(result => {
+            if (result !== undefined && result.message_id !== null) {
+                const message = channel.messages.cache.get(result.message_id as string);
+                if (message) message_id_cache.set(channel_id, message);
+                return message;
+            }
+        });
+}
+
+/**
  * @description Updates an individual channel's countdowns
  */
 export async function update_countdown(channel: schema.ChannelCountdown & { countdowns: schema.Countdown[] }, guild: Guild, force_new_message?: boolean) {
@@ -66,13 +107,16 @@ export async function update_countdown(channel: schema.ChannelCountdown & { coun
     const discord_channel = guild.channels.cache.get(channel.channel_id);
     if (discord_channel === undefined) return Promise.reject("No channel found");
     const text_channel = discord_channel as TextChannel;
-    const message = channel.message_id !== null ? (await text_channel.messages.fetch({ limit: 100 })).get(channel.message_id) : undefined;
+    const message = channel.message_id !== null ? await text_channel.messages.fetch(channel.message_id) : undefined;
     if (!guild.channels.cache.has(channel.channel_id)) return Promise.reject("No channel");
 
     const delta_time = new Date().getTime() - (message !== undefined ? message.createdTimestamp : 0);
     // If message exists < 24 hours, edit if not make new lol
-    if (message === undefined || delta_time > NEW_COUNTDOWN_MESSAGE || force_new_message === true) {
-        if (message !== undefined) {
+    if (message === undefined || delta_time > NEW_COUNTDOWN_MESSAGE || force_new_message === true || (channel.countdowns.length === 0 && message)) {
+        if (message !== undefined && channel.countdowns.length === 0) {
+            // eslint-disable-next-line drizzle/enforce-delete-with-where
+            return await message.delete().then(_ => db?.update(schema.countdown_channel).set({ messages_since: 0 }).where(eq(schema.countdown_channel.channel_id, message.channelId)).execute());
+        } else if (message !== undefined) {
             // eslint-disable-next-line drizzle/enforce-delete-with-where
             await message.delete().then(_ => db?.update(schema.countdown_channel).set({ messages_since: 0 }).where(eq(schema.countdown_channel.channel_id, message.channelId)).execute());
         } else if (channel.message_id !== null) {
@@ -85,10 +129,15 @@ export async function update_countdown(channel: schema.ChannelCountdown & { coun
                 })
                 .then(async message => {
                     try {
-                        await message.pin();
+                        await message.pin().then(_ => delete_pinned_message(text_channel));
                     } catch {
                         /* empty */
                     }
+                    return message;
+                })
+                .then(message => {
+                    // update cache
+                    message_id_cache.set(channel.channel_id, message);
                     return message;
                 })
                 .then(message => {
@@ -179,10 +228,14 @@ const on_message_create = {
     execution: async (event, client, __, message) => {
         const guild = client.guilds.cache.get(process.env.DISCORD_GUILD_ID!) as Guild;
         if (message.channel.type !== ChannelType.GuildText) return;
+        // ignore messages sent after
+        if (Number(message.id) < Number((await get_message_by_channel_id(client, message.channelId)) || "0")) {
+            return;
+        }
         // eslint-disable-next-line drizzle/enforce-update-with-where
         return db
             ?.update(schema.countdown_channel)
-            .set({ messages_since: event === Events.MessageCreate ? sql`${schema.countdown_channel.messages_since} + 1` : sql`max(${schema.countdown_channel.messages_since} - 1, 0)` })
+            .set({ messages_since: event === Events.MessageCreate ? sql`${schema.countdown_channel.messages_since} + 1` : sql`greatest(${schema.countdown_channel.messages_since} - 1, 0)` })
             .where(eq(schema.countdown_channel.channel_id, message.channelId))
             .execute()
             .then(
@@ -191,13 +244,9 @@ const on_message_create = {
                         .findFirst({ with: { countdowns: true }, where: eq(schema.countdown_channel.channel_id, message.channelId) })
                         .execute()
                         .then(channel => {
-                            // Cap message_since at 100 since we can fetch at most 100 messages this ensures
+                            // Minimum at 3 to ensure we don't force the bot into some weird sending loop
                             // we constantly update the bot.
-                            if (
-                                channel !== undefined &&
-                                (channel.messages_since >= Math.max(MAX_MESSAGES_NEW_MESSAGE, 3) || channel.messages_since >= 100) &&
-                                handle_new_countdowns.get(message.channelId) === false
-                            ) {
+                            if (channel !== undefined && channel.messages_since >= Math.max(MAX_MESSAGES_NEW_MESSAGE, 3) && handle_new_countdowns.get(message.channelId) === false) {
                                 handle_new_countdowns.set(message.channelId, true);
                                 return update_countdown(channel, guild, true);
                             } else {
