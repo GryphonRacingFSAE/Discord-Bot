@@ -29,6 +29,7 @@ services:
       - app-resources:/usr/app/resources
       - app-onedrive:/usr/app/onedrive
       - app-drizzle:/usr/app/drizzle
+      - app-logs:/usr/app/logs
     env_file:
       - .env
     restart: unless-stopped
@@ -37,4 +38,5 @@ volumes:
   app-resources:
   app-onedrive:
   app-drizzle:
+  app-logs:
   mysql-data:
