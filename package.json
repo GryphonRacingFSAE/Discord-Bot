@@ -3,7 +3,7 @@
     "scripts": {
         "dev": "tsc --watch",
         "build": "tsc --strict && tsc-alias",
-        "preview": "node dist/index.js",
+        "preview": "mkdir -p ./logs && node dist/index.js > ./logs/$(date +'%Y-%m-%d_%H-%M-%S').log",
         "preview-text-logs": "node dist/index.js > bot-logs.txt 2>&1",
         "deploy-commands": "node dist/deploy-commands.js",
         "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --ignore-path .gitignore --fix",
