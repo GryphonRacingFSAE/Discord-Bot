@@ -2,7 +2,7 @@
  * @description Responsible for handling countdowns in the server.
  */
 import { Command, OnMessageCreate, OnReady, Service } from "@/service.js";
-import { APIEmbedField, ChannelType, EmbedBuilder, Events, Guild, MessageType, SlashCommandBuilder, TextChannel } from "discord.js";
+import { APIEmbedField, ChannelType, EmbedBuilder, Events, Guild, SlashCommandBuilder, TextChannel } from "discord.js";
 import { db } from "@/db.js";
 import * as schema from "@/schema.js";
 import { countdown } from "@/schema.js";
@@ -10,7 +10,6 @@ import { and, eq, sql } from "drizzle-orm";
 import cron from "node-cron";
 import { DiscordClient } from "@/discord-client";
 import { format_embed, quick_embed } from "@/util.js";
-import { channel } from "node:diagnostics_channel";
 
 const COMMAND_UPDATE = 5; // Time in minutes in which we should refresh each countdown
 const NEW_COUNTDOWN_MESSAGE = 24 * 60 * 60 * 1000; // Time in millisecond we should wait before having another countdown
