@@ -133,6 +133,7 @@ async function main() {
                     // followed by the database instance 'db' and then any event arguments
                     return await (event as Service.Event<unknown[]>).execution(run_on, client, db, ...args);
                 });
+                console.log(`${service.name} loaded event: ${run_on}`);
             });
         });
     }
