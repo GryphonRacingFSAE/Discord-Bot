@@ -12,7 +12,7 @@
     },
     "dependencies": {
         "async-mutex": "^0.4.1",
-        "discord-api-types": "^0.37.68",
+        "discord-api-types": "^0.37.79",
         "discord.js": "^14.14.1",
         "dotenv": "^16.4.4",
         "moment-timezone": "^0.5.45",
