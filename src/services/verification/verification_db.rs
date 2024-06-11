@@ -229,7 +229,7 @@ pub async fn update_verification_roles(
                 }
                 Some(verification) => {
                     let verification_embed: Option<CreateEmbed> =
-                        add_verification_error_fields(Some(embed.clone()), &verification);
+                        add_verification_error_fields(Some(embed.clone()), verification);
                     if let Some(verification_embed) = verification_embed {
                         embed = verification_embed;
                     }
