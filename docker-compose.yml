@@ -1,0 +1,40 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: mydatabase
+      MYSQL_USER: myuser
+      MYSQL_PASSWORD: mypassword
+    ports:
+      - "3306:3306" # Bind MySQL to localhost for external access
+    volumes:
+      - mysql-data:/var/lib/mysql
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - internal_network
+
+  ugracing_bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: mysql://myuser:mypassword@mysql:3306/mydatabase
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - internal_network
+
+volumes:
+  mysql-data:
+
+networks:
+  internal_network:
+    driver: bridge
