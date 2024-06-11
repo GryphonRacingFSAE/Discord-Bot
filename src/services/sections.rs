@@ -12,7 +12,7 @@ use crate::discord::get_role_id_from_name;
 /// Updates a member's role
 ///
 /// This is also where we will hardcode the roles given out
-pub ddasync fn update_member_section_role(
+pub async fn update_member_section_role(
     ctx: &serenity::Context,
     member: &serenity::Member,
 ) -> Result<()> {
