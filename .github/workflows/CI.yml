@@ -3,30 +3,41 @@ name: GRacing Bot CI
 on:
   push:
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
   Lint-Type-Build-Check-Bot:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        toolchain:
+          - stable
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Install rustup
+        run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
 
       - name: Install dependencies
-        run: npm i
+        run: cargo build --verbose
 
-        # Run all the checks, and report all the results
-      - name: Lint check
+      - name: Format check
         if: always()
-        run: npm run lint-check
+        run: cargo fmt --check
 
-      - name: Type Check
+      - name: Clippy check
         if: always()
-        run: npm run type-check
+        run: cargo clippy -- -D warnings
 
-      - name: Compile TypeScript
+      - name: Build project
         if: always()
-        run: npm run build
-    
+        run: cargo build --verbose
+
+      - name: Test project
+        if: always()
+        run: cargo test --verbose
+
   Lint-Build-Check-Door-Sensor:
     runs-on: ubuntu-latest
 
@@ -54,7 +65,7 @@ jobs:
   Deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: [ self-hosted, Linux, X64 ]
-    needs: [Lint-Type-Build-Check-Bot, Lint-Build-Check-Door-Sensor]
+    needs: [ Lint-Type-Build-Check-Bot, Lint-Build-Check-Door-Sensor ]
     steps:
       - uses: actions/checkout@v4
 
@@ -62,16 +73,12 @@ jobs:
       - name: Deploy with Docker
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
-          DISCORD_APPLICATION_ID: ${{ secrets.DISCORD_APPLICATION_ID }}
           DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
           EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
           EMAIL_SERVICE: ${{ vars.EMAIL_SERVICE }}
           EMAIL_HOST: ${{ vars.EMAIL_HOST }}
           EMAIL_PORT: ${{ vars.EMAIL_PORT }}
-          VERIFICATION_CHANNEL: ${{ vars.VERIFICATION_CHANNEL }}
         run: |
-          docker build . --tag gracingbot
-          docker stop GRacingBot || true # It's okay if these fail, as the bot might not be active or existant
-          docker rm GRacingBot || true
-          docker run -d --restart unless-stopped -e DISCORD_BOT_TOKEN -e DISCORD_APPLICATION_ID -e DISCORD_GUILD_ID -e EMAIL_USERNAME -e EMAIL_PASSWORD -e EMAIL_HOST -e EMAIL_SERVICE -e EMAIL_PORT -e VERIFICATION_CHANNEL -p 80:80 -p 587:587 --name GRacingBot -v /home/grc0/GRacingBotFiles:/usr/app/resources -v "/home/grc0/OneDrive/Gryphon Racing Administrative/Team Roster":/usr/app/onedrive gracingbot
+          docker compose down
+          docker compose up 
