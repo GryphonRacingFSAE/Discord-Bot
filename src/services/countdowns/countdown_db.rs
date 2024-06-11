@@ -77,7 +77,6 @@ pub fn update_channel(channel: &Channel) -> Result<()> {
 
 /// Generates the embed for the countdown message
 pub fn generate_countdown_message_embed(
-    ctx: &serenity::Context,
     db: &mut MysqlConnection,
     channel: &Channel,
     time_zone: &Tz,
@@ -93,7 +92,6 @@ pub fn generate_countdown_message_embed(
             let cd_tz = Utc
                 .from_utc_datetime(&cd.date_time)
                 .with_timezone(time_zone);
-            let duration = cd_tz.timestamp_millis() - tz_now.timestamp_millis();
             let duration = cd_tz.signed_duration_since(tz_now);
             (cd, duration)
         })
@@ -154,7 +152,7 @@ pub async fn new_channel_message(
     channel: &Channel,
     time_zone: &Tz,
 ) -> Result<()> {
-    let embed = generate_countdown_message_embed(ctx, db, channel, time_zone)?;
+    let embed = generate_countdown_message_embed(db, channel, time_zone)?;
     if channel.message_id != 0 {
         let message = ctx
             .http()
@@ -235,6 +233,8 @@ pub async fn update_channel_message(
             let diff = Utc::now().timestamp() - message.timestamp.unix_timestamp();
             if diff < 60 * 60 * 24 * 7 {
                 new_countdown_message = false;
+            }
+            if new_countdown_message {
                 let messages = c_id
                     .messages(ctx.http(), GetMessages::new().after(channel.message_id))
                     .await
@@ -262,7 +262,7 @@ pub async fn update_channel_message(
             .edit(
                 ctx.http(),
                 EditMessage::new().embed(generate_countdown_message_embed(
-                    ctx, &mut db, &channel, time_zone,
+                    &mut db, &channel, time_zone,
                 )?),
             )
             .await?;

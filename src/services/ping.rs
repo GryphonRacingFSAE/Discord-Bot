@@ -1,11 +1,12 @@
-use crate::Data;
-use poise::{Context, CreateReply};
 use std::time::Instant;
+
+use poise::{Context, CreateReply};
+
+use crate::Data;
 
 /// Pings the bot
 #[poise::command(slash_command)]
 pub async fn ping(ctx: Context<'_, Data, anyhow::Error>) -> Result<(), anyhow::Error> {
-    let user = ctx.author();
     let start = Instant::now();
     let msg = ctx.reply("Pinging...").await?;
     let end = Instant::now();
@@ -23,6 +24,6 @@ pub async fn ping(ctx: Context<'_, Data, anyhow::Error>) -> Result<(), anyhow::E
             __non_exhaustive: (),
         },
     )
-    .await?;
+       .await?;
     Ok(())
 }

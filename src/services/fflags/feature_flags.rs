@@ -1,11 +1,11 @@
 use std::fmt::Debug;
 
 use anyhow::Result;
-use diesel::associations::HasTable;
 use diesel::{
-    AsChangeset, ExpressionMethods, Insertable, MysqlConnection, OptionalExtension, QueryDsl,
-    Queryable, RunQueryDsl, Selectable,
+    AsChangeset, ExpressionMethods, Insertable, MysqlConnection, OptionalExtension, Queryable,
+    QueryDsl, RunQueryDsl, Selectable,
 };
+use diesel::associations::HasTable;
 use serde::Deserialize;
 
 use crate::error::BotError;
@@ -35,6 +35,7 @@ pub trait FeatureFlag: Debug + Clone {
     fn set_value(&mut self, db: &mut MysqlConnection, value: Option<Self::RustType>) -> Result<()>;
 
     /// Fetches feature flag value from the db
+    #[allow(dead_code)]
     fn fetch_value(&mut self, db: &mut MysqlConnection) -> Result<Option<Self::RustType>>;
 
     /// Get the cached value

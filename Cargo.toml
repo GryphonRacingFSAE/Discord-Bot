@@ -3,6 +3,7 @@ name = "ugracing_bot"
 version = "0.1.0"
 edition = "2021"
 authors = ["Danny Le <dle05@uoguelph.ca>"]
+build = "./src/build.rs"
 
 [dependencies]
 anyhow = "1.0.86"

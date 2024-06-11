@@ -1,16 +1,16 @@
 use std::env::var;
 
 use anyhow::Result;
-use poise::serenity_prelude as serenity;
 use poise::{Context, CreateReply};
+use poise::serenity_prelude as serenity;
 
+use crate::Data;
 use crate::discord::{get_role_id_from_name, user_has_roles_or};
 use crate::embeds::{default_embed, GuelphColors};
 use crate::services::verification::verification_db::update_verification_roles;
-use crate::Data;
 
 #[poise::command(slash_command, subcommands("update"), subcommand_required)]
-pub async fn verification(ctx: Context<'_, Data, anyhow::Error>) -> Result<()> {
+pub async fn verification(_: Context<'_, Data, anyhow::Error>) -> Result<()> {
     Ok(())
 }
 
@@ -22,7 +22,7 @@ pub async fn update(ctx: Context<'_, Data, anyhow::Error>) -> Result<()> {
         &ctx.author().id,
         &["Bot Developer", "Leads"],
     )
-    .await
+        .await
     {
         return Ok(());
     }
@@ -39,7 +39,7 @@ pub async fn update(ctx: Context<'_, Data, anyhow::Error>) -> Result<()> {
                         )
                         .ephemeral(true),
                 )
-                .await?;
+                   .await?;
             }
             Err(e) => {
                 ctx.send(
@@ -50,7 +50,7 @@ pub async fn update(ctx: Context<'_, Data, anyhow::Error>) -> Result<()> {
                         )
                         .ephemeral(true),
                 )
-                .await?;
+                   .await?;
             }
         }
     } else {
@@ -61,7 +61,7 @@ pub async fn update(ctx: Context<'_, Data, anyhow::Error>) -> Result<()> {
                 )
                 .ephemeral(true),
         )
-        .await?;
+           .await?;
     }
     Ok(())
 }

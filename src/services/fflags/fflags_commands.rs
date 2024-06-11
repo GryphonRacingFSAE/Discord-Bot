@@ -1,28 +1,28 @@
 use anyhow::Result;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use futures::StreamExt;
-use poise::futures_util::Stream;
 use poise::{Context, CreateReply};
+use poise::futures_util::Stream;
 
+use crate::Data;
 use crate::db::establish_db_connection;
 use crate::discord::user_has_roles_or;
 use crate::embeds::{default_embed, GuelphColors};
 use crate::services::fflags::feature_flags::{FeatureFlag, FeatureFlagBoolean};
-use crate::Data;
 
 #[poise::command(
     slash_command,
     subcommands("set_boolean", "get_boolean"),
     subcommand_required
 )]
-pub async fn fflag(ctx: Context<'_, Data, anyhow::Error>) -> Result<(), anyhow::Error> {
+pub async fn fflag(_: Context<'_, Data, anyhow::Error>) -> Result<(), anyhow::Error> {
     Ok(())
 }
 
 async fn autocomplete_binary_flag_names<'a>(
     _ctx: Context<'_, Data, anyhow::Error>,
     partial: &'a str,
-) -> impl Stream<Item = String> + 'a {
+) -> impl Stream<Item=String> + 'a {
     let mut db = establish_db_connection().unwrap();
     let names = {
         use crate::schema::feature_flags::dsl::*;
@@ -51,7 +51,7 @@ pub async fn set_boolean(
         &ctx.author().id,
         &["Bot Developer", "Leads"],
     )
-    .await
+        .await
     {
         return Ok(());
     }
@@ -68,7 +68,7 @@ pub async fn set_boolean(
                             )
                             .ephemeral(true),
                     )
-                    .await?;
+                       .await?;
                 }
                 Err(e) => {
                     ctx.send(
@@ -79,7 +79,7 @@ pub async fn set_boolean(
                             )
                             .ephemeral(true),
                     )
-                    .await?;
+                       .await?;
                 }
             };
         }
@@ -92,7 +92,7 @@ pub async fn set_boolean(
                     )
                     .ephemeral(true),
             )
-            .await?;
+               .await?;
         }
     }
     Ok(())
@@ -111,7 +111,7 @@ pub async fn get_boolean(
         &ctx.author().id,
         &["Bot Developer", "Leads"],
     )
-    .await
+        .await
     {
         return Ok(());
     }
@@ -128,7 +128,7 @@ pub async fn get_boolean(
                         )))
                         .ephemeral(true),
                 )
-                .await?;
+                   .await?;
             } else {
                 ctx.send(
                     CreateReply::default()
@@ -138,7 +138,7 @@ pub async fn get_boolean(
                         )))
                         .ephemeral(true),
                 )
-                .await?;
+                   .await?;
             }
         }
         Err(e) => {
@@ -150,7 +150,7 @@ pub async fn get_boolean(
                     )
                     .ephemeral(true),
             )
-            .await?;
+               .await?;
         }
     }
     Ok(())

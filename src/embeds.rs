@@ -5,6 +5,7 @@ use poise::serenity_prelude::{Colour, CreateEmbed, CreateEmbedFooter};
 /// https://guides.uoguelph.ca/guides/brand-guide/colour-palette/
 pub enum GuelphColors {
     Red,
+    #[allow(dead_code)]
     Black,
     Gold,
     Blue,

@@ -2,8 +2,8 @@ use std::env::var;
 use std::str::FromStr;
 
 use anyhow::Result;
-use diesel::sql_types::Bigint;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::sql_types::Bigint;
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::{CacheHttp, CreateMessage, GuildId, Member, Message, RoleId};
 
@@ -13,52 +13,51 @@ use crate::discord::{
 };
 use crate::embeds::{default_embed, GuelphColors};
 use crate::services::verification::verification_db::{
-    valid_verification_session, verification_entry_exists, Verification, VerificationSession,
+    valid_verification_session, Verification, verification_entry_exists, VerificationSession,
 };
 use crate::services::verification::verification_discord::add_verification_error_fields;
 use crate::services::verification::verification_email::{generate_code, send_email};
-use crate::Data;
 
 /// A new verification was requested
 ///
 /// **Assumes no other existing verification session. This must be validated prior.**
-pub async fn new_verification(ctx: &serenity::Context, data: &Data, msg: &Message) -> Result<()> {
+pub async fn new_verification(ctx: &serenity::Context, msg: &Message) -> Result<()> {
     let recipient = lettre::message::Mailbox::from_str(&msg.content.to_lowercase());
     if recipient.is_err() {
         msg.channel_id
-            .send_message(
-                ctx.http(),
-                CreateMessage::new()
-                    .embed(default_embed(GuelphColors::Red).description("Invalid email sent.")),
-            )
-            .await?;
+           .send_message(
+               ctx.http(),
+               CreateMessage::new()
+                   .embed(default_embed(GuelphColors::Red).description("Invalid email sent.")),
+           )
+           .await?;
         return Ok(());
     };
     let recipient = recipient.unwrap();
     if !recipient.to_string().ends_with("@uoguelph.ca") {
         msg.channel_id
-            .send_message(
-                ctx.http(),
-                CreateMessage::new().embed(default_embed(GuelphColors::Red).description(format!(
-                    "Expected a `@uoguelph.ca` email address, got: {}",
-                    recipient.email
-                ))),
-            )
-            .await?;
+           .send_message(
+               ctx.http(),
+               CreateMessage::new().embed(default_embed(GuelphColors::Red).description(format!(
+                   "Expected a `@uoguelph.ca` email address, got: {}",
+                   recipient.email
+               ))),
+           )
+           .await?;
         return Ok(());
     }
     // check if email is already in use?
     if let Some(verification_entry) = verification_entry_exists(&recipient.to_string())? {
         if verification_entry.discord_id.is_some() {
             msg.channel_id
-                .send_message(
-                    ctx.http(),
-                    CreateMessage::new().embed(
-                        default_embed(GuelphColors::Red)
-                            .description("This email is already registered."),
-                    ),
-                )
-                .await?;
+               .send_message(
+                   ctx.http(),
+                   CreateMessage::new().embed(
+                       default_embed(GuelphColors::Red)
+                           .description("This email is already registered."),
+                   ),
+               )
+               .await?;
             return Ok(());
         }
     } else {
@@ -98,19 +97,18 @@ pub async fn new_verification(ctx: &serenity::Context, data: &Data, msg: &Messag
 /// Handles existing verification sessions
 pub async fn handle_verification_code(
     ctx: &serenity::Context,
-    data: &Data,
     msg: &Message,
 ) -> Result<()> {
     if msg.content.parse::<u64>().is_err() {
         msg.channel_id
-            .send_message(
-                ctx.http(),
-                CreateMessage::new().embed(
-                    default_embed(GuelphColors::Red)
-                        .description("Please submit a valid verification code."),
-                ),
-            )
-            .await?;
+           .send_message(
+               ctx.http(),
+               CreateMessage::new().embed(
+                   default_embed(GuelphColors::Red)
+                       .description("Please submit a valid verification code."),
+               ),
+           )
+           .await?;
         return Ok(());
     }
     let verification_lock_entry: Option<VerificationSession> = {
@@ -123,41 +121,41 @@ pub async fn handle_verification_code(
     };
     if verification_lock_entry.is_none() {
         msg.channel_id
-            .send_message(
-                ctx.http(),
-                CreateMessage::new().embed(
-                    default_embed(GuelphColors::Red)
-                        .description("No active verification session found."),
-                ),
-            )
-            .await?;
+           .send_message(
+               ctx.http(),
+               CreateMessage::new().embed(
+                   default_embed(GuelphColors::Red)
+                       .description("No active verification session found."),
+               ),
+           )
+           .await?;
         return Ok(());
     }
     let verification_lock_entry: VerificationSession = verification_lock_entry.unwrap();
     let mut db = establish_db_connection()?;
     if verification_lock_entry.is_expired() {
         msg.channel_id
-            .send_message(
-                ctx.http(),
-                CreateMessage::new().embed(
-                    default_embed(GuelphColors::Red).description(
-                        "Expired verification session. Please try re-submit your email.",
-                    ),
-                ),
-            )
-            .await?;
+           .send_message(
+               ctx.http(),
+               CreateMessage::new().embed(
+                   default_embed(GuelphColors::Red).description(
+                       "Expired verification session. Please try re-submit your email.",
+                   ),
+               ),
+           )
+           .await?;
         use crate::schema::verification_sessions::dsl::*;
         diesel::delete(verification_sessions.filter(email.eq(&verification_lock_entry.email)))
             .execute(&mut db)?;
         return Ok(());
     } else if verification_lock_entry.code != msg.content.parse::<u64>().unwrap() {
         msg.channel_id
-            .send_message(
-                ctx.http(),
-                CreateMessage::new()
-                    .embed(default_embed(GuelphColors::Red).description("Incorrect code.")),
-            )
-            .await?;
+           .send_message(
+               ctx.http(),
+               CreateMessage::new()
+                   .embed(default_embed(GuelphColors::Red).description("Incorrect code.")),
+           )
+           .await?;
         return Ok(());
     }
     use crate::schema::verifications::dsl::*;
@@ -167,22 +165,22 @@ pub async fn handle_verification_code(
 
     if let Some(embed) = add_verification_error_fields(None, &verification_entry) {
         msg.channel_id
-            .send_message(ctx.http(), CreateMessage::new().embed(embed))
-            .await?;
+           .send_message(ctx.http(), CreateMessage::new().embed(embed))
+           .await?;
         return Ok(());
     }
     let guild_id = GuildId::new(var("GUILD_ID").unwrap().parse()?);
     let member: Option<Member> = get_guild_member_from_user(ctx, guild_id, msg.author.id).await?;
     if member.is_none() {
         msg.channel_id
-            .send_message(
-                ctx.http(),
-                CreateMessage::new().embed(
-                    default_embed(GuelphColors::Red)
-                        .description("You are not in the Gryphon FSAE discord server."),
-                ),
-            )
-            .await?;
+           .send_message(
+               ctx.http(),
+               CreateMessage::new().embed(
+                   default_embed(GuelphColors::Red)
+                       .description("You are not in the Gryphon FSAE discord server."),
+               ),
+           )
+           .await?;
         return Ok(());
     }
     let member: Member = member.unwrap();
@@ -201,14 +199,14 @@ pub async fn handle_verification_code(
         member.add_role(ctx.http(), role_id).await?;
     }
     msg.channel_id
-        .send_message(
-            ctx.http(),
-            CreateMessage::new().embed(
-                default_embed(GuelphColors::Gold)
-                    .description("You have been verified successfully. Welcome to Gryphon FSAE!"),
-            ),
-        )
-        .await?;
+       .send_message(
+           ctx.http(),
+           CreateMessage::new().embed(
+               default_embed(GuelphColors::Gold)
+                   .description("You have been verified successfully. Welcome to Gryphon FSAE!"),
+           ),
+       )
+       .await?;
 
     Ok(())
 }
@@ -216,10 +214,9 @@ pub async fn handle_verification_code(
 /// Handles the incoming
 pub async fn handle_verification_message(
     ctx: &serenity::Context,
-    data: &Data,
     msg: &Message,
 ) -> Result<()> {
-    if msg.author.bot || !msg.is_private() {
+    if msg.author.bot || msg.guild_id.is_none() {
         return Ok(());
     }
     // check if in guild
@@ -241,7 +238,7 @@ pub async fn handle_verification_message(
             .unwrap_or(false)
     };
     if !already_verifying {
-        new_verification(ctx, data, msg).await?;
+        new_verification(ctx, msg).await?;
     } else if msg.content == *"quit" {
         // drop existing verification
         {
@@ -250,15 +247,15 @@ pub async fn handle_verification_message(
                 .execute(&mut db)?;
         }
         msg.channel_id
-            .send_message(
-                ctx.http(),
-                CreateMessage::new().embed(
-                    default_embed(GuelphColors::Blue).description("Stopped verification session."),
-                ),
-            )
-            .await?;
+           .send_message(
+               ctx.http(),
+               CreateMessage::new().embed(
+                   default_embed(GuelphColors::Blue).description("Stopped verification session."),
+               ),
+           )
+           .await?;
     } else {
-        handle_verification_code(ctx, data, msg).await?;
+        handle_verification_code(ctx, msg).await?;
     }
     Ok(())
 }

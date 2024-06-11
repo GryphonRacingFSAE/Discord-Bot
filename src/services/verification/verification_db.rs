@@ -15,10 +15,10 @@ use crate::db::establish_db_connection;
 use crate::discord::get_role_id_from_name;
 use crate::embeds::{default_embed, GuelphColors};
 use crate::services::fflags::feature_flags::{FeatureFlag, FeatureFlagBoolean};
+use crate::services::verification::SESSION_EXPIRATION_SECONDS;
 use crate::services::verification::verification_discord::{
     add_verification_error_fields, generate_embed_error,
 };
-use crate::services::verification::SESSION_EXPIRATION_SECONDS;
 
 /// Automatically handle reading/writing of database contents
 
@@ -126,11 +126,11 @@ pub fn merge_verifications(records: &[Verification]) -> Result<()> {
              ON DUPLICATE KEY UPDATE
              name = VALUES(name), in_gryphlife = VALUES(in_gryphlife), has_paid = VALUES(has_paid)",
         )
-        .bind::<diesel::sql_types::Text, _>(&record.email)
-        .bind::<diesel::sql_types::Nullable<diesel::sql_types::Text>, _>(&record.name)
-        .bind::<diesel::sql_types::Nullable<diesel::sql_types::Bool>, _>(&record.in_gryphlife)
-        .bind::<diesel::sql_types::Nullable<diesel::sql_types::Bool>, _>(&record.has_paid)
-        .execute(&mut db)?;
+            .bind::<diesel::sql_types::Text, _>(&record.email)
+            .bind::<diesel::sql_types::Nullable<diesel::sql_types::Text>, _>(&record.name)
+            .bind::<diesel::sql_types::Nullable<diesel::sql_types::Bool>, _>(&record.in_gryphlife)
+            .bind::<diesel::sql_types::Nullable<diesel::sql_types::Bool>, _>(&record.has_paid)
+            .execute(&mut db)?;
     }
     Ok(())
 }
@@ -156,7 +156,7 @@ pub async fn merge_verifications_periodically(time_zone: chrono_tz::Tz) {
                 .to_std()
                 .unwrap(),
         )
-        .await;
+            .await;
     }
 }
 
@@ -289,7 +289,7 @@ pub async fn update_verification_roles_periodically(
                 .to_std()
                 .unwrap(),
         )
-        .await;
+            .await;
     }
 }
 
@@ -305,30 +305,7 @@ pub fn verification_entry_exists(email_in: &str) -> Result<Option<Verification>>
     Ok(res)
 }
 
-/// Checks if a verification field exists based off of a user
-pub fn get_user_verification(user: &UserId) -> Result<Option<Verification>> {
-    let mut db = establish_db_connection()?;
-    use crate::schema::verifications::dsl::*;
-    let res: Option<Verification> = verifications
-        .filter(discord_id.eq(user.get()))
-        .first::<Verification>(&mut db)
-        .optional()
-        .unwrap_or(None);
-    Ok(res)
-}
-
 /// If there is a valid verification session
 pub fn valid_verification_session(session: &VerificationSession) -> bool {
     !session.is_expired()
-}
-
-/// Checks if a user is verified
-pub fn user_verified(user: &UserId) -> Result<bool> {
-    let mut db = establish_db_connection()?;
-    use crate::schema::verifications::dsl::*;
-    Ok(verifications
-        .filter(discord_id.eq(user.get()))
-        .first::<Verification>(&mut db)
-        .map(|v| v.is_verified())
-        .is_ok())
 }
