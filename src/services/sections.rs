@@ -16,7 +16,7 @@ pub async fn update_member_section_role(
     ctx: &serenity::Context,
     member: &serenity::Member,
 ) -> Result<()> {
-    let role_assigments: HashMap<String, Vec<String>> = HashMap::from([
+    let role_assignments: HashMap<String, Vec<String>> = HashMap::from([
         (
             String::from("Dynamics"),
             vec![
@@ -44,7 +44,7 @@ pub async fn update_member_section_role(
         ),
     ]);
 
-    for (section, subsections) in role_assigments.into_iter() {
+    for (section, subsections) in role_assignments.into_iter() {
         let section: serenity::RoleId =
             match get_role_id_from_name(ctx, &member.guild_id, &section).await {
                 None => continue,
