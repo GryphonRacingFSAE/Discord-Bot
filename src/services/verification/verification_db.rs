@@ -5,7 +5,9 @@ use std::str::FromStr;
 use anyhow::Result;
 use calamine::{DataType, Reader};
 use chrono::Utc;
-use diesel::{AsChangeset, Insertable, MysqlConnection, Queryable, RunQueryDsl, Selectable};
+use diesel::{
+    AsChangeset, Connection, Insertable, MysqlConnection, Queryable, RunQueryDsl, Selectable,
+};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl};
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::{CacheHttp, CreateEmbed, CreateMessage, GuildId, RoleId, UserId};
@@ -117,22 +119,38 @@ pub fn read_xlsx_file_contents() -> Result<Vec<Verification>> {
     Ok(verifications_vec)
 }
 
-/// Merge the vector of verifications into the db aka do a massive update
+/// Merge the vector of verifications into the db aka do a massive update and purge all fields
+/// not found in the spreadsheet
 pub fn merge_verifications(records: &[Verification]) -> Result<()> {
     let mut db = establish_db_connection()?;
-    for record in records {
-        diesel::sql_query(
-            "INSERT INTO verifications (email, name, in_gryphlife, has_paid) VALUES (?, ?, ?, ?)
-             ON DUPLICATE KEY UPDATE
-             name = VALUES(name), in_gryphlife = VALUES(in_gryphlife), has_paid = VALUES(has_paid)",
-        )
-        .bind::<diesel::sql_types::Text, _>(&record.email)
-        .bind::<diesel::sql_types::Nullable<diesel::sql_types::Text>, _>(&record.name)
-        .bind::<diesel::sql_types::Nullable<diesel::sql_types::Bool>, _>(&record.in_gryphlife)
-        .bind::<diesel::sql_types::Nullable<diesel::sql_types::Bool>, _>(&record.has_paid)
-        .execute(&mut db)?;
-    }
-    Ok(())
+
+    // Start a transaction
+    db.transaction(|db| {
+        for record in records {
+            diesel::sql_query(
+                "INSERT INTO verifications (email, name, in_gryphlife, has_paid) VALUES (?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                 name = VALUES(name), in_gryphlife = VALUES(in_gryphlife), has_paid = VALUES(has_paid)",
+            )
+                .bind::<diesel::sql_types::VarChar, _>(&record.email)
+                .bind::<diesel::sql_types::Nullable<diesel::sql_types::Text>, _>(&record.name)
+                .bind::<diesel::sql_types::Nullable<diesel::sql_types::Bool>, _>(&record.in_gryphlife)
+                .bind::<diesel::sql_types::Nullable<diesel::sql_types::Bool>, _>(&record.has_paid)
+                .execute(db)?;
+        }
+
+        let emails: Vec<String> = records.iter().map(|r| r.email.clone()).collect();
+        if !emails.is_empty() {
+            diesel::sql_query(
+                format!(
+                    "DELETE FROM verifications WHERE email NOT IN ({})",
+                    emails.iter().map(|s| format!("'{}'", s)).collect::<Vec<_>>().join(",")
+                )
+            ).execute(db)?;
+        }
+
+        Ok(())
+    })
 }
 
 fn read_and_merge_verifications() -> Result<()> {
