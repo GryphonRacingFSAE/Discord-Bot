@@ -3,12 +3,13 @@ use std::env::var;
 use chrono_tz::Tz;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness};
 use dotenv::dotenv;
-use poise::serenity_prelude::{CacheHttp, GuildId};
+use poise::{Framework, FrameworkContext, serenity_prelude as serenity};
 use poise::PrefixFrameworkOptions;
-use poise::{serenity_prelude as serenity, Framework, FrameworkContext};
+use poise::serenity_prelude::CacheHttp;
 
 use crate::db::establish_db_connection;
 use crate::services::countdowns::update_cycle::update_countdown_messages_periodically;
+use crate::services::sections::{update_all_member_roles_periodically, update_member_section_role};
 use crate::services::verification::verification_db::{
     merge_verifications_periodically, update_verification_roles_periodically,
 };
@@ -37,7 +38,7 @@ async fn on_error(error: poise::FrameworkError<'_, Data, anyhow::Error>) {
     match error {
         poise::FrameworkError::Setup { error, .. } => panic!("Failed to start bot: {:?}", error),
         poise::FrameworkError::Command { error, ctx, .. } => {
-            println!("Error in command `{}`: {:?}", ctx.command().name, error,);
+            println!("Error in command `{}`: {:?}", ctx.command().name, error, );
         }
         error => {
             if let Err(e) = poise::builtins::on_error(error).await {
@@ -59,7 +60,7 @@ async fn main() {
     }
 
     #[allow(deprecated)]
-    let options = poise::FrameworkOptions {
+        let options = poise::FrameworkOptions {
         commands: vec![
             services::ping::ping(),
             services::countdowns::countdowns_commands::countdown(),
@@ -77,17 +78,7 @@ async fn main() {
                 println!("Executed command {}!", ctx.command().qualified_name);
             })
         },
-        command_check: Some(|ctx| {
-            Box::pin(async move {
-                Ok(ctx.guild_id().map_or(false, |guild_id: GuildId| {
-                    guild_id.get()
-                        == var("GUILD_ID")
-                            .unwrap_or("0".to_string())
-                            .parse::<u64>()
-                            .unwrap()
-                }))
-            })
-        }),
+        command_check: None,
         skip_checks_for_owners: false,
         allowed_mentions: None,
         reply_callback: None,
@@ -102,6 +93,8 @@ async fn main() {
                     "Got an event in event handler: {:?}",
                     event.snake_case_name()
                 );
+                let guild_id: serenity::GuildId =
+                    serenity::GuildId::new(var("GUILD_ID").unwrap().parse().unwrap());
                 // Start up services
                 if let serenity::FullEvent::Ready { .. } = event {
                     tokio::spawn(merge_verifications_periodically(
@@ -114,21 +107,38 @@ async fn main() {
                     tokio::spawn(update_verification_roles_periodically(
                         ctx.clone(),
                         framework.user_data().await.time_zone,
-                        GuildId::new(var("GUILD_ID").unwrap().parse().unwrap()),
+                        guild_id,
                     ));
+                    tokio::spawn(update_all_member_roles_periodically(ctx.clone(), guild_id));
                 } else if let serenity::FullEvent::Message { new_message } = event {
                     if let Err(e) =
                         services::verification::verification_event::handle_verification_message(
                             ctx,
                             new_message,
                         )
-                        .await
+                            .await
                     {
                         println!(
                             "Error while handling event {}: {}",
                             event.snake_case_name(),
                             e
                         )
+                    }
+                } else if let serenity::FullEvent::GuildMemberUpdate {
+                    old_if_available,
+                    new,
+                    ..
+                } = event
+                {
+                    if let (Some(old), Some(new)) = (old_if_available, new) {
+                        if old.roles != new.roles {
+                            if let Err(e) = update_member_section_role(ctx, new).await {
+                                println!(
+                                    "Failed to update section role for {} due to: {e}",
+                                    new.user.name
+                                );
+                            }
+                        }
                     }
                 }
                 Ok(())
@@ -164,12 +174,12 @@ async fn main() {
                     ctx.http().delete_global_command(command.id).await?
                 }
                 if let Ok(guild_id) = var("GUILD_ID") {
-                    let guild_id = GuildId::new(guild_id.parse()?);
+                    let guild_id = serenity::GuildId::new(guild_id.parse()?);
                     let guild_commands = ctx.http().get_guild_commands(guild_id).await?;
                     for command in guild_commands {
                         ctx.http()
-                            .delete_guild_command(guild_id, command.id)
-                            .await?;
+                           .delete_guild_command(guild_id, command.id)
+                           .await?;
                     }
                 }
 
@@ -190,6 +200,8 @@ async fn main() {
     var("GUILD_ID").expect("Missing `GUILD_ID` env var");
     let intents = serenity::GatewayIntents::MESSAGE_CONTENT
         | serenity::GatewayIntents::GUILDS
+        | serenity::GatewayIntents::DIRECT_MESSAGES
+        | serenity::GatewayIntents::GUILD_MEMBERS
         | serenity::GatewayIntents::non_privileged();
 
     let client = serenity::ClientBuilder::new(token, intents)

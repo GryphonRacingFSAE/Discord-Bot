@@ -210,7 +210,7 @@ pub async fn handle_verification_code(ctx: &serenity::Context, msg: &Message) ->
 
 /// Handles the incoming
 pub async fn handle_verification_message(ctx: &serenity::Context, msg: &Message) -> Result<()> {
-    if msg.author.bot || msg.guild_id.is_none() {
+    if msg.author.bot || msg.guild_id.is_some() {
         return Ok(());
     }
     // check if in guild
