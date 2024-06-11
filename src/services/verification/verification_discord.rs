@@ -1,6 +1,8 @@
-use crate::embeds::{default_embed, GuelphColors};
-use crate::services::verification::verification_db::Verification;
 use poise::serenity_prelude::CreateEmbed;
+
+use crate::embeds::{default_embed, GuelphColors};
+use crate::services::verification::GRYPHLIFE_LINK;
+use crate::services::verification::verification_db::Verification;
 
 /// Generates a basic embed error for verification
 pub fn generate_embed_error() -> CreateEmbed {
@@ -21,7 +23,7 @@ pub fn add_verification_error_fields(
         has_error = true;
     }
     if !verification_entry.in_gryphlife.unwrap_or(false) {
-        embed = embed.field("Not in GryphLife", "You are not in the [GryphLife](<https://gryphlife.uoguelph.ca/organization/gryphonracing>).", true);
+        embed = embed.field("Not in GryphLife", format!("You are not in the [GryphLife](<{}>).", GRYPHLIFE_LINK), true);
         has_error = true;
     }
     if verification_entry.name.as_deref().unwrap_or("").is_empty() {
