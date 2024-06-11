@@ -24,6 +24,6 @@ pub async fn ping(ctx: Context<'_, Data, anyhow::Error>) -> Result<(), anyhow::E
             __non_exhaustive: (),
         },
     )
-       .await?;
+    .await?;
     Ok(())
 }

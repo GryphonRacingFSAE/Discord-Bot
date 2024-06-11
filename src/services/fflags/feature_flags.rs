@@ -1,11 +1,11 @@
 use std::fmt::Debug;
 
 use anyhow::Result;
-use diesel::{
-    AsChangeset, ExpressionMethods, Insertable, MysqlConnection, OptionalExtension, Queryable,
-    QueryDsl, RunQueryDsl, Selectable,
-};
 use diesel::associations::HasTable;
+use diesel::{
+    AsChangeset, ExpressionMethods, Insertable, MysqlConnection, OptionalExtension, QueryDsl,
+    Queryable, RunQueryDsl, Selectable,
+};
 use serde::Deserialize;
 
 use crate::error::BotError;

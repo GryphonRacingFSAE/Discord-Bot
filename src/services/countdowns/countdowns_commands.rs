@@ -3,13 +3,13 @@ use chrono::{NaiveDate, TimeZone, Utc};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use poise::{Context, CreateReply};
 
-use crate::Data;
 use crate::db::establish_db_connection;
 use crate::discord::user_has_roles_or;
 use crate::embeds::{default_embed, GuelphColors};
 use crate::services::countdowns::countdown_db::{
-    Countdown, CountdownWithId, create_countdown, query_channel_or_default, update_channel_message,
+    create_countdown, query_channel_or_default, update_channel_message, Countdown, CountdownWithId,
 };
+use crate::Data;
 
 #[poise::command(
     slash_command,
@@ -33,7 +33,7 @@ pub async fn add(
         &ctx.author().id,
         &["Bot Developer", "Leads"],
     )
-        .await
+    .await
     {
         return Ok(());
     }
@@ -46,7 +46,7 @@ pub async fn add(
                 ctx.send(CreateReply::default().ephemeral(true).embed(
                     default_embed(GuelphColors::Red).description("Invalid timestamp given."),
                 ))
-                   .await?;
+                .await?;
                 return Ok(());
             }
         };
@@ -66,19 +66,19 @@ pub async fn add(
         channel_id: ctx.channel_id().get(),
         date_time,
     })
-        .await?;
+    .await?;
     update_channel_message(
         ctx.serenity_context(),
         ctx.channel_id(),
         &ctx.data().time_zone,
     )
-        .await?;
+    .await?;
     ctx.send(
         CreateReply::default()
             .ephemeral(true)
             .embed(default_embed(GuelphColors::Blue).description("Created new countdown.")),
     )
-       .await?;
+    .await?;
     Ok(())
 }
 
@@ -90,7 +90,7 @@ pub async fn update(ctx: Context<'_, Data, anyhow::Error>) -> Result<()> {
         &ctx.author().id,
         &["Bot Developer", "Leads"],
     )
-        .await
+    .await
     {
         return Ok(());
     }
@@ -99,13 +99,13 @@ pub async fn update(ctx: Context<'_, Data, anyhow::Error>) -> Result<()> {
         ctx.channel_id(),
         &ctx.data().time_zone,
     )
-        .await?;
+    .await?;
     ctx.send(
         CreateReply::default()
             .ephemeral(true)
             .embed(default_embed(GuelphColors::Blue).description("Updated countdown.")),
     )
-       .await?;
+    .await?;
     Ok(())
 }
 
@@ -119,7 +119,7 @@ pub async fn delete(
         &ctx.author().id,
         &["Bot Developer", "Leads"],
     )
-        .await
+    .await
     {
         return Ok(());
     }
@@ -135,13 +135,13 @@ pub async fn delete(
             ctx.send(CreateReply::default().ephemeral(true).embed(
                 default_embed(GuelphColors::Blue).description("Deleted countdown successfully."),
             ))
-               .await?;
+            .await?;
             update_channel_message(
                 ctx.serenity_context(),
                 ctx.channel_id(),
                 &ctx.data().time_zone,
             )
-                .await?;
+            .await?;
             return Ok(());
         }
     }
@@ -151,7 +151,7 @@ pub async fn delete(
                 .ephemeral(true)
                 .embed(default_embed(GuelphColors::Red).description("No countdown found.")),
         )
-           .await?;
+        .await?;
     } else {
         ctx.send(CreateReply::default().ephemeral(true).embed(
             default_embed(GuelphColors::Red).description(format!(
@@ -160,7 +160,7 @@ pub async fn delete(
                 countdown_index
             )),
         ))
-           .await?;
+        .await?;
     }
     Ok(())
 }
