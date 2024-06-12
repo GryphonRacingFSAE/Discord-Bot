@@ -6,7 +6,6 @@ use diesel::{Connection, ExpressionMethods, QueryDsl, RunQueryDsl};
 use log::warn;
 use poise::{Context, CreateReply};
 use poise::serenity_prelude as serenity;
-use tokio::time::{interval, sleep};
 
 use crate::Data;
 use crate::db::establish_db_connection;
