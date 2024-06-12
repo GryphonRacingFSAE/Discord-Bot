@@ -4,9 +4,9 @@ use chrono_tz::Tz;
 use diesel_migrations::EmbeddedMigrations;
 use dotenv::dotenv;
 use log::warn;
-use poise::{Framework, FrameworkContext, serenity_prelude as serenity};
-use poise::PrefixFrameworkOptions;
 use poise::serenity_prelude::CacheHttp;
+use poise::PrefixFrameworkOptions;
+use poise::{serenity_prelude as serenity, Framework, FrameworkContext};
 
 use crate::discord::get_role_id_from_name;
 use crate::services::countdowns::update_cycle::update_countdown_messages_periodically;
@@ -42,7 +42,7 @@ async fn on_error(error: poise::FrameworkError<'_, Data, anyhow::Error>) {
     match error {
         poise::FrameworkError::Setup { error, .. } => panic!("Failed to start bot: {:?}", error),
         poise::FrameworkError::Command { error, ctx, .. } => {
-            println!("Error in command `{}`: {:?}", ctx.command().name, error, );
+            println!("Error in command `{}`: {:?}", ctx.command().name, error,);
         }
         error => {
             if let Err(e) = poise::builtins::on_error(error).await {
@@ -59,7 +59,7 @@ async fn main() {
     dotenv().ok();
 
     #[allow(deprecated)]
-        let options = poise::FrameworkOptions {
+    let options = poise::FrameworkOptions {
         commands: vec![
             services::ping::ping(),
             services::countdowns::countdowns_commands::countdown(),
@@ -116,7 +116,7 @@ async fn main() {
                             ctx,
                             new_message,
                         )
-                            .await
+                        .await
                     {
                         println!(
                             "Error while handling event {}: {}",
@@ -182,8 +182,8 @@ async fn main() {
                     let guild_commands = ctx.http().get_guild_commands(guild_id).await?;
                     for command in guild_commands {
                         ctx.http()
-                           .delete_guild_command(guild_id, command.id)
-                           .await?;
+                            .delete_guild_command(guild_id, command.id)
+                            .await?;
                     }
                     guild_id
                 };

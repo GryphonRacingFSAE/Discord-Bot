@@ -2,25 +2,25 @@ use std::time;
 
 use anyhow::Result;
 use diesel::prelude::*;
-use diesel_async::{AsyncConnection, RunQueryDsl};
 use diesel_async::scoped_futures::ScopedFutureExt;
+use diesel_async::{AsyncConnection, RunQueryDsl};
 use futures::TryFutureExt;
 use log::warn;
-use poise::{Context, CreateReply};
 use poise::serenity_prelude as serenity;
+use poise::{Context, CreateReply};
 use tokio::try_join;
 
-use crate::Data;
 use crate::db::establish_db_connection;
 use crate::discord::{get_name_from_user_id, is_user_in_guild, user_has_roles_or};
 use crate::embeds::{default_embed, GuelphColors};
 use crate::services::verification::verification_db::{
-    update_verification_roles, update_verification_roles_from_members, Verification,
-    verification_entry_exists,
+    update_verification_roles, update_verification_roles_from_members, verification_entry_exists,
+    Verification,
 };
 use crate::services::verification::verification_discord::{
     add_verification_error_fields, generate_embed_error,
 };
+use crate::Data;
 
 #[poise::command(
     slash_command,
@@ -39,7 +39,7 @@ pub async fn update(ctx: Context<'_, Data, anyhow::Error>) -> Result<()> {
         &ctx.author().id,
         &["Bot Developer", "Leads"],
     )
-        .await
+    .await
     {
         return Ok(());
     }
@@ -47,7 +47,9 @@ pub async fn update(ctx: Context<'_, Data, anyhow::Error>) -> Result<()> {
     let verified_role = ctx.data().verified_role;
     let mut db = establish_db_connection().await?;
     if let Some(verified_role) = verified_role {
-        match update_verification_roles(ctx.serenity_context(), &mut db, &guild_id, &verified_role).await {
+        match update_verification_roles(ctx.serenity_context(), &mut db, &guild_id, &verified_role)
+            .await
+        {
             Ok(_) => {
                 ctx.send(
                     CreateReply::default()
@@ -57,7 +59,7 @@ pub async fn update(ctx: Context<'_, Data, anyhow::Error>) -> Result<()> {
                         )
                         .ephemeral(true),
                 )
-                   .await?;
+                .await?;
             }
             Err(e) => {
                 ctx.send(
@@ -68,7 +70,7 @@ pub async fn update(ctx: Context<'_, Data, anyhow::Error>) -> Result<()> {
                         )
                         .ephemeral(true),
                 )
-                   .await?;
+                .await?;
             }
         }
     } else {
@@ -79,7 +81,7 @@ pub async fn update(ctx: Context<'_, Data, anyhow::Error>) -> Result<()> {
                 )
                 .ephemeral(true),
         )
-           .await?;
+        .await?;
     }
     Ok(())
 }
@@ -121,11 +123,11 @@ pub async fn status(
                         )))
                         .ephemeral(true),
                 )
-                   .await?;
+                .await?;
             }
             Some(embed) => {
                 ctx.send(CreateReply::default().embed(embed).ephemeral(true))
-                   .await?;
+                    .await?;
             }
         }
     } else {
@@ -145,7 +147,7 @@ pub async fn status(
                 )
                 .ephemeral(true),
         )
-           .await?;
+        .await?;
     }
 
     Ok(())
@@ -162,7 +164,7 @@ pub async fn link(
         &ctx.author().id,
         &["Bot Developer", "Leads"],
     )
-        .await
+    .await
     {
         return Ok(());
     } else if ctx.data().verified_role.is_none() {
@@ -172,7 +174,9 @@ pub async fn link(
     let mut embed =
         default_embed(GuelphColors::Blue).description("Are you sure you want to do this?");
     let mut db = establish_db_connection().await?;
-    let old_verification: Option<Verification> = match verification_entry_exists(&mut db, &email).await? {
+    let old_verification: Option<Verification> = match verification_entry_exists(&mut db, &email)
+        .await?
+    {
         None => {
             ctx.send(CreateReply::default().ephemeral(true).embed(
                 default_embed(GuelphColors::Red).description(format!(
@@ -180,7 +184,7 @@ pub async fn link(
                     email
                 )),
             ))
-               .await?;
+            .await?;
             return Ok(());
         }
         Some(data) => {
@@ -231,21 +235,27 @@ pub async fn link(
                     .ephemeral(true)
                     .embed(default_embed(GuelphColors::Black).description("Response expired.")),
             )
-               .await?;
+            .await?;
         }
         Some(interaction) => match interaction.data.custom_id.as_str() {
             "verification_link_yes" => {
-                let defer_future = interaction.defer_ephemeral(ctx.http()).map_err(|err| anyhow::Error::from(err));
+                let defer_future = interaction
+                    .defer_ephemeral(ctx.http())
+                    .map_err(anyhow::Error::from);
                 let mut db = establish_db_connection().await?;
                 let unlink_future = {
                     let member = member.clone();
-                    db.transaction::<_, anyhow::Error, _>(|db| async move {
-                        use crate::schema::verifications::dsl::*;
-                        diesel::update(verifications.filter(email.eq(in_email)))
-                            .set(discord_id.eq(member.as_ref().map(|m| m.user.id.get())))
-                            .execute(db).await?;
-                        Ok(())
-                    }.scope_boxed())
+                    db.transaction::<_, anyhow::Error, _>(|db| {
+                        async move {
+                            use crate::schema::verifications::dsl::*;
+                            diesel::update(verifications.filter(email.eq(in_email)))
+                                .set(discord_id.eq(member.as_ref().map(|m| m.user.id.get())))
+                                .execute(db)
+                                .await?;
+                            Ok(())
+                        }
+                        .scope_boxed()
+                    })
                 };
                 try_join!(defer_future, unlink_future)?;
                 let mut changed_members: Vec<serenity::Member> = Vec::new();
@@ -258,16 +268,16 @@ pub async fn link(
                         ctx.data().guild_id,
                         serenity::UserId::new(verification.discord_id.unwrap()),
                     )
-                        .await?
+                    .await?
                     {
                         changed_members.push(
                             ctx.data()
-                               .guild_id
-                               .member(
-                                   ctx.http(),
-                                   serenity::UserId::new(verification.discord_id.unwrap()),
-                               )
-                               .await?,
+                                .guild_id
+                                .member(
+                                    ctx.http(),
+                                    serenity::UserId::new(verification.discord_id.unwrap()),
+                                )
+                                .await?,
                         );
                     }
                 }
@@ -276,14 +286,16 @@ pub async fn link(
                     &mut db,
                     ctx.data().verified_role.as_ref().unwrap(),
                     &changed_members,
-                ).await?;
+                )
+                .await?;
                 interaction
                     .edit_response(
                         ctx.http(),
                         serenity::EditInteractionResponse::new()
                             .embed(default_embed(GuelphColors::Blue).description("Done!"))
                             .components(vec![]),
-                    ).await?;
+                    )
+                    .await?;
             }
             "verification_link_no" => {
                 interaction

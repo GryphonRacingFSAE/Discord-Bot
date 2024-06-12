@@ -1,9 +1,11 @@
 use std::fmt::Debug;
 
 use anyhow::Result;
-use diesel::{AsChangeset, ExpressionMethods, Insertable, OptionalExtension, Queryable, Selectable};
 use diesel::associations::HasTable;
 use diesel::query_dsl::methods::FilterDsl;
+use diesel::{
+    AsChangeset, ExpressionMethods, Insertable, OptionalExtension, Queryable, Selectable,
+};
 use diesel_async::{AsyncMysqlConnection, RunQueryDsl};
 use serde::Deserialize;
 
@@ -31,11 +33,18 @@ pub trait FeatureFlag: Debug + Clone {
     async fn fetch(db: &mut AsyncMysqlConnection, name: &str) -> Result<Option<Self>>;
 
     /// Sets the feature flag value to the db
-    async fn set_value(&mut self, db: &mut AsyncMysqlConnection, value: Option<Self::RustType>) -> Result<()>;
+    async fn set_value(
+        &mut self,
+        db: &mut AsyncMysqlConnection,
+        value: Option<Self::RustType>,
+    ) -> Result<()>;
 
     /// Fetches feature flag value from the db
     #[allow(dead_code)]
-    async fn fetch_value(&mut self, db: &mut AsyncMysqlConnection) -> Result<Option<Self::RustType>>;
+    async fn fetch_value(
+        &mut self,
+        db: &mut AsyncMysqlConnection,
+    ) -> Result<Option<Self::RustType>>;
 
     /// Get the cached value
     fn value(&self) -> Option<Self::RustType>;
@@ -82,10 +91,11 @@ impl FeatureFlag for FeatureFlagBoolean {
                 };
                 diesel::insert_into(feature_flags::table())
                     .values(&res.inner)
-                    .execute(db).await?;
+                    .execute(db)
+                    .await?;
                 Ok(res)
             }
-            Some(res) => Ok(res)
+            Some(res) => Ok(res),
         }
     }
 
@@ -94,7 +104,8 @@ impl FeatureFlag for FeatureFlagBoolean {
         feature_flags
             .filter(name.eq(flag_name))
             .first::<FeatureFlagModel>(db)
-            .await.optional()?
+            .await
+            .optional()?
             .map(|inner| {
                 if inner.flag_type == "BOOLEAN" {
                     Ok(Self { inner })
@@ -120,15 +131,20 @@ impl FeatureFlag for FeatureFlagBoolean {
         });
         diesel::update(feature_flags.filter(name.eq(self.inner.name.clone())))
             .set(value.eq(self.inner.value.clone()))
-            .execute(db).await?;
+            .execute(db)
+            .await?;
         Ok(())
     }
 
-    async fn fetch_value(&mut self, db: &mut AsyncMysqlConnection) -> Result<Option<Self::RustType>> {
+    async fn fetch_value(
+        &mut self,
+        db: &mut AsyncMysqlConnection,
+    ) -> Result<Option<Self::RustType>> {
         use crate::schema::feature_flags::dsl::*;
         self.inner.value = feature_flags
             .filter(name.eq(self.inner.name.clone()))
-            .first::<FeatureFlagModel>(db).await?
+            .first::<FeatureFlagModel>(db)
+            .await?
             .value;
         Ok(self.value())
     }

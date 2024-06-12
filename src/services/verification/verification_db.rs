@@ -6,8 +6,8 @@ use anyhow::Result;
 use calamine::{DataType, Reader};
 use chrono::Utc;
 use diesel::prelude::*;
-use diesel_async::{AsyncConnection, AsyncMysqlConnection, RunQueryDsl};
 use diesel_async::scoped_futures::ScopedFutureExt;
+use diesel_async::{AsyncConnection, AsyncMysqlConnection, RunQueryDsl};
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::{CacheHttp, CreateEmbed, CreateMessage, GuildId, RoleId, UserId};
 use serde::Deserialize;
@@ -16,10 +16,10 @@ use crate::db::establish_db_connection;
 use crate::discord::get_role_id_from_name;
 use crate::embeds::{default_embed, GuelphColors};
 use crate::services::fflags::feature_flags::{FeatureFlag, FeatureFlagBoolean};
-use crate::services::verification::SESSION_EXPIRATION_SECONDS;
 use crate::services::verification::verification_discord::{
     add_verification_error_fields, generate_embed_error,
 };
+use crate::services::verification::SESSION_EXPIRATION_SECONDS;
 
 /// Automatically handle reading/writing of database contents
 
@@ -60,7 +60,7 @@ impl Verification {
     /// Will check if the user is in the server still
     pub async fn is_in_server(&self, ctx: &serenity::Context, guild_id: GuildId) -> bool {
         if let Some(discord_id) = self.discord_id {
-            return guild_id.member(ctx.http(), discord_id).await.is_ok()
+            return guild_id.member(ctx.http(), discord_id).await.is_ok();
         }
         false
     }
@@ -183,7 +183,7 @@ pub async fn merge_verifications_periodically(time_zone: chrono_tz::Tz) {
                 .to_std()
                 .unwrap(),
         )
-            .await;
+        .await;
     }
 }
 
@@ -196,11 +196,13 @@ pub async fn update_verification_roles_from_hashmap(
     verified_members: HashMap<UserId, Verification>,
 ) -> Result<()> {
     let allow_removals: bool =
-        FeatureFlagBoolean::fetch_or_default(db, "verification_role_removal", Some(false)).await?
+        FeatureFlagBoolean::fetch_or_default(db, "verification_role_removal", Some(false))
+            .await?
             .value()
             .unwrap_or(false);
     let allow_additions: bool =
-        FeatureFlagBoolean::fetch_or_default(db, "verification_role_addition", Some(true)).await?
+        FeatureFlagBoolean::fetch_or_default(db, "verification_role_addition", Some(true))
+            .await?
             .value()
             .unwrap_or(false);
     for member in members {
@@ -297,7 +299,8 @@ pub async fn update_verification_roles(
         use crate::schema::verifications::dsl::*;
         let verifications_vec: Vec<Verification> = verifications
             .filter(discord_id.is_not_null())
-            .load::<Verification>(db).await?;
+            .load::<Verification>(db)
+            .await?;
         verifications_vec
             .into_iter()
             .map(|v| (UserId::new(v.discord_id.unwrap()), v))
@@ -307,9 +310,12 @@ pub async fn update_verification_roles(
         ctx,
         db,
         verified_role,
-        &guild_id.members(ctx.http(), Some(u32::MAX as u64), None).await?,
+        &guild_id
+            .members(ctx.http(), Some(u32::MAX as u64), None)
+            .await?,
         verified_members,
-    ).await
+    )
+    .await
 }
 
 pub async fn update_verification_roles_from_members(
@@ -329,7 +335,8 @@ pub async fn update_verification_roles_from_members(
                         .collect::<Vec<u64>>(),
                 ),
             )
-            .load::<Verification>(db).await?;
+            .load::<Verification>(db)
+            .await?;
         verifications_vec
             .into_iter()
             .map(|v| (UserId::new(v.discord_id.unwrap()), v))
@@ -361,13 +368,16 @@ pub async fn update_verification_roles_periodically(
                     .to_std()
                     .unwrap(),
             )
-                .await;
+            .await;
         }
     }
 }
 
 /// Checks if a verification entry exists given an email address
-pub async fn verification_entry_exists(db: &mut AsyncMysqlConnection, email_in: &str) -> Result<Option<Verification>> {
+pub async fn verification_entry_exists(
+    db: &mut AsyncMysqlConnection,
+    email_in: &str,
+) -> Result<Option<Verification>> {
     use crate::schema::verifications::dsl::*;
     let res: Option<Verification> = verifications
         .filter(email.eq(email_in))

@@ -1,12 +1,12 @@
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use poise::{Context, CreateReply};
 use poise::serenity_prelude::CreateMessage;
+use poise::{Context, CreateReply};
 
-use crate::Data;
 use crate::db::establish_db_connection;
 use crate::embeds::{default_embed, GuelphColors};
 use crate::services::verification::verification_db::update_verification_roles_from_members;
+use crate::Data;
 
 /// These commands are public facing that anyone can use without any issue
 #[poise::command(slash_command, subcommands("help", "unlink"), subcommand_required)]
@@ -26,14 +26,14 @@ pub async fn help(ctx: Context<'_, Data, anyhow::Error>) -> anyhow::Result<()> {
             .field("How?", "1. DM the bot your **@uoguelph.ca** email\n2. Send the bot the code sent to the email address\n3. Done!", false)
             .field("Code expiration", "Any code sent will expire within **5 minutes**.", false);
     ctx.author()
-       .direct_message(ctx.http(), CreateMessage::default().embed(embed))
-       .await?;
+        .direct_message(ctx.http(), CreateMessage::default().embed(embed))
+        .await?;
     ctx.send(
         CreateReply::default()
             .embed(default_embed(GuelphColors::Blue).description("Check your DMs!"))
             .ephemeral(true),
     )
-       .await?;
+    .await?;
     Ok(())
 }
 
@@ -71,14 +71,14 @@ pub async fn unlink(ctx: Context<'_, Data, anyhow::Error>) -> anyhow::Result<()>
                         ctx.data().verified_role.as_ref().unwrap(),
                         &[member.into_owned()],
                     )
-                        .await?;
+                    .await?;
                     msg.edit(
                         ctx,
                         CreateReply::default().embed(
                             default_embed(GuelphColors::Blue).description("Successfully unlinked."),
                         ),
                     )
-                       .await?;
+                    .await?;
                 }
             } else {
                 msg.edit(
@@ -87,7 +87,7 @@ pub async fn unlink(ctx: Context<'_, Data, anyhow::Error>) -> anyhow::Result<()>
                         default_embed(GuelphColors::Red).description("There is no account linked."),
                     ),
                 )
-                   .await?;
+                .await?;
             }
         }
         Err(_) => {
@@ -96,7 +96,7 @@ pub async fn unlink(ctx: Context<'_, Data, anyhow::Error>) -> anyhow::Result<()>
                 CreateReply::default()
                     .embed(default_embed(GuelphColors::Red).description("Internal error.")),
             )
-               .await?;
+            .await?;
         }
     }
     Ok(())
