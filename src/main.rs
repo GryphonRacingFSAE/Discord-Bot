@@ -3,11 +3,13 @@ use std::env::var;
 use chrono_tz::Tz;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness};
 use dotenv::dotenv;
+use log::warn;
 use poise::serenity_prelude::CacheHttp;
 use poise::PrefixFrameworkOptions;
 use poise::{serenity_prelude as serenity, Framework, FrameworkContext};
 
 use crate::db::establish_db_connection;
+use crate::discord::get_role_id_from_name;
 use crate::services::countdowns::update_cycle::update_countdown_messages_periodically;
 use crate::services::sections::{update_all_member_roles_periodically, update_member_section_role};
 use crate::services::verification::verification_db::{
@@ -25,6 +27,8 @@ mod services;
 #[derive(Debug, Clone)]
 pub struct Data {
     time_zone: Tz,
+    guild_id: serenity::GuildId,
+    verified_role: Option<serenity::RoleId>,
 }
 
 unsafe impl Send for Data {}
@@ -174,15 +178,22 @@ async fn main() {
                 for command in global_commands {
                     ctx.http().delete_global_command(command.id).await?
                 }
-                if let Ok(guild_id) = var("GUILD_ID") {
-                    let guild_id = serenity::GuildId::new(guild_id.parse()?);
+                let guild_id: serenity::GuildId = {
+                    let guild_id = serenity::GuildId::new(
+                        var("GUILD_ID")
+                            .expect("Expected env variable `GUILD_ID`, got NULL.")
+                            .parse()?,
+                    );
                     let guild_commands = ctx.http().get_guild_commands(guild_id).await?;
                     for command in guild_commands {
                         ctx.http()
                             .delete_guild_command(guild_id, command.id)
                             .await?;
                     }
-                }
+                    guild_id
+                };
+                let verified_role = get_role_id_from_name(ctx, &guild_id, "Verified").await;
+                warn!("No verified role found.");
 
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
                 println!("Data initialization complete!");
@@ -191,6 +202,8 @@ async fn main() {
                         .unwrap_or("America/Toronto".to_string())
                         .parse()
                         .unwrap(),
+                    guild_id,
+                    verified_role,
                 })
             })
         })
