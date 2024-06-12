@@ -310,9 +310,7 @@ pub async fn update_verification_roles(
         ctx,
         db,
         verified_role,
-        &guild_id
-            .members(ctx.http(), Some(u32::MAX as u64), None)
-            .await?,
+        &guild_id.members(ctx.http(), None, None).await?,
         verified_members,
     )
     .await
