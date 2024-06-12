@@ -15,12 +15,13 @@ diesel = { version = "2.2.0", features = ["mysql", "time", "chrono"] }
 diesel_migrations = { version = "2.2.0", features = ["mysql"] }
 dotenv = "0.15.0"
 lettre = { version = "0.11.7", features = ["tokio1", "tokio1-native-tls", "native-tls"] }
-poise = "0.6.1"
+poise = { version = "0.6.1", features = ["handle_panics", "collector", "chrono"] }
 rand = "0.8.5"
 serde = "1.0.203"
 thiserror = "1.0.61"
 tokio = { version = "1.38.0", features = ["default", "rt-multi-thread"] }
 toml = "0.8.14"
 futures = "0.3.30"
+log = "0.4.21"
 
 

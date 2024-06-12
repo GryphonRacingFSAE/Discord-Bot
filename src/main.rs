@@ -4,9 +4,9 @@ use chrono_tz::Tz;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness};
 use dotenv::dotenv;
 use log::warn;
-use poise::serenity_prelude::CacheHttp;
+use poise::{Framework, FrameworkContext, serenity_prelude as serenity};
 use poise::PrefixFrameworkOptions;
-use poise::{serenity_prelude as serenity, Framework, FrameworkContext};
+use poise::serenity_prelude::CacheHttp;
 
 use crate::db::establish_db_connection;
 use crate::discord::get_role_id_from_name;
@@ -27,6 +27,7 @@ mod services;
 #[derive(Debug, Clone)]
 pub struct Data {
     time_zone: Tz,
+    #[allow(dead_code)]
     guild_id: serenity::GuildId,
     verified_role: Option<serenity::RoleId>,
 }
@@ -42,7 +43,7 @@ async fn on_error(error: poise::FrameworkError<'_, Data, anyhow::Error>) {
     match error {
         poise::FrameworkError::Setup { error, .. } => panic!("Failed to start bot: {:?}", error),
         poise::FrameworkError::Command { error, ctx, .. } => {
-            println!("Error in command `{}`: {:?}", ctx.command().name, error,);
+            println!("Error in command `{}`: {:?}", ctx.command().name, error, );
         }
         error => {
             if let Err(e) = poise::builtins::on_error(error).await {
@@ -64,7 +65,7 @@ async fn main() {
     }
 
     #[allow(deprecated)]
-    let options = poise::FrameworkOptions {
+        let options = poise::FrameworkOptions {
         commands: vec![
             services::ping::ping(),
             services::countdowns::countdowns_commands::countdown(),
@@ -121,7 +122,7 @@ async fn main() {
                             ctx,
                             new_message,
                         )
-                        .await
+                            .await
                     {
                         println!(
                             "Error while handling event {}: {}",
@@ -187,8 +188,8 @@ async fn main() {
                     let guild_commands = ctx.http().get_guild_commands(guild_id).await?;
                     for command in guild_commands {
                         ctx.http()
-                            .delete_guild_command(guild_id, command.id)
-                            .await?;
+                           .delete_guild_command(guild_id, command.id)
+                           .await?;
                     }
                     guild_id
                 };

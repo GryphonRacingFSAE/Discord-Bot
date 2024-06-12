@@ -2315,6 +2315,7 @@ dependencies = [
  "dotenv",
  "futures",
  "lettre",
+ "log",
  "poise",
  "rand",
  "serde",

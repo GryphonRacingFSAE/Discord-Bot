@@ -99,3 +99,10 @@ pub async fn get_guild_member_from_user(
         .find(|member| member.user.id == user)
         .cloned())
 }
+
+pub async fn get_name_from_user_id(ctx: &serenity::Context, user_id: UserId) -> Option<String> {
+    if let Ok(user) = user_id.to_user(ctx.http()).await {
+        return Some(user.name);
+    }
+    None
+}
