@@ -1,14 +1,13 @@
 use std::env::var;
 
 use chrono_tz::Tz;
-use diesel_migrations::{EmbeddedMigrations, MigrationHarness};
+use diesel_migrations::EmbeddedMigrations;
 use dotenv::dotenv;
 use log::warn;
 use poise::{Framework, FrameworkContext, serenity_prelude as serenity};
 use poise::PrefixFrameworkOptions;
 use poise::serenity_prelude::CacheHttp;
 
-use crate::db::establish_db_connection;
 use crate::discord::get_role_id_from_name;
 use crate::services::countdowns::update_cycle::update_countdown_messages_periodically;
 use crate::services::sections::{update_all_member_roles_periodically, update_member_section_role};
@@ -58,11 +57,6 @@ pub const MIGRATIONS: EmbeddedMigrations = diesel_migrations::embed_migrations!(
 #[tokio::main]
 async fn main() {
     dotenv().ok();
-    {
-        // database, MIGRATE!
-        let mut db = establish_db_connection().unwrap();
-        db.run_pending_migrations(MIGRATIONS).unwrap();
-    }
 
     #[allow(deprecated)]
         let options = poise::FrameworkOptions {

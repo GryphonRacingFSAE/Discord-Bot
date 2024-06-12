@@ -1,17 +1,22 @@
 use std::time;
 
 use anyhow::Result;
-use diesel::{Connection, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::prelude::*;
+use diesel_async::{AsyncConnection, RunQueryDsl};
+use diesel_async::scoped_futures::ScopedFutureExt;
+use futures::TryFutureExt;
 use log::warn;
 use poise::{Context, CreateReply};
 use poise::serenity_prelude as serenity;
+use tokio::try_join;
 
 use crate::Data;
 use crate::db::establish_db_connection;
-use crate::discord::{get_name_from_user_id, user_has_roles_or};
+use crate::discord::{get_name_from_user_id, is_user_in_guild, user_has_roles_or};
 use crate::embeds::{default_embed, GuelphColors};
 use crate::services::verification::verification_db::{
-    update_verification_roles, Verification, verification_entry_exists,
+    update_verification_roles, update_verification_roles_from_members, Verification,
+    verification_entry_exists,
 };
 use crate::services::verification::verification_discord::{
     add_verification_error_fields, generate_embed_error,
@@ -40,8 +45,9 @@ pub async fn update(ctx: Context<'_, Data, anyhow::Error>) -> Result<()> {
     }
     let guild_id = ctx.data().guild_id;
     let verified_role = ctx.data().verified_role;
+    let mut db = establish_db_connection().await?;
     if let Some(verified_role) = verified_role {
-        match update_verification_roles(ctx.serenity_context(), &guild_id, &verified_role).await {
+        match update_verification_roles(ctx.serenity_context(), &mut db, &guild_id, &verified_role).await {
             Ok(_) => {
                 ctx.send(
                     CreateReply::default()
@@ -84,11 +90,12 @@ pub async fn status(
     ctx: Context<'_, Data, anyhow::Error>,
     #[description = "Member to check verification status of"] member: serenity::Member,
 ) -> Result<()> {
-    let mut db = establish_db_connection()?;
+    let mut db = establish_db_connection().await?;
     use crate::schema::verifications::dsl::*;
     if let Ok(entry) = verifications
         .filter(discord_id.eq(member.user.id.get()))
         .first::<Verification>(&mut db)
+        .await
     {
         match add_verification_error_fields(
             Some(
@@ -162,10 +169,10 @@ pub async fn link(
         warn!("Expected role to exist named `Verified`, got NULL.");
         return Ok(());
     }
-    let verified_role = ctx.data().verified_role.unwrap();
     let mut embed =
         default_embed(GuelphColors::Blue).description("Are you sure you want to do this?");
-    match verification_entry_exists(&email)? {
+    let mut db = establish_db_connection().await?;
+    let old_verification: Option<Verification> = match verification_entry_exists(&mut db, &email).await? {
         None => {
             ctx.send(CreateReply::default().ephemeral(true).embed(
                 default_embed(GuelphColors::Red).description(format!(
@@ -190,9 +197,12 @@ pub async fn link(
                         false,
                     )
                     .colour(GuelphColors::Red.to_colour());
+                Some(data)
+            } else {
+                None
             }
         }
-    }
+    };
     let yes_button = serenity::CreateButton::new("verification_link_yes")
         .style(serenity::ButtonStyle::Danger)
         .label("Yes");
@@ -225,24 +235,55 @@ pub async fn link(
         }
         Some(interaction) => match interaction.data.custom_id.as_str() {
             "verification_link_yes" => {
-                interaction.defer_ephemeral(ctx.http()).await?;
-                let mut db = establish_db_connection()?;
-                db.transaction::<_, anyhow::Error, _>(|db| {
-                    use crate::schema::verifications::dsl::*;
-                    diesel::update(verifications.filter(email.eq(in_email)))
-                        .set(discord_id.eq(member.map(|m| m.user.id.get())))
-                        .execute(db)?;
-                    Ok(())
-                })?;
-                update_verification_roles(ctx.serenity_context(), &ctx.data().guild_id, &verified_role).await?;
+                let defer_future = interaction.defer_ephemeral(ctx.http()).map_err(|err| anyhow::Error::from(err));
+                let mut db = establish_db_connection().await?;
+                let unlink_future = {
+                    let member = member.clone();
+                    db.transaction::<_, anyhow::Error, _>(|db| async move {
+                        use crate::schema::verifications::dsl::*;
+                        diesel::update(verifications.filter(email.eq(in_email)))
+                            .set(discord_id.eq(member.as_ref().map(|m| m.user.id.get())))
+                            .execute(db).await?;
+                        Ok(())
+                    }.scope_boxed())
+                };
+                try_join!(defer_future, unlink_future)?;
+                let mut changed_members: Vec<serenity::Member> = Vec::new();
+                if let Some(member) = member {
+                    changed_members.push(member);
+                }
+                if let Some(verification) = old_verification {
+                    if is_user_in_guild(
+                        ctx.serenity_context(),
+                        ctx.data().guild_id,
+                        serenity::UserId::new(verification.discord_id.unwrap()),
+                    )
+                        .await?
+                    {
+                        changed_members.push(
+                            ctx.data()
+                               .guild_id
+                               .member(
+                                   ctx.http(),
+                                   serenity::UserId::new(verification.discord_id.unwrap()),
+                               )
+                               .await?,
+                        );
+                    }
+                }
+                update_verification_roles_from_members(
+                    ctx.serenity_context(),
+                    &mut db,
+                    ctx.data().verified_role.as_ref().unwrap(),
+                    &changed_members,
+                ).await?;
                 interaction
                     .edit_response(
                         ctx.http(),
                         serenity::EditInteractionResponse::new()
                             .embed(default_embed(GuelphColors::Blue).description("Done!"))
                             .components(vec![]),
-                    )
-                    .await?;
+                    ).await?;
             }
             "verification_link_no" => {
                 interaction

@@ -5,10 +5,9 @@ use std::str::FromStr;
 use anyhow::Result;
 use calamine::{DataType, Reader};
 use chrono::Utc;
-use diesel::{
-    AsChangeset, Connection, Insertable, MysqlConnection, Queryable, RunQueryDsl, Selectable,
-};
-use diesel::{ExpressionMethods, OptionalExtension, QueryDsl};
+use diesel::prelude::*;
+use diesel_async::{AsyncConnection, AsyncMysqlConnection, RunQueryDsl};
+use diesel_async::scoped_futures::ScopedFutureExt;
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::{CacheHttp, CreateEmbed, CreateMessage, GuildId, RoleId, UserId};
 use serde::Deserialize;
@@ -17,10 +16,10 @@ use crate::db::establish_db_connection;
 use crate::discord::get_role_id_from_name;
 use crate::embeds::{default_embed, GuelphColors};
 use crate::services::fflags::feature_flags::{FeatureFlag, FeatureFlagBoolean};
+use crate::services::verification::SESSION_EXPIRATION_SECONDS;
 use crate::services::verification::verification_discord::{
     add_verification_error_fields, generate_embed_error,
 };
-use crate::services::verification::SESSION_EXPIRATION_SECONDS;
 
 /// Automatically handle reading/writing of database contents
 
@@ -44,10 +43,11 @@ impl Verification {
     /// - in_gryphlife = Some(true)
     /// - has_paid = Some(true)
     /// - discord_id is not none and > 0
-    pub fn is_verified(&self) -> bool {
-        let mut db = establish_db_connection().unwrap();
+    pub async fn is_verified(&self) -> bool {
+        let mut db = establish_db_connection().await.unwrap();
         let paid_required =
             FeatureFlagBoolean::fetch(&mut db, "verification_verified_requires_paid")
+                .await
                 .ok()
                 .map(|v| v.map(|v| v.value().unwrap_or(true)).unwrap_or(true))
                 .unwrap_or(true);
@@ -55,6 +55,14 @@ impl Verification {
             && self.in_gryphlife.unwrap_or(false)
             && self.has_paid.unwrap_or(false)
             && (self.discord_id.map(|id| id != 0).unwrap_or(false) || !paid_required)
+    }
+
+    /// Will check if the user is in the server still
+    pub async fn is_in_server(&self, ctx: &serenity::Context, guild_id: GuildId) -> bool {
+        if let Some(discord_id) = self.discord_id {
+            return guild_id.member(ctx.http(), discord_id).await.is_ok()
+        }
+        false
     }
 }
 
@@ -121,11 +129,10 @@ pub fn read_xlsx_file_contents() -> Result<Vec<Verification>> {
 
 /// Merge the vector of verifications into the db aka do a massive update and purge all fields
 /// not found in the spreadsheet
-pub fn merge_verifications(records: &[Verification]) -> Result<()> {
-    let mut db = establish_db_connection()?;
-
+pub async fn merge_verifications(records: &[Verification]) -> Result<()> {
+    let mut db = establish_db_connection().await?;
     // Start a transaction
-    db.transaction(|db| {
+    db.transaction::<_, anyhow::Error, _>(|db| async move {
         for record in records {
             diesel::sql_query(
                 "INSERT INTO verifications (email, name, in_gryphlife, has_paid) VALUES (?, ?, ?, ?)
@@ -136,7 +143,7 @@ pub fn merge_verifications(records: &[Verification]) -> Result<()> {
                 .bind::<diesel::sql_types::Nullable<diesel::sql_types::Text>, _>(&record.name)
                 .bind::<diesel::sql_types::Nullable<diesel::sql_types::Bool>, _>(&record.in_gryphlife)
                 .bind::<diesel::sql_types::Nullable<diesel::sql_types::Bool>, _>(&record.has_paid)
-                .execute(db)?;
+                .execute(db).await?;
         }
 
         let emails: Vec<String> = records.iter().map(|r| r.email.clone()).collect();
@@ -146,16 +153,18 @@ pub fn merge_verifications(records: &[Verification]) -> Result<()> {
                     "DELETE FROM verifications WHERE email NOT IN ({})",
                     emails.iter().map(|s| format!("'{}'", s)).collect::<Vec<_>>().join(",")
                 )
-            ).execute(db)?;
+            ).execute(db).await?;
         }
 
         Ok(())
-    })
+    }.scope_boxed()).await?;
+
+    Ok(())
 }
 
-fn read_and_merge_verifications() -> Result<()> {
+async fn read_and_merge_verifications() -> Result<()> {
     let records = read_xlsx_file_contents()?;
-    merge_verifications(&records)?;
+    merge_verifications(&records).await?;
     Ok(())
 }
 
@@ -164,7 +173,7 @@ pub async fn merge_verifications_periodically(time_zone: chrono_tz::Tz) {
     let cron_expression = "0 */5 * * * *";
     let schedule = cron::Schedule::from_str(cron_expression).unwrap();
     loop {
-        match read_and_merge_verifications() {
+        match read_and_merge_verifications().await {
             Ok(_) => {}
             Err(e) => println!("Unable to read and merge verification.xlsx due to: {e}"),
         }
@@ -174,44 +183,36 @@ pub async fn merge_verifications_periodically(time_zone: chrono_tz::Tz) {
                 .to_std()
                 .unwrap(),
         )
-        .await;
+            .await;
     }
 }
 
-/// Updates verification roles based off of the database
-pub async fn update_verification_roles(
+/// Updates verification per members using a hashmap as a truth table
+pub async fn update_verification_roles_from_hashmap(
     ctx: &serenity::Context,
-    guild_id: &GuildId,
+    db: &mut AsyncMysqlConnection,
     verified_role: &RoleId,
+    members: &[serenity::Member],
+    verified_members: HashMap<UserId, Verification>,
 ) -> Result<()> {
-    let mut db: MysqlConnection = establish_db_connection()?;
-    let verified_members: HashMap<UserId, Verification> = {
-        use crate::schema::verifications::dsl::*;
-        let verifications_vec: Vec<Verification> = verifications
-            .filter(discord_id.is_not_null())
-            .load::<Verification>(&mut db)?;
-        verifications_vec
-            .into_iter()
-            .map(|v| (UserId::new(v.discord_id.unwrap()), v))
-            .collect()
-    };
     let allow_removals: bool =
-        FeatureFlagBoolean::fetch_or_default(&mut db, "verification_role_removal", Some(false))?
+        FeatureFlagBoolean::fetch_or_default(db, "verification_role_removal", Some(false)).await?
             .value()
             .unwrap_or(false);
     let allow_additions: bool =
-        FeatureFlagBoolean::fetch_or_default(&mut db, "verification_role_addition", Some(true))?
+        FeatureFlagBoolean::fetch_or_default(db, "verification_role_addition", Some(true)).await?
             .value()
             .unwrap_or(false);
-    for member in guild_id.members(ctx.http(), None, None).await? {
+    for member in members {
         if member.user.bot {
             continue;
         }
         let has_verified_role: bool = member.roles.contains(verified_role);
-        let verified: bool = verified_members
-            .get(&member.user.id)
-            .map(|v| v.is_verified())
-            .unwrap_or(false);
+        let verified: bool = if let Some(verification) = verified_members.get(&member.user.id) {
+            verification.is_verified().await
+        } else {
+            false
+        };
         if !verified && has_verified_role {
             let mut embed = generate_embed_error();
             if allow_removals {
@@ -285,39 +286,93 @@ pub async fn update_verification_roles(
     Ok(())
 }
 
+/// Updates verification roles based off of the database
+pub async fn update_verification_roles(
+    ctx: &serenity::Context,
+    db: &mut AsyncMysqlConnection,
+    guild_id: &GuildId,
+    verified_role: &RoleId,
+) -> Result<()> {
+    let verified_members: HashMap<UserId, Verification> = {
+        use crate::schema::verifications::dsl::*;
+        let verifications_vec: Vec<Verification> = verifications
+            .filter(discord_id.is_not_null())
+            .load::<Verification>(db).await?;
+        verifications_vec
+            .into_iter()
+            .map(|v| (UserId::new(v.discord_id.unwrap()), v))
+            .collect()
+    };
+    update_verification_roles_from_hashmap(
+        ctx,
+        db,
+        verified_role,
+        &guild_id.members(ctx.http(), Some(u32::MAX as u64), None).await?,
+        verified_members,
+    ).await
+}
+
+pub async fn update_verification_roles_from_members(
+    ctx: &serenity::Context,
+    db: &mut AsyncMysqlConnection,
+    verified_role: &RoleId,
+    members: &[serenity::Member],
+) -> Result<()> {
+    let verified_members: HashMap<UserId, Verification> = {
+        use crate::schema::verifications::dsl::*;
+        let verifications_vec: Vec<Verification> = verifications
+            .filter(
+                discord_id.eq_any(
+                    members
+                        .iter()
+                        .map(|m| m.user.id.get())
+                        .collect::<Vec<u64>>(),
+                ),
+            )
+            .load::<Verification>(db).await?;
+        verifications_vec
+            .into_iter()
+            .map(|v| (UserId::new(v.discord_id.unwrap()), v))
+            .collect()
+    };
+    update_verification_roles_from_hashmap(ctx, db, verified_role, members, verified_members).await
+}
+
 pub async fn update_verification_roles_periodically(
     ctx: serenity::Context,
     time_zone: chrono_tz::Tz,
     guild_id: GuildId,
 ) {
     // daily at 18:00
-    let cron_expression = "0 0 18 * * *";
-    let schedule = cron::Schedule::from_str(cron_expression).unwrap();
-    let verified_role = get_role_id_from_name(&ctx, &guild_id, "Verified")
-        .await
-        .unwrap();
-    loop {
-        match update_verification_roles(&ctx, &guild_id, &verified_role).await {
-            Ok(_) => {}
-            Err(e) => println!("Unable to update verification roles due to: {e}"),
+    if let Ok(mut db) = establish_db_connection().await {
+        let cron_expression = "0 0 18 * * *";
+        let schedule = cron::Schedule::from_str(cron_expression).unwrap();
+        let verified_role = get_role_id_from_name(&ctx, &guild_id, "Verified")
+            .await
+            .unwrap();
+        loop {
+            match update_verification_roles(&ctx, &mut db, &guild_id, &verified_role).await {
+                Ok(_) => {}
+                Err(e) => println!("Unable to update verification roles due to: {e}"),
+            }
+            let next = schedule.upcoming(time_zone).next().unwrap();
+            tokio::time::sleep(
+                next.signed_duration_since(chrono::Local::now().with_timezone(&time_zone))
+                    .to_std()
+                    .unwrap(),
+            )
+                .await;
         }
-        let next = schedule.upcoming(time_zone).next().unwrap();
-        tokio::time::sleep(
-            next.signed_duration_since(chrono::Local::now().with_timezone(&time_zone))
-                .to_std()
-                .unwrap(),
-        )
-        .await;
     }
 }
 
 /// Checks if a verification entry exists given an email address
-pub fn verification_entry_exists(email_in: &str) -> Result<Option<Verification>> {
-    let mut db = establish_db_connection()?;
+pub async fn verification_entry_exists(db: &mut AsyncMysqlConnection, email_in: &str) -> Result<Option<Verification>> {
     use crate::schema::verifications::dsl::*;
     let res: Option<Verification> = verifications
         .filter(email.eq(email_in))
-        .first::<Verification>(&mut db)
+        .first::<Verification>(db)
+        .await
         .optional()
         .unwrap_or(None);
     Ok(res)

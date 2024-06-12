@@ -1,15 +1,16 @@
 use anyhow::Result;
 use chrono::{NaiveDate, TimeZone, Utc};
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl};
+use diesel_async::{AsyncMysqlConnection, RunQueryDsl};
 use poise::{Context, CreateReply};
 
+use crate::Data;
 use crate::db::establish_db_connection;
 use crate::discord::user_has_roles_or;
 use crate::embeds::{default_embed, GuelphColors};
 use crate::services::countdowns::countdown_db::{
-    create_countdown, query_channel_or_default, update_channel_message, Countdown, CountdownWithId,
+    Countdown, CountdownWithId, create_countdown, query_channel_or_default, update_channel_message,
 };
-use crate::Data;
 
 #[poise::command(
     slash_command,
@@ -33,7 +34,7 @@ pub async fn add(
         &ctx.author().id,
         &["Bot Developer", "Leads"],
     )
-    .await
+        .await
     {
         return Ok(());
     }
@@ -46,7 +47,7 @@ pub async fn add(
                 ctx.send(CreateReply::default().ephemeral(true).embed(
                     default_embed(GuelphColors::Red).description("Invalid timestamp given."),
                 ))
-                .await?;
+                   .await?;
                 return Ok(());
             }
         };
@@ -59,26 +60,28 @@ pub async fn add(
     let dt = dt.with_timezone(&Utc);
     let date_time = dt.naive_utc();
 
-    query_channel_or_default(ctx.channel_id().get())?;
-    create_countdown(Countdown {
+    let mut db: AsyncMysqlConnection = establish_db_connection().await?;
+    query_channel_or_default(&mut db, ctx.channel_id().get()).await?;
+    create_countdown(&mut db, Countdown {
         title,
         url: url.unwrap_or("https://www.youtube.com/watch?v=dQw4w9WgXcQ".to_string()),
         channel_id: ctx.channel_id().get(),
         date_time,
     })
-    .await?;
+        .await?;
     update_channel_message(
         ctx.serenity_context(),
+        &mut db,
         ctx.channel_id(),
         &ctx.data().time_zone,
     )
-    .await?;
+        .await?;
     ctx.send(
         CreateReply::default()
             .ephemeral(true)
             .embed(default_embed(GuelphColors::Blue).description("Created new countdown.")),
     )
-    .await?;
+       .await?;
     Ok(())
 }
 
@@ -90,22 +93,24 @@ pub async fn update(ctx: Context<'_, Data, anyhow::Error>) -> Result<()> {
         &ctx.author().id,
         &["Bot Developer", "Leads"],
     )
-    .await
+        .await
     {
         return Ok(());
     }
+    let mut db: AsyncMysqlConnection = establish_db_connection().await?;
     update_channel_message(
         ctx.serenity_context(),
+        &mut db,
         ctx.channel_id(),
         &ctx.data().time_zone,
     )
-    .await?;
+        .await?;
     ctx.send(
         CreateReply::default()
             .ephemeral(true)
             .embed(default_embed(GuelphColors::Blue).description("Updated countdown.")),
     )
-    .await?;
+       .await?;
     Ok(())
 }
 
@@ -119,29 +124,30 @@ pub async fn delete(
         &ctx.author().id,
         &["Bot Developer", "Leads"],
     )
-    .await
+        .await
     {
         return Ok(());
     }
-    let mut db = establish_db_connection()?;
+    let mut db = establish_db_connection().await?;
     use crate::schema::countdowns::dsl::*;
-    let cds = countdowns
+    let cds: Vec<CountdownWithId> = countdowns
         .filter(channel_id.eq(ctx.channel_id().get()))
         .order_by(date_time)
-        .load::<CountdownWithId>(&mut db)?;
+        .load::<CountdownWithId>(&mut db).await?;
     if cds.len() > countdown_index as usize {
         if let Some(cd) = cds.get(countdown_index as usize) {
-            diesel::delete(countdowns.filter(id.eq(cd.id))).execute(&mut db)?;
+            diesel::delete(countdowns.filter(id.eq(cd.id))).execute(&mut db).await?;
             ctx.send(CreateReply::default().ephemeral(true).embed(
                 default_embed(GuelphColors::Blue).description("Deleted countdown successfully."),
             ))
-            .await?;
+               .await?;
             update_channel_message(
                 ctx.serenity_context(),
+                &mut db,
                 ctx.channel_id(),
                 &ctx.data().time_zone,
             )
-            .await?;
+                .await?;
             return Ok(());
         }
     }
@@ -151,7 +157,7 @@ pub async fn delete(
                 .ephemeral(true)
                 .embed(default_embed(GuelphColors::Red).description("No countdown found.")),
         )
-        .await?;
+           .await?;
     } else {
         ctx.send(CreateReply::default().ephemeral(true).embed(
             default_embed(GuelphColors::Red).description(format!(
@@ -160,7 +166,7 @@ pub async fn delete(
                 countdown_index
             )),
         ))
-        .await?;
+           .await?;
     }
     Ok(())
 }

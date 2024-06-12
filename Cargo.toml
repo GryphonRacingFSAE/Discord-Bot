@@ -11,7 +11,8 @@ calamine = "0.25.0"
 chrono = "0.4.38"
 chrono-tz = "0.9.0"
 cron = "0.12.1"
-diesel = { version = "2.2.0", features = ["mysql", "time", "chrono"] }
+diesel = { version = "2.2.0", features = ["chrono"] }
+diesel-async = { git = "https://github.com/weiznich/diesel_async.git", features = ["mysql", "tokio"] }
 diesel_migrations = { version = "2.2.0", features = ["mysql"] }
 dotenv = "0.15.0"
 lettre = { version = "0.11.7", features = ["tokio1", "tokio1-native-tls", "native-tls"] }

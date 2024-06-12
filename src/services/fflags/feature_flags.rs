@@ -1,11 +1,10 @@
 use std::fmt::Debug;
 
 use anyhow::Result;
+use diesel::{AsChangeset, ExpressionMethods, Insertable, OptionalExtension, Queryable, Selectable};
 use diesel::associations::HasTable;
-use diesel::{
-    AsChangeset, ExpressionMethods, Insertable, MysqlConnection, OptionalExtension, QueryDsl,
-    Queryable, RunQueryDsl, Selectable,
-};
+use diesel::query_dsl::methods::FilterDsl;
+use diesel_async::{AsyncMysqlConnection, RunQueryDsl};
 use serde::Deserialize;
 
 use crate::error::BotError;
@@ -18,8 +17,8 @@ pub trait FeatureFlag: Debug + Clone {
     type RustType: Default + Debug + Clone;
 
     /// Runs [`Self::fetch`], if none is found, it will create a new feature flag in the db
-    fn fetch_or_default(
-        db: &mut MysqlConnection,
+    async fn fetch_or_default(
+        db: &mut AsyncMysqlConnection,
         name: &str,
         default_value: Option<Self::RustType>,
     ) -> Result<Self>;
@@ -29,14 +28,14 @@ pub trait FeatureFlag: Debug + Clone {
     /// [`None`] if not feature flag exists
     ///
     /// [`Some(Self)`] if one already exists
-    fn fetch(db: &mut MysqlConnection, name: &str) -> Result<Option<Self>>;
+    async fn fetch(db: &mut AsyncMysqlConnection, name: &str) -> Result<Option<Self>>;
 
     /// Sets the feature flag value to the db
-    fn set_value(&mut self, db: &mut MysqlConnection, value: Option<Self::RustType>) -> Result<()>;
+    async fn set_value(&mut self, db: &mut AsyncMysqlConnection, value: Option<Self::RustType>) -> Result<()>;
 
     /// Fetches feature flag value from the db
     #[allow(dead_code)]
-    fn fetch_value(&mut self, db: &mut MysqlConnection) -> Result<Option<Self::RustType>>;
+    async fn fetch_value(&mut self, db: &mut AsyncMysqlConnection) -> Result<Option<Self::RustType>>;
 
     /// Get the cached value
     fn value(&self) -> Option<Self::RustType>;
@@ -61,13 +60,13 @@ pub struct FeatureFlagBoolean {
 impl FeatureFlag for FeatureFlagBoolean {
     type RustType = bool;
 
-    fn fetch_or_default(
-        db: &mut MysqlConnection,
+    async fn fetch_or_default(
+        db: &mut AsyncMysqlConnection,
         flag_name: &str,
         default_value: Option<Self::RustType>,
     ) -> Result<Self> {
-        Self::fetch(db, flag_name)?.map_or_else(
-            || {
+        match Self::fetch(db, flag_name).await? {
+            None => {
                 let res = Self {
                     inner: FeatureFlagModel {
                         name: flag_name.to_string(),
@@ -83,19 +82,19 @@ impl FeatureFlag for FeatureFlagBoolean {
                 };
                 diesel::insert_into(feature_flags::table())
                     .values(&res.inner)
-                    .execute(db)?;
+                    .execute(db).await?;
                 Ok(res)
-            },
-            Ok,
-        )
+            }
+            Some(res) => Ok(res)
+        }
     }
 
-    fn fetch(db: &mut MysqlConnection, flag_name: &str) -> Result<Option<Self>> {
+    async fn fetch(db: &mut AsyncMysqlConnection, flag_name: &str) -> Result<Option<Self>> {
         use crate::schema::feature_flags::dsl::*;
         feature_flags
             .filter(name.eq(flag_name))
             .first::<FeatureFlagModel>(db)
-            .optional()?
+            .await.optional()?
             .map(|inner| {
                 if inner.flag_type == "BOOLEAN" {
                     Ok(Self { inner })
@@ -106,9 +105,9 @@ impl FeatureFlag for FeatureFlagBoolean {
             .transpose()
     }
 
-    fn set_value(
+    async fn set_value(
         &mut self,
-        db: &mut MysqlConnection,
+        db: &mut AsyncMysqlConnection,
         in_value: Option<Self::RustType>,
     ) -> Result<()> {
         use crate::schema::feature_flags::dsl::*;
@@ -121,15 +120,15 @@ impl FeatureFlag for FeatureFlagBoolean {
         });
         diesel::update(feature_flags.filter(name.eq(self.inner.name.clone())))
             .set(value.eq(self.inner.value.clone()))
-            .execute(db)?;
+            .execute(db).await?;
         Ok(())
     }
 
-    fn fetch_value(&mut self, db: &mut MysqlConnection) -> Result<Option<Self::RustType>> {
+    async fn fetch_value(&mut self, db: &mut AsyncMysqlConnection) -> Result<Option<Self::RustType>> {
         use crate::schema::feature_flags::dsl::*;
         self.inner.value = feature_flags
             .filter(name.eq(self.inner.name.clone()))
-            .first::<FeatureFlagModel>(db)?
+            .first::<FeatureFlagModel>(db).await?
             .value;
         Ok(self.value())
     }

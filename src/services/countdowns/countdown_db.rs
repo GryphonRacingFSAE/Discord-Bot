@@ -2,13 +2,13 @@ use anyhow::Result;
 use chrono::{NaiveDateTime, TimeDelta, TimeZone, Utc};
 use chrono_tz::Tz;
 use diesel::prelude::*;
+use diesel_async::{AsyncMysqlConnection, RunQueryDsl};
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::{
     CacheHttp, ChannelId, CreateEmbed, CreateMessage, EditMessage, GetMessages, MessageId,
     Timestamp,
 };
 
-use crate::db::establish_db_connection;
 use crate::embeds::{default_embed, GuelphColors};
 use crate::services::countdowns::countdown_date::format_naive_datetime;
 
@@ -42,11 +42,10 @@ pub struct Channel {
 }
 
 /// Queries for a channel and if it doesn't exist, creates a default one with a blank `message_id`
-pub fn query_channel_or_default(channel_id: u64) -> Result<Channel> {
+pub async fn query_channel_or_default(db: &mut AsyncMysqlConnection, channel_id: u64) -> Result<Channel> {
     use crate::schema::channels::dsl::*;
 
-    let mut db = establish_db_connection()?;
-    match channels.filter(id.eq(channel_id)).first::<Channel>(&mut db) {
+    match channels.filter(id.eq(channel_id)).first::<Channel>(db).await {
         Ok(channel) => Ok(channel),
         Err(diesel::result::Error::NotFound) => {
             let new_channel = Channel {
@@ -55,36 +54,36 @@ pub fn query_channel_or_default(channel_id: u64) -> Result<Channel> {
             };
             diesel::insert_into(channels)
                 .values(&new_channel)
-                .execute(&mut db)?;
+                .execute(db).await?;
             Ok(channels
                 .filter(id.eq(channel_id))
-                .first::<Channel>(&mut db)
-                .unwrap())
+                .first::<Channel>(db)
+                .await.unwrap())
         }
         Err(e) => Err(anyhow::Error::from(e)),
     }
 }
 
 /// Creates or updates any existing channel
-pub fn update_channel(channel: &Channel) -> Result<()> {
-    let mut db = establish_db_connection()?;
+pub async fn update_channel(db: &mut AsyncMysqlConnection, channel: &Channel) -> Result<()> {
     use crate::schema::channels::dsl::*;
     diesel::update(channels.filter(id.eq(channel.id)))
         .set(channel)
-        .execute(&mut db)?;
+        .execute(db).await?;
     Ok(())
 }
 
 /// Generates the embed for the countdown message
-pub fn generate_countdown_message_embed(
-    db: &mut MysqlConnection,
+pub async fn generate_countdown_message_embed(
+    db: &mut AsyncMysqlConnection,
     channel: &Channel,
     time_zone: &Tz,
 ) -> Result<CreateEmbed> {
     use crate::schema::countdowns::dsl::*;
     let cds = countdowns
         .filter(channel_id.eq(channel.id))
-        .load::<CountdownWithId>(db)?;
+        .load::<CountdownWithId>(db)
+        .await?;
     let tz_now = Utc::now().with_timezone(time_zone);
     let mut countdowns_with_time_diff: Vec<(CountdownWithId, TimeDelta)> = cds
         .into_iter()
@@ -148,11 +147,11 @@ pub fn generate_countdown_message_embed(
 /// TODO: in theory, we could make deletion + message creation async but who tf cares??
 pub async fn new_channel_message(
     ctx: &serenity::Context,
-    db: &mut MysqlConnection,
+    db: &mut AsyncMysqlConnection,
     channel: &Channel,
     time_zone: &Tz,
 ) -> Result<()> {
-    let embed = generate_countdown_message_embed(db, channel, time_zone)?;
+    let embed = generate_countdown_message_embed(db, channel, time_zone).await?;
     if channel.message_id != 0 {
         let message = ctx
             .http()
@@ -176,7 +175,7 @@ pub async fn new_channel_message(
         id: channel.id,
         message_id: message.id.get(),
     };
-    update_channel(&channel)?;
+    update_channel(db, &channel).await?;
     Ok(())
 }
 
@@ -190,16 +189,16 @@ pub async fn new_channel_message(
 /// - There are no countdowns left
 pub async fn update_channel_message(
     ctx: &serenity::Context,
+    db: &mut AsyncMysqlConnection,
     c_id: ChannelId,
     time_zone: &Tz,
 ) -> Result<()> {
     use crate::schema::countdowns::dsl::*;
-    let channel = query_channel_or_default(c_id.get())?;
-    let mut db = establish_db_connection()?;
+    let channel = query_channel_or_default(db, c_id.get()).await?;
     let mut new_countdown_message: bool = true;
     let countdown_empty: bool = countdowns
         .filter(channel_id.eq(c_id.get()))
-        .execute(&mut db)?
+        .execute(db).await?
         == 0;
     // Delete pre-existing messages
     if channel.message_id != 0 {
@@ -219,7 +218,7 @@ pub async fn update_channel_message(
                 id: c_id.get(),
                 message_id: 0,
             };
-            update_channel(&new_channel)?;
+            update_channel(db, &new_channel).await?;
             return Ok(());
         }
         let message = ctx
@@ -248,7 +247,7 @@ pub async fn update_channel_message(
     }
 
     if new_countdown_message {
-        new_channel_message(ctx, &mut db, &channel, time_zone).await?;
+        new_channel_message(ctx, db, &channel, time_zone).await?;
     } else {
         // simply edit the existing message
         let mut message = ctx
@@ -262,8 +261,8 @@ pub async fn update_channel_message(
             .edit(
                 ctx.http(),
                 EditMessage::new().embed(generate_countdown_message_embed(
-                    &mut db, &channel, time_zone,
-                )?),
+                    db, &channel, time_zone,
+                ).await?),
             )
             .await?;
     }
@@ -271,11 +270,11 @@ pub async fn update_channel_message(
 }
 
 /// Creates a countdown
-pub async fn create_countdown(countdown_info: Countdown) -> Result<()> {
+pub async fn create_countdown(db: &mut AsyncMysqlConnection, countdown_info: Countdown) -> Result<()> {
     use crate::schema::countdowns;
-    let mut db = establish_db_connection()?;
     diesel::insert_into(countdowns::table)
         .values(&countdown_info)
-        .execute(&mut db)?;
+        .execute(db)
+        .await?;
     Ok(())
 }

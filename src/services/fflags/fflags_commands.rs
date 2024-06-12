@@ -1,14 +1,16 @@
 use anyhow::Result;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::associations::HasTable;
+use diesel::prelude::*;
+use diesel_async::{AsyncMysqlConnection, RunQueryDsl};
 use futures::StreamExt;
-use poise::futures_util::Stream;
 use poise::{Context, CreateReply};
+use poise::futures_util::Stream;
 
+use crate::Data;
 use crate::db::establish_db_connection;
 use crate::discord::user_has_roles_or;
 use crate::embeds::{default_embed, GuelphColors};
 use crate::services::fflags::feature_flags::{FeatureFlag, FeatureFlagBoolean};
-use crate::Data;
 
 #[poise::command(
     slash_command,
@@ -22,14 +24,15 @@ pub async fn fflag(_: Context<'_, Data, anyhow::Error>) -> Result<(), anyhow::Er
 async fn autocomplete_binary_flag_names<'a>(
     _ctx: Context<'_, Data, anyhow::Error>,
     partial: &'a str,
-) -> impl Stream<Item = String> + 'a {
-    let mut db = establish_db_connection().unwrap();
-    let names = {
+) -> impl Stream<Item=String> + 'a {
+    let mut db: AsyncMysqlConnection = establish_db_connection().await.unwrap();
+    let names: Vec<String> = {
         use crate::schema::feature_flags::dsl::*;
-        feature_flags
+        feature_flags::table()
             .filter(flag_type.eq("BOOLEAN"))
             .select(name)
             .load::<String>(&mut db)
+            .await
             .unwrap()
     };
     futures::stream::iter(names.into_iter())
@@ -51,14 +54,14 @@ pub async fn set_boolean(
         &ctx.author().id,
         &["Bot Developer", "Leads"],
     )
-    .await
+        .await
     {
         return Ok(());
     }
-    let mut db = establish_db_connection()?;
-    match FeatureFlagBoolean::fetch_or_default(&mut db, &fflag_name, value) {
+    let mut db: AsyncMysqlConnection = establish_db_connection().await?;
+    match FeatureFlagBoolean::fetch_or_default(&mut db, &fflag_name, value).await {
         Ok(mut flag) => {
-            match flag.set_value(&mut db, value) {
+            match flag.set_value(&mut db, value).await {
                 Ok(_) => {
                     ctx.send(
                         CreateReply::default()
@@ -68,7 +71,7 @@ pub async fn set_boolean(
                             )
                             .ephemeral(true),
                     )
-                    .await?;
+                       .await?;
                 }
                 Err(e) => {
                     ctx.send(
@@ -79,7 +82,7 @@ pub async fn set_boolean(
                             )
                             .ephemeral(true),
                     )
-                    .await?;
+                       .await?;
                 }
             };
         }
@@ -92,7 +95,7 @@ pub async fn set_boolean(
                     )
                     .ephemeral(true),
             )
-            .await?;
+               .await?;
         }
     }
     Ok(())
@@ -111,12 +114,12 @@ pub async fn get_boolean(
         &ctx.author().id,
         &["Bot Developer", "Leads"],
     )
-    .await
+        .await
     {
         return Ok(());
     }
-    let mut db = establish_db_connection()?;
-    match FeatureFlagBoolean::fetch(&mut db, &fflag_name) {
+    let mut db: AsyncMysqlConnection = establish_db_connection().await?;
+    match FeatureFlagBoolean::fetch(&mut db, &fflag_name).await {
         Ok(flag) => {
             if let Some(flag) = flag {
                 ctx.send(
@@ -128,7 +131,7 @@ pub async fn get_boolean(
                         )))
                         .ephemeral(true),
                 )
-                .await?;
+                   .await?;
             } else {
                 ctx.send(
                     CreateReply::default()
@@ -138,7 +141,7 @@ pub async fn get_boolean(
                         )))
                         .ephemeral(true),
                 )
-                .await?;
+                   .await?;
             }
         }
         Err(e) => {
@@ -150,7 +153,7 @@ pub async fn get_boolean(
                     )
                     .ephemeral(true),
             )
-            .await?;
+               .await?;
         }
     }
     Ok(())

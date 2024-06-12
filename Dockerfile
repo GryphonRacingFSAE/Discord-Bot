@@ -27,4 +27,4 @@ RUN cargo install diesel_cli --no-default-features --features mysql
 
 RUN cargo build --release
 
-ENTRYPOINT ["sh", "-c", "diesel setup && cargo run"]
+ENTRYPOINT ["sh", "-c", "diesel setup && diesel migration run && cargo run"]
