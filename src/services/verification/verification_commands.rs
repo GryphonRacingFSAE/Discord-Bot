@@ -1,4 +1,3 @@
-use std::env::var;
 use std::time;
 
 use anyhow::Result;
@@ -9,7 +8,7 @@ use poise::serenity_prelude as serenity;
 
 use crate::Data;
 use crate::db::establish_db_connection;
-use crate::discord::{get_name_from_user_id, get_role_id_from_name, user_has_roles_or};
+use crate::discord::{get_name_from_user_id, user_has_roles_or};
 use crate::embeds::{default_embed, GuelphColors};
 use crate::services::verification::verification_db::{
     update_verification_roles, Verification, verification_entry_exists,
@@ -39,8 +38,8 @@ pub async fn update(ctx: Context<'_, Data, anyhow::Error>) -> Result<()> {
     {
         return Ok(());
     }
-    let guild_id = serenity::GuildId::new(var("GUILD_ID").unwrap().parse().unwrap());
-    let verified_role = get_role_id_from_name(ctx.serenity_context(), &guild_id, "Verified").await;
+    let guild_id = ctx.data().guild_id;
+    let verified_role = ctx.data().verified_role;
     if let Some(verified_role) = verified_role {
         match update_verification_roles(ctx.serenity_context(), &guild_id, &verified_role).await {
             Ok(_) => {
