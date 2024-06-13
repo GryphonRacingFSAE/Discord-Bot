@@ -4,83 +4,137 @@
 
 A Discord bot used internally on our server to provide the following services:
 
--   Monitor and backup audit logs (locally and on the server itself)
--   Schedule events and countdown for events in specific chats
--   Monitor our shop door(s) and update on whether the shop is open/closed (WIP)
--   Semi-automatic verification of members in the Discord server (WIP)
+- Monitor and backup audit logs (locally and on the server itself)
+- Schedule events and countdown for events in specific chats
+- Monitor our shop door(s) and update on whether the shop is open/closed
+- Semi-automatic verification of members in the Discord server
 
 ## Setup
 
--   Install [NodeJS](https://nodejs.org/en) & ensure it is installed to PATH.
--   Create a discord bot & discord server for private development
-    -   [This](https://www.freecodecamp.org/news/create-a-discord-bot-with-javascript-nodejs/) is quite a good guide.
-    -   Invite the bot to your server with these permissions:
-        ![image](https://github.com/GryphonRacingFSAE/Discord-Bot/assets/36043275/20f4ef5f-900d-4ca2-ade2-e2d04a2d7fd6)
-    -   This privileged intent is required for auto-role detecting:
-        ![image](https://github.com/GryphonRacingFSAE/Discord-Bot/assets/36043275/5b052e07-70c9-44ab-b98d-9d0ee3149e7e)
--   Populate .env with the required variables:
+- Install [rustup](https://rustup.rs/)
+- Ensure you have at least Rust `1.78` installed using rustup (`rustup install`)
+
+There are certain environment variables we expect:
 
 ```ini
-DISCORD_BOT_TOKEN=... # Bot auth token
-DISCORD_GUILD_ID=... # Guild ID of the server you're testing with
-DISCORD_APPLICATION_ID=... # Application ID of your bot
+DISCORD_TOKEN=... # Discord bot token
+TIME_ZONE=America/Toronto # Time zone
+GUILD_ID=... # Guild ID of the server you're developing for
+
+
+# Email services
+EMAIL_USERNAME='...' # Email address
+EMAIL_APP_PASSWORD='...' # Email password
+SMTP_SERVER='...' # STMP server
+
+# Database
+MYSQL_ROOT_PASSWORD=... # Password
+MYSQL_USER=... # MySQL username
+MYSQL_PASSWORD=... # MySQL password
+MYSQL_DATABASE=... # MySQL database
+MYSQL_HOST=127.0.0.1 # MySQL host
+DATABASE_URL=... # URL to the MySQL DB usually formatted as: mysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:3306/{MYSQL_DATABASE}
 ```
+
+### Database
+
+If you require a database see the following [guide](https://diesel.rs/guides/getting-started.html) for the most
+information.
+
+- tl;dr We recommend you run an Linux system ([WSL2](https://learn.microsoft.com/en-us/windows/wsl/install) if you're on
+  windows) and install the following packages:
+    - libmariadb-dev
+    - pkg-config
+- or whatever suitable mysql-dev package that is on your respective OS.
+- After installing dependencies, run:
+
+```bash
+cargo install diesel --no-default-features --features mysql 
+```
+
+- If your install keeps failing here, you likely have a dependency issue and need to install your MySQL dev packages
+    - If this issue still persists, you can in theory use docker compose to simply run your dev builds
+    - You could also go into the `Dockerfile` and try to use the `sudo apt install` dependencies and install them on
+      your system to resolve issues
+- After a successful install, go into the project directory and:
+
+```bash
+diesel setup
+diesel migration run
+```
+
+- After that, you're now free to develop. If you're touching the database's schema files or migration files,
+  checkout [diesel-rs](https://diesel.rs/)
 
 ### Build + Run
 
+To just simply run the bot in the project directory:
+
 ```bash
-npm install # Install dependencies
-npm run build # Transpile TypeScript to JavaScript
-node dist/deploy-commands.js # Register any new slash commands (if applicable)
-node dist/index.js # Run Discord bot
+cargo run
 ```
+
+However, we also make use of [Docker compose](https://docs.docker.com/compose/) so it is possible to also run the MySQL
+server:
+
+```bash
+docker compose up
+```
+
+To stop:
+
+```bash
+docker compose down
+```
+
+We recommend you familiarize yourself with the basic Docker compose commands before diving too deep.
 
 ## Development
 
 ### Shop Status Monitoring - Evan
 
-We have an ESP32 at the main shop entrance monitoring if it's open or closed, if the status changes, it sends a POST request to an HTTP server with the Discord bot, which then sends a message to the server.
+We have an ESP32 at the main shop entrance monitoring if it's open or closed, if the status changes, it sends a POST
+request to an HTTP server with the Discord bot, which then sends a message to the server.
 
-### Semi-Automatic Verification (WIP) - Danny
+### Verification
 
-Fetch latest team roster + payment status from OneDrive using rclone and verify email. If passing all requirements, the user is given the role "Verified".
+To handle verification, we have a Docker volume `./resources`which contains a `verification.xlsx`. We do strictly **only
+reads**
+of this file. This data is fed into the MySQL database.
 
-#### Onedrive sync
+### Feature Flags
 
-Syncing to the onedrive team verification roster xlsx file is done through rclone + a cron task. Syncing is done every 5 minutes using a [crontab](https://en.wikipedia.org/wiki/Cron) which executes an [rclone sync](https://rclone.org/commands/rclone_sync/) command. To edit the synchronization file, please run `crontab -e` on the dev box/server to access the cron task configuration + synchronization command.
+We don't have much unit testing, so we rely much more on being able to quickly disable broken features fast. Features
+flags are stored in `./src/services/fflags`. For example usage
+see: `crate::services::verification::verification_db::update_verification_roles`
+All features flags are stored in a MySQL database.
 
-We currently sync between `~/Documents/onedrive-sync` and `/Gryphon Racing Administration/Team Roster` folder. 
+### Countdown
 
-### Countdown - Danny
+The countdown service is responsible for simply maintaining a message that countdowns the time until a certain date.
+All countdowns are stored in a MySQL database.
 
-Initiate a countdown from a Captain or Lead, update the countdown every 5 minutes, and push it to the latest in the chat every day. Save countdowns locally to preserve countdowns between launches.
+### diesel-rs
 
-### Log - Danny
-
-Fetch the current running bots logs. It will fetch at most 4000 lines with an adjustable position to index deeper into the logs if needed.
-
-### Restart - Danny
-
-This command will shutdown. Utilizes the docker's auto-restart feature to reboot the bot.
-
-### Audit Log Backup - Evan
-
-Download the audit logs every week for the past week, and upload them to Discord to the audit-logs channel (hidden by default). Can also be uploaded manually via command by Captains and Leads.
+We use an ORM. Could we use some custom solution or just raw MySQL? Sure, but this is a bot that we don't
+expect to handle absurd amounts of traffic. To view the schemas of all database objects: `./src/schema.rs`.
+We generally prefer to create the migrations ourselves rather than relying on automatically generated ones.
 
 ### Subsection + Section Auto Assignment - Dallas
 
 Assigns the Category role based on a users current role:
 
--   Dynamics: Frame, Aerodynamics, Brakes, Suspension
--   Electrical: Low Voltage, Embedded, Tractive System
--   Business: Marketing, Purchasing, Sponsorship
+- Dynamics: Frame, Aerodynamics, Brakes, Suspension
+- Electrical: Low Voltage, Embedded, Tractive System
+- Business: Marketing, Purchasing, Sponsorship
 
 ### Deployment - Dallas
 
-This bot is run on the Embedded subsection's shop computer, it's run in a docker container and locally saved files are mounted onto the filesystem to ensure non-volatility.
+This bot is run on the Embedded subsection's shop computer, it's run in a docker container and locally saved files are
+mounted onto the filesystem to ensure non-volatility.
 
 ## Resources
 
--   [discord.js docs](https://old.discordjs.dev/#/docs/discord.js/14.11.0/general/welcome)
--   [discord.js guide](https://discordjs.guide/)
--   [discord.js tutorial](https://www.freecodecamp.org/news/create-a-discord-bot-with-javascript-nodejs/)
+- [diesel-rs docs](https://docs.diesel.rs/master/diesel/index.html)
+- [poise docs](https://docs.rs/poise/latest/poise/)
+- [serenity docs](https://github.com/serenity-rs/serenity)

@@ -1,4 +1,10 @@
-node_modules/
-*.env*
-resources/
-dist/
+# rust
+/target
+/Cargo.lock
+/esp32
+# diesel
+/diesel.toml
+
+# VCS
+.git
+.git/*
