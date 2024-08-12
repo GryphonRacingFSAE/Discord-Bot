@@ -49,7 +49,7 @@ jobs:
 
       # Clang Format
       - name: Format Check
-        uses: DoozyX/clang-format-lint-action@v0.17
+        uses: DoozyX/clang-format-lint-action@v0.18
         if: always()
         with:
           source: esp32
