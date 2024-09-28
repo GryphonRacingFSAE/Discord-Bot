@@ -234,19 +234,7 @@ pub async fn update_verification_roles_from_hashmap(
             }
             match verified_members.get(&member.user.id) {
                 None => {
-                    member
-                        .user
-                        .direct_message(
-                            ctx.http(),
-                            CreateMessage::new().embed(embed.field(
-                                "Not in system",
-                                "You are not registered in our verification system.",
-                                false,
-                            )),
-                        )
-                        .await
-                        .map_err(|e| println!("Failed to message {}: {e}", member.user.id))
-                        .ok();
+                    println!("Encountered a user who is not in the server, but is in verified db, of discord id: {:?}", member.user.id);
                 }
                 Some(verification) => {
                     let verification_embed: Option<CreateEmbed> =
