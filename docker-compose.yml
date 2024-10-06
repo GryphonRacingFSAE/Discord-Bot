@@ -23,8 +23,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    environment:
-      DATABASE_URL: mysql://myuser:mypassword@mysql:3306/mydatabase
+    env_file:
+      - .env
     depends_on:
       mysql:
         condition: service_healthy
