@@ -371,12 +371,6 @@ pub async fn verification_entry_exists(
         .first::<Verification>(db)
         .await
         .optional()?;
-    let all_verifications: Vec<Verification> = verifications
-        .load::<Verification>(db)
-        .await?;
-    for verification in all_verifications {
-        println!("{}", verification.email);
-    }
     Ok(res)
 }
 

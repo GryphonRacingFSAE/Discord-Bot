@@ -64,7 +64,6 @@ pub async fn new_verification(
         return Ok(());
     }
     // check if email is already in use?
-    println!("{}", recipient.email.to_string());
     if let Some(verification_entry) =
         verification_entry_exists(&mut db, &recipient.email.to_string()).await?
     {
