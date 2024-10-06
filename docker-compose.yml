@@ -31,7 +31,7 @@ services:
     restart: on-failure
     volumes:
       - "./Gryphon Racing Administrative/Team Roster/Verification Team Roster.xlsx:/usr/src/app/resources/verification.xlsx"
-      - "./target:/usr/src/app/target"
+      - "./docker_target:/usr/src/app/target"
     networks:
       - internal_network
 
