@@ -9,7 +9,7 @@ pub async fn establish_db_connection() -> Result<AsyncMysqlConnection> {
         let password = var("MYSQL_PASSWORD").expect("MYSQL_PASSWORD must be set");
         let host = var("MYSQL_HOST").expect("MYSQL_HOST must be set");
         let database = var("MYSQL_DATABASE").expect("MYSQL_DATABASE must be set");
-        format!("mysql://{}:{}@{}/{}", user, password, host, database)
+        format!("mysql://{}:{}@{}:3306/{}", user, password, host, database)
     };
     match AsyncMysqlConnection::establish(&database_url).await {
         Ok(db) => Ok(db),
