@@ -30,7 +30,8 @@ services:
         condition: service_healthy
     restart: on-failure
     volumes:
-      - "./Gryphon Racing Administrative/Team Roster/:/app/resources/"
+      - "./Gryphon Racing Administrative/Team Roster/Verification Team Roster.xlsx:/usr/src/app/resources/verification.xlsx"
+      - "./target:/usr/src/app/target"
     networks:
       - internal_network
 
