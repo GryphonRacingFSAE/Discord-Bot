@@ -23,7 +23,7 @@ use crate::services::verification::SESSION_EXPIRATION_SECONDS;
 
 /// Automatically handle reading/writing of database contents
 
-pub const WORKSHEET_PATH: &str = "./resources/verification.xlsx";
+pub const WORKSHEET_PATH: &str = "/app/resources/verification.xlsx";
 
 #[derive(Debug, Queryable, Selectable, Insertable, AsChangeset, Deserialize)]
 #[diesel(table_name = crate::schema::verifications)]
