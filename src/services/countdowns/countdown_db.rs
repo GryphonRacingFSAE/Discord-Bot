@@ -285,9 +285,11 @@ pub async fn create_countdown(
     countdown_info: Countdown,
 ) -> Result<()> {
     use crate::schema::countdowns;
+    println!("db_1");
     diesel::insert_into(countdowns::table)
         .values(&countdown_info)
         .execute(db)
         .await?;
+    println!("db_2");
     Ok(())
 }

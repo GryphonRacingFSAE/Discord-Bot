@@ -18,6 +18,7 @@ use crate::Data;
     subcommand_required
 )]
 pub async fn countdown(_: Context<'_, Data, anyhow::Error>) -> Result<(), anyhow::Error> {
+    println!("-1");
     Ok(())
 }
 
@@ -29,15 +30,22 @@ pub async fn add(
     #[description = "Date the countdown ends at (YYYY/MM/DD)"] date: String,
     #[description = "Url of the countdown"] url: Option<String>,
 ) -> Result<()> {
-    if user_has_roles_or(
+    println!("0");
+    if !user_has_roles_or(
         ctx.serenity_context(),
         &ctx.author().id,
         &["Bot Developer", "Leads"],
     )
     .await
     {
+        ctx.send(
+            CreateReply::default()
+                .ephemeral(true)
+                .embed(default_embed(GuelphColors::Red).description("You do not have sufficient permissions.")),
+        ).await?;
         return Ok(());
     }
+    println!("1");
     let date = NaiveDate::parse_from_str(&date, "%Y/%m/%d");
     let date: NaiveDate =
         match date {
@@ -51,6 +59,7 @@ pub async fn add(
                 return Ok(());
             }
         };
+    println!("2");
     let date_time = date.and_hms_opt(0, 0, 0).unwrap();
     let dt = ctx
         .data()
@@ -59,9 +68,11 @@ pub async fn add(
         .unwrap();
     let dt = dt.with_timezone(&Utc);
     let date_time = dt.naive_utc();
-
+    println!("3");
     let mut db: AsyncMysqlConnection = establish_db_connection().await?;
+    println!("4");
     query_channel_or_default(&mut db, ctx.channel_id().get()).await?;
+    println!("5");
     create_countdown(
         &mut db,
         Countdown {
@@ -72,6 +83,7 @@ pub async fn add(
         },
     )
     .await?;
+    println!("6");
     update_channel_message(
         ctx.serenity_context(),
         &mut db,
@@ -79,25 +91,32 @@ pub async fn add(
         &ctx.data().time_zone,
     )
     .await?;
+    println!("7");
     ctx.send(
         CreateReply::default()
             .ephemeral(true)
             .embed(default_embed(GuelphColors::Blue).description("Created new countdown.")),
     )
     .await?;
+    println!("8");
     Ok(())
 }
 
 /// Updates the current countdown in channel
 #[poise::command(slash_command)]
 pub async fn update(ctx: Context<'_, Data, anyhow::Error>) -> Result<()> {
-    if user_has_roles_or(
+    if !user_has_roles_or(
         ctx.serenity_context(),
         &ctx.author().id,
         &["Bot Developer", "Leads"],
     )
     .await
     {
+        ctx.send(
+            CreateReply::default()
+                .ephemeral(true)
+                .embed(default_embed(GuelphColors::Red).description("You do not have sufficient permissions.")),
+        ).await?;
         return Ok(());
     }
     let mut db: AsyncMysqlConnection = establish_db_connection().await?;
@@ -122,13 +141,18 @@ pub async fn delete(
     ctx: Context<'_, Data, anyhow::Error>,
     #[description = "Position of the image in the countdown message"] countdown_index: u64,
 ) -> Result<()> {
-    if user_has_roles_or(
+    if !user_has_roles_or(
         ctx.serenity_context(),
         &ctx.author().id,
         &["Bot Developer", "Leads"],
     )
     .await
     {
+        ctx.send(
+            CreateReply::default()
+                .ephemeral(true)
+                .embed(default_embed(GuelphColors::Red).description("You do not have sufficient permissions.")),
+        ).await?;
         return Ok(());
     }
     let mut db = establish_db_connection().await?;
