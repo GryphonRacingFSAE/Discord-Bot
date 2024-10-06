@@ -30,8 +30,8 @@ pub async fn send_email(recipient: lettre::message::Mailbox, code: u64) -> Resul
         .subject("Gryphon FSAE Discord verification code")
         .singlepart(lettre::message::SinglePart::html(body))?;
     let creds: Credentials = Credentials::new(
-        var("EMAIL_USERNAME").unwrap(),
-        var("EMAIL_APP_PASSWORD").unwrap(),
+        var("EMAIL_USERNAME")?,
+        var("EMAIL_APP_PASSWORD")?,
     );
     let mailer: AsyncSmtpTransport<Tokio1Executor> =
         AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(var("SMTP_SERVER").unwrap().as_str())?

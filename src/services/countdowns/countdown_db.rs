@@ -178,9 +178,11 @@ pub async fn new_channel_message(
         }
     }
     let discord_channel = ChannelId::new(channel.id);
+    println!("cooked");
     let message = discord_channel
         .send_message(ctx.http(), CreateMessage::new().embed(embed))
         .await?;
+    println!("Sent!");
     let channel = Channel {
         id: channel.id,
         message_id: message.id.get(),
@@ -208,7 +210,8 @@ pub async fn update_channel_message(
     let mut new_countdown_message: bool = true;
     let countdown_empty: bool = countdowns
         .filter(channel_id.eq(c_id.get()))
-        .execute(db)
+        .count()
+        .get_result::<i64>(db)
         .await?
         == 0;
     // Delete pre-existing messages

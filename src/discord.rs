@@ -40,10 +40,7 @@ pub async fn get_role_id_from_name(
     let roles = guild_id.roles(ctx.http()).await.ok()?;
     roles
         .iter()
-        .find(|(_, role)| {
-            println!("got {} == {role_name}", role.name);
-            role.name == role_name
-        })
+        .find(|(_, role)| role.name == role_name)
         .map(|(role_id, _)| *role_id)
 }
 
@@ -67,7 +64,6 @@ pub async fn user_has_roles_or(
     user: &UserId,
     role_names: &[&str],
 ) -> bool {
-    println!("a");
     let guild_id: GuildId = match var("GUILD_ID") {
         Ok(guild_id_str) => match guild_id_str.parse::<u64>() {
             Ok(id) => GuildId::new(id),
@@ -75,21 +71,17 @@ pub async fn user_has_roles_or(
         },
         Err(_) => return false,
     };
-    println!("b");
     let member: Member = match guild_id.member(ctx.http(), *user).await {
         Ok(member) => member,
         Err(_) => return false,
     };
-    println!("c");
     for name in role_names.iter() {
         if let Some(id) = get_role_id_from_name(ctx, &guild_id, name).await {
-            println!("Searching: {id} == {:?}", member.roles);
             if member.roles.contains(&id) {
                 return true;
             }
         }
     }
-    println!("d");
     false
 }
 

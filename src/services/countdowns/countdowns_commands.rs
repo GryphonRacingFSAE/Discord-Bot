@@ -59,7 +59,6 @@ pub async fn add(
                 return Ok(());
             }
         };
-    println!("2");
     let date_time = date.and_hms_opt(0, 0, 0).unwrap();
     let dt = ctx
         .data()
@@ -68,11 +67,8 @@ pub async fn add(
         .unwrap();
     let dt = dt.with_timezone(&Utc);
     let date_time = dt.naive_utc();
-    println!("3");
     let mut db: AsyncMysqlConnection = establish_db_connection().await?;
-    println!("4");
     query_channel_or_default(&mut db, ctx.channel_id().get()).await?;
-    println!("5");
     create_countdown(
         &mut db,
         Countdown {
@@ -83,7 +79,6 @@ pub async fn add(
         },
     )
     .await?;
-    println!("6");
     update_channel_message(
         ctx.serenity_context(),
         &mut db,
@@ -91,14 +86,12 @@ pub async fn add(
         &ctx.data().time_zone,
     )
     .await?;
-    println!("7");
     ctx.send(
         CreateReply::default()
             .ephemeral(true)
             .embed(default_embed(GuelphColors::Blue).description("Created new countdown.")),
     )
     .await?;
-    println!("8");
     Ok(())
 }
 

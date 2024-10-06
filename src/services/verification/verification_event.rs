@@ -39,8 +39,8 @@ pub async fn new_verification(
             .await?;
         return Ok(());
     };
-    let recipient: lettre::message::Mailbox = recipient.unwrap();
-    if recipient.to_string().len() > 64 {
+    let recipient: lettre::message::Mailbox = recipient?;
+    if recipient.email.to_string().len() > 64 {
         msg.channel_id
             .send_message(
                 ctx.http(),
@@ -49,7 +49,7 @@ pub async fn new_verification(
             )
             .await?;
     }
-    if !recipient.to_string().ends_with("@uoguelph.ca") {
+    if !recipient.email.to_string().ends_with("@uoguelph.ca") {
         msg.channel_id
             .send_message(
                 ctx.http(),
@@ -64,8 +64,9 @@ pub async fn new_verification(
         return Ok(());
     }
     // check if email is already in use?
+    println!("{}", recipient.email.to_string());
     if let Some(verification_entry) =
-        verification_entry_exists(&mut db, &recipient.to_string()).await?
+        verification_entry_exists(&mut db, &recipient.email.to_string()).await?
     {
         if verification_entry.is_in_server(ctx, guild_id).await {
             msg.channel_id
@@ -90,7 +91,7 @@ pub async fn new_verification(
     let mut db = establish_db_connection().await?;
     db.transaction::<_, anyhow::Error, _>(|db| async move {
         let new_session = VerificationSession::new(
-            recipient.to_string(),
+            recipient.email.to_string(),
             msg.author.id.get(),
             verification_code,
         );

@@ -108,20 +108,20 @@ pub fn read_xlsx_file_contents() -> Result<Vec<Verification>> {
         .skip(1)
         .filter_map(|row| {
             // only consider rows with an actual email
-            let email: String = row.first().and_then(|c| c.get_string())?.to_string();
-            let name: Option<String> = row
-                .get(1)
-                .and_then(|c| c.get_string())
-                .map(|s| s.to_string());
-            let in_gryphlife: Option<bool> = row.get(3).and_then(|c| c.get_bool());
-            let has_paid: Option<bool> = row.get(2).and_then(|c| c.get_bool());
-            Some(Verification {
-                email,
-                name,
-                in_gryphlife,
-                has_paid,
-                discord_id: None,
-            })
+            if let Some(email) = row.get(1).and_then(|c| c.get_string()).map(|s| s.to_string()) {
+                let name: Option<String> = row.first().and_then(|c| c.get_string()).map(|s| s.to_string());
+                let in_gryphlife: Option<bool> = row.get(3).and_then(|c| c.get_string()).map(|s| s.to_lowercase().trim() == "yes");
+                let has_paid: Option<bool> = row.get(2).and_then(|c| c.get_string()).map(|s| s.to_lowercase().trim() == "paid");
+                Some(Verification {
+                    email,
+                    name,
+                    in_gryphlife,
+                    has_paid,
+                    discord_id: None,
+                })
+            } else {
+                None
+            }
         })
         .collect();
     Ok(verifications_vec)
@@ -135,10 +135,13 @@ pub async fn merge_verifications(records: &[Verification]) -> Result<()> {
     db.transaction::<_, anyhow::Error, _>(|db| async move {
         for record in records {
             diesel::sql_query(
-                "INSERT INTO verifications (email, name, in_gryphlife, has_paid) VALUES (?, ?, ?, ?)
-                 ON DUPLICATE KEY UPDATE
-                 name = VALUES(name), in_gryphlife = VALUES(in_gryphlife), has_paid = VALUES(has_paid)",
-            )
+                r#"
+                INSERT INTO verifications (email, name, in_gryphlife, has_paid) VALUES (?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                name = VALUES(name),
+                in_gryphlife = VALUES(in_gryphlife),
+                has_paid = VALUES(has_paid)
+            "#)
                 .bind::<diesel::sql_types::VarChar, _>(&record.email)
                 .bind::<diesel::sql_types::Nullable<diesel::sql_types::Text>, _>(&record.name)
                 .bind::<diesel::sql_types::Nullable<diesel::sql_types::Bool>, _>(&record.in_gryphlife)
@@ -148,12 +151,10 @@ pub async fn merge_verifications(records: &[Verification]) -> Result<()> {
 
         let emails: Vec<String> = records.iter().map(|r| r.email.clone()).collect();
         if !emails.is_empty() {
-            diesel::sql_query(
-                format!(
-                    "DELETE FROM verifications WHERE email NOT IN ({})",
-                    emails.iter().map(|s| format!("'{}'", s)).collect::<Vec<_>>().join(",")
-                )
-            ).execute(db).await?;
+            use super::super::super::schema::verifications::dsl::*;
+            diesel::delete(verifications.filter(email.ne_all(emails)))
+                .execute(db)
+                .await?;
         }
 
         Ok(())
@@ -366,11 +367,16 @@ pub async fn verification_entry_exists(
 ) -> Result<Option<Verification>> {
     use crate::schema::verifications::dsl::*;
     let res: Option<Verification> = verifications
-        .filter(email.eq(email_in))
+        .filter(email.eq(email_in.to_string().trim().to_lowercase()))
         .first::<Verification>(db)
         .await
-        .optional()
-        .unwrap_or(None);
+        .optional()?;
+    let all_verifications: Vec<Verification> = verifications
+        .load::<Verification>(db)
+        .await?;
+    for verification in all_verifications {
+        println!("{}", verification.email);
+    }
     Ok(res)
 }
 
