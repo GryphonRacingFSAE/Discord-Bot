@@ -29,6 +29,8 @@ services:
       mysql:
         condition: service_healthy
     restart: on-failure
+    volumes:
+      - "./Gryphon Racing Administrative/Team Roster/Verification Team Roster.xlsx:/app/resources/verification.xlsx"
     networks:
       - internal_network
 
