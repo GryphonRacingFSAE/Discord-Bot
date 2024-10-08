@@ -163,7 +163,7 @@ pub async fn merge_verifications(records: &[Verification]) -> Result<()> {
     Ok(())
 }
 
-async fn read_and_merge_verifications() -> Result<()> {
+pub async fn read_and_merge_verifications() -> Result<()> {
     let records = read_xlsx_file_contents()?;
     merge_verifications(&records).await?;
     Ok(())

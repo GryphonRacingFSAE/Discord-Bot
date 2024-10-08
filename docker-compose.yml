@@ -32,6 +32,9 @@ services:
     volumes:
       - "./Gryphon Racing Administrative/Team Roster/Verification Team Roster.xlsx:/usr/src/app/resources/verification.xlsx"
       - "./docker_target:/usr/src/app/target"
+      - "./src:/usr/src/app/src"
+      - "./Cargo.toml:/usr/src/app/Cargo.toml"
+      - "./Cargo.lock:/usr/src/app/Cargo.lock"
     networks:
       - internal_network
 

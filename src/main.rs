@@ -188,9 +188,8 @@ async fn main() {
                     guild_id
                 };
                 let verified_role = get_role_id_from_name(ctx, &guild_id, "Verified").await;
-                warn!("No verified role found.");
 
-                poise::builtins::register_globally(ctx, &framework.options().commands).await?;
+                poise::builtins::register_in_guild(ctx, &framework.options().commands, guild_id).await?;
                 println!("Data initialization complete!");
                 Ok(Data {
                     time_zone: var("TIME_ZONE")

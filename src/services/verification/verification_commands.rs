@@ -13,10 +13,7 @@ use tokio::try_join;
 use crate::db::establish_db_connection;
 use crate::discord::{get_name_from_user_id, is_user_in_guild, user_has_roles_or};
 use crate::embeds::{default_embed, GuelphColors};
-use crate::services::verification::verification_db::{
-    update_verification_roles, update_verification_roles_from_members, verification_entry_exists,
-    Verification,
-};
+use crate::services::verification::verification_db::{read_and_merge_verifications, update_verification_roles, update_verification_roles_from_members, verification_entry_exists, Verification};
 use crate::services::verification::verification_discord::{
     add_verification_error_fields, generate_embed_error,
 };
@@ -45,6 +42,7 @@ pub async fn update(ctx: Context<'_, Data, anyhow::Error>) -> Result<()> {
     }
     let guild_id = ctx.data().guild_id;
     let verified_role = ctx.data().verified_role;
+    read_and_merge_verifications().await?;
     let mut db = establish_db_connection().await?;
     if let Some(verified_role) = verified_role {
         match update_verification_roles(ctx.serenity_context(), &mut db, &guild_id, &verified_role)

@@ -89,11 +89,13 @@ pub async fn generate_countdown_message_embed(
     channel: &Channel,
     time_zone: &Tz,
 ) -> Result<CreateEmbed> {
+    println!("u1");
     use crate::schema::countdowns::dsl::*;
     let cds = countdowns
         .filter(channel_id.eq(channel.id))
         .load::<CountdownWithId>(db)
         .await?;
+    println!("u2");
     let tz_now = Utc::now().with_timezone(time_zone);
     let mut countdowns_with_time_diff: Vec<(CountdownWithId, TimeDelta)> = cds
         .into_iter()
@@ -134,7 +136,7 @@ pub async fn generate_countdown_message_embed(
                 )
             }
         };
-
+        println!("u5");
         embed = embed.field(
             countdown.title.to_string(),
             format!(
@@ -145,6 +147,7 @@ pub async fn generate_countdown_message_embed(
             ),
             false,
         );
+        println!("u6");
     }
 
     Ok(embed)
@@ -205,9 +208,11 @@ pub async fn update_channel_message(
     c_id: ChannelId,
     time_zone: &Tz,
 ) -> Result<()> {
+    println!("a1");
     use crate::schema::countdowns::dsl::*;
     let channel = query_channel_or_default(db, c_id.get()).await?;
     let mut new_countdown_message: bool = true;
+    println!("a2");
     let countdown_empty: bool = countdowns
         .filter(channel_id.eq(c_id.get()))
         .count()
@@ -215,6 +220,7 @@ pub async fn update_channel_message(
         .await?
         == 0;
     // Delete pre-existing messages
+    println!("a3");
     if channel.message_id != 0 {
         // No countdowns exist on current channel, delete message
         if countdown_empty {
@@ -257,12 +263,15 @@ pub async fn update_channel_message(
         };
     }
     if countdown_empty {
+        println!("Empty??");
         return Ok(());
     }
-
+    println!("a4");
     if new_countdown_message {
+        println!("New message");
         new_channel_message(ctx, db, &channel, time_zone).await?;
     } else {
+        println!("update");
         // simply edit the existing message
         let mut message = ctx
             .http()
@@ -271,6 +280,7 @@ pub async fn update_channel_message(
                 MessageId::new(channel.message_id),
             )
             .await?;
+        println!("update 1");
         message
             .edit(
                 ctx.http(),
@@ -278,6 +288,7 @@ pub async fn update_channel_message(
                     .embed(generate_countdown_message_embed(db, &channel, time_zone).await?),
             )
             .await?;
+        println!("update 2");
     }
     Ok(())
 }

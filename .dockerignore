@@ -4,6 +4,9 @@
 /esp32
 /resources
 /docker_target
+/src
+Cargo.lock
+Cargo.toml
 # diesel
 /diesel.toml
 
