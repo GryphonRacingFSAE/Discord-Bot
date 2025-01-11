@@ -32,4 +32,4 @@ ENV MYSQLCLIENT_VERSION=8.0
 RUN chmod +x entrypoint.sh
 
 # Define the entrypoint
-ENTRYPOINT ["sh", "-c", "./entrypoint.sh"]
+ENTRYPOINT ["sh", "-c", "diesel setup && diesel migration run && cargo run"]
