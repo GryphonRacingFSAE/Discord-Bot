@@ -14,8 +14,6 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /usr/src/app
 
-COPY Cargo.toml Cargo.lock ./
-
 RUN cargo install diesel_cli --no-default-features --features mysql
 
 RUN cargo build --release
