@@ -37,6 +37,9 @@ services:
       - "./Cargo.lock:/usr/src/app/Cargo.lock"
     networks:
       - internal_network
+    ports:
+      - "587:587" # Bind SMTP port to host
+      - "465:465" # Optional SSL port for SMTP
 
 volumes:
   mysql-data:
