@@ -28,8 +28,5 @@ ENV MYSQLCLIENT_LIB_DIR=/usr/lib
 ENV MYSQLCLIENT_INCLUDE_DIR=/usr/include/mysql
 ENV MYSQLCLIENT_VERSION=8.0
 
-# Ensure the entrypoint script is executable
-RUN chmod +x entrypoint.sh
-
 # Define the entrypoint
 ENTRYPOINT ["sh", "-c", "diesel setup && diesel migration run && cargo run"]
