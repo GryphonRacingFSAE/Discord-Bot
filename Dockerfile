@@ -14,12 +14,11 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /usr/src/app
 
+# Copy source code
+COPY . .
+
 # Build the dependencies only to cache them
 RUN cargo build --release
-RUN rm -rf src/main.rs
-
-# Copy the rest of the source code
-COPY . .
 
 # Install diesel_cli
 RUN cargo install diesel_cli --no-default-features --features mysql
