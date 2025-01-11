@@ -14,16 +14,29 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /usr/src/app
 
+# Copy the Cargo.toml and Cargo.lock files separately to leverage Docker caching
+COPY Cargo.toml Cargo.lock ./
+
+# Create a dummy main.rs file to build dependencies
+RUN mkdir -p src && echo "fn main() {}" > src/main.rs
+
+# Build the dependencies only to cache them
+RUN cargo build --release
+RUN rm -rf src/main.rs
+
+# Copy the rest of the source code
+COPY . .
+
+# Install diesel_cli
 RUN cargo install diesel_cli --no-default-features --features mysql
 
-RUN cargo build --release
-
-COPY .env .env
-
-RUN chmod +x entrypoint.sh
-
+# Set environment variables
 ENV MYSQLCLIENT_LIB_DIR=/usr/lib
 ENV MYSQLCLIENT_INCLUDE_DIR=/usr/include/mysql
 ENV MYSQLCLIENT_VERSION=8.0
 
-ENTRYPOINT ["sh", "-c", "diesel setup && diesel migration run && cargo run --release"]
+# Ensure the entrypoint script is executable
+RUN chmod +x entrypoint.sh
+
+# Define the entrypoint
+ENTRYPOINT ["sh", "-c", "./entrypoint.sh"]
