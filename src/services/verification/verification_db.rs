@@ -179,6 +179,7 @@ pub async fn merge_verifications_periodically(time_zone: chrono_tz::Tz) {
             Err(e) => println!("Unable to read and merge verification.xlsx due to: {e}"),
         }
         let next = schedule.upcoming(time_zone).next().unwrap();
+        println!("Updated all verifications.");
         tokio::time::sleep(
             next.signed_duration_since(chrono::Local::now().with_timezone(&time_zone))
                 .to_std()
