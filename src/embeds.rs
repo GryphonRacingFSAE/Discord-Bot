@@ -27,7 +27,7 @@ impl GuelphColors {
 pub fn default_embed(color: GuelphColors) -> CreateEmbed {
     CreateEmbed::new()
         .footer(CreateEmbedFooter::new(
-            "The UoFG FSAE bot will never ask for your personal information.",
+            "The UoG FSAE bot will never ask for your personal information",
         ))
         .colour(color.to_colour())
 }
