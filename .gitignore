@@ -1,5 +1,1 @@
-/target
-*.env
-/resources
-*.xlsx
-diesel.toml
+.env

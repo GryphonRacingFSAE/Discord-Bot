@@ -1,10 +1,1 @@
-# rust
-/target
-/Cargo.lock
-/esp32
-# diesel
-/diesel.toml
-
-# VCS
-.git
-.git/*
+.env
