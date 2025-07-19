@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+from zoneinfo import ZoneInfo
 
 import discord
 from discord import app_commands
@@ -41,25 +42,26 @@ async def comp(interaction: discord.Interaction):
         await interaction.response.send_message("No competitions added yet")
         return
 
-    now = datetime.now()
+    now = datetime.datetime.now(ZoneInfo("America/New_York"))
     embed = discord.Embed(
-        title="Upcoming Competitions",
+        title="Upcoming Competitions 🗓️",
         color=discord.Color.blue(),
     )
 
     for comp in comps:
-        comp_time = datetime.datetime.fromisoformat(comp["date"])
+        comp_time = datetime.datetime.strptime(comp["date"], "%Y-%m-%dT%H:%M:%S")
+        comp_time = comp_time.replace(tzinfo=ZoneInfo("America/New_York"))
         remaining = comp_time - now
         if remaining.total_seconds() > 0:
             embed.add_field(
                 name=comp["name"],
-                value=f"**{str(remaining).split('.')[0]}** remaining\n `{comp["date"]}`",
+                value=f"**{str(remaining).split('.')[0]}** remaining\n `{comp['date']}`",
                 inline=False,
             )
         else:
             embed.add_field(
                 name=comp["name"],
-                value=f"Already passed\n `{comp["date"]}`",
+                value=f"Already passed\n `{comp['date']}`",
                 inline=False,
             )
 
