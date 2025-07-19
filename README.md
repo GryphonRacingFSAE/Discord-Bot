@@ -9,7 +9,7 @@ GryphBot is a simple python-based Discord bot for our server, featuring:
 
 ## Setup
 
-- Install [Python](https://www.python.org/downloads/) (3.11+)
+- Install [Python](https://www.python.org/downloads/) (3.12+)
 - Download dependencies with `pip install -r requirements.txt`
 - Copy the contents of `.env_example` to a new `.env` file and fill out the required environment variables
 
