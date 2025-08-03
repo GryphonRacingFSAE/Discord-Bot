@@ -3,13 +3,12 @@
  * We connect to Drizzle ORM to figure out which users have paid, in gryphlife, and etc.
  */
 
-import cron from "node-cron";
-import { APIEmbedField, Client, EmbedBuilder, GuildMember, Message, Role, User } from "discord.js";
+import { APIEmbedField, Client, EmbedBuilder, GuildMember, Role } from "discord.js";
 import { eq, sql } from "drizzle-orm";
-import { MySql2Database } from "drizzle-orm/mysql2";
-import * as schema from "@/schema.js";
-import { format_embed } from "@/util.js";
-import { db } from "@/db.js";
+import * as schema from "@/schema.ts";
+import { format_embed } from "@/util.ts";
+import { db } from "@/db.ts";
+import { isFeatureEnabled } from "@/posthog.ts";
 
 // Error codes to make it easier for us to scream at the user
 // No email? 🗿 No discord? 🗿 No gryphlife? 🗿 And most importantly no payment? 🗿🗿🗿
@@ -32,7 +31,7 @@ const FAQ_SECTION = format_embed(
             value: "For some reason beyond our human comprehension, you do not have an email associated with your account. Please contact `@Bot Developer` for assistance.",
         },
         { name: "No Discord?", value: "You have not completed the process for verifying your discord account." },
-        { name: "No GryphLife?", value: "You have not joined the UofG GryphLife club." },
+        { name: "No GryphLife?", value: "You have not joined the UoG GryphLife club." },
         { name: "No payment?", value: "You have not paid your clue fees yet." },
         { name: "No database?", value: "You have not been registered **yet** on our database. See the next section." },
         {
@@ -94,17 +93,26 @@ function build_denial_message(status: UserStatus): EmbedBuilder[] {
  * @description Responsible for removing the permissions role + sending a message to users passed in
  * @returns Array of users unverified
  */
-export async function prune_members(client: Client, users: { discord: GuildMember; reason: UserStatus }[], verified_role: Role) {
+export async function prune_members(_client: Client, users: { discord: GuildMember; reason: UserStatus }[], verified_role: Role) {
+    // Check if role removal is enabled via feature flag
+    const canRemoveRoles = await isFeatureEnabled("VERIFICATION_ROLE_REMOVE");
+    
     return Promise.all(
         users.map(async user => {
             if (!user.discord.roles.cache.has(verified_role.id) || user.discord.id !== "676195749800968192") return undefined;
-            console.log(`Sending to ${user.discord.user.tag} is out!`);
-            try {
-                //await user.discord.roles.remove(verified_role); we do not roles for now.
-                await user.discord.send({ embeds: build_denial_message(user.reason) });
-                return user;
-            } catch (err) {
-                console.error(`Failed to remove verification role due to: ${err}`);
+            
+            if (canRemoveRoles) {
+                console.log(`Sending to ${user.discord.user.tag} is out!`);
+                try {
+                    await user.discord.roles.remove(verified_role);
+                    await user.discord.send({ embeds: build_denial_message(user.reason) });
+                    return user;
+                } catch (err) {
+                    console.error(`Failed to remove verification role due to: ${err}`);
+                    return undefined;
+                }
+            } else {
+                console.log(`Would remove access from ${user.discord.user.tag} (reason: ${user.reason}), but role removal is disabled by feature flag`);
                 return undefined;
             }
         }),
@@ -117,17 +125,29 @@ export async function prune_members(client: Client, users: { discord: GuildMembe
  **/
 export async function check_members(client: Client, members: GuildMember[]) {
     // we first find all database occurances of the discord id. if it doesn't exist, get them out of here
-    const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
+    const guild = await client.guilds.fetch(Deno.env.get("DISCORD_GUILD_ID")!);
     const verified_role = guild.roles.cache.find(role => role.name === "Verified");
     if (verified_role === undefined) {
         // permissions role... doesn't exist?
         return [];
     }
+    
+    // Check if database connection is available
+    if (user_by_discord_id === undefined) {
+        console.warn("Database connection not available, skipping member checks");
+        return [];
+    }
+    
     // we will be pruning this
     return Promise.all(
         members.map(async member => {
-            // get all db users that have the same discord id
-            return user_by_discord_id?.execute({ discord_id: member.user.id });
+            try {
+                // get all db users that have the same discord id
+                return await user_by_discord_id.execute({ discord_id: member.user.id });
+            } catch (error) {
+                console.error(`Failed to query user ${member.user.id}:`, error);
+                return undefined;
+            }
         }),
     )
         .then(results => {
@@ -148,28 +168,36 @@ export async function check_members(client: Client, members: GuildMember[]) {
             // Process further based on valid and invalid members
             return { dbUsers, invalidUsers };
         })
-        .then(({ dbUsers, invalidUsers }) => {
+        .then(async ({ dbUsers, invalidUsers }) => {
             // we simply check for basic requirements here for users with a db
-            return dbUsers.reduce((acc, user) => {
+            const usersToProcess = [];
+            const canAddRoles = await isFeatureEnabled("VERIFICATION_ROLE_ADD");
+            for (const user of dbUsers) {
                 // is user not allowed? then include them
                 const status = user_allowed(user.db);
                 const has_verification_role = user.discord.roles.cache.has(verified_role.id);
                 if (status !== UserStatus.success && has_verification_role) {
                     console.log(`${user.discord.user.tag} - ${status}`);
-                    acc.push({
+                    usersToProcess.push({
                         discord: user.discord,
                         reason: status,
                     });
                 } else if (status === UserStatus.success && !has_verification_role) {
-                    // somehow meet the requirements but don't have the role...
-                    user.discord.roles.add(verified_role.id).then(_ => {
-                        return user.discord.send({
-                            embeds: [format_embed(new EmbedBuilder().setTitle("Access granted").setDescription("You now have access to the UofG FSAE discord server."), "yellow")],
+                    // Check if role addition is enabled via feature flag
+                    if (canAddRoles) {
+                        // somehow meet the requirements but don't have the role...
+                        user.discord.roles.add(verified_role.id).then(_ => {
+                            return user.discord.send({
+                                embeds: [format_embed(new EmbedBuilder().setTitle("Access granted").setDescription("You now have access to the UoG FSAE discord server."), "yellow")],
+                            });
                         });
-                    });
+                    } else {
+                        console.log(`Would grant access to ${user.discord.user.tag}, but role addition is disabled by feature flag`);
+                    }
                 }
-                return acc;
-            }, invalidUsers);
+            }
+            
+            return [...invalidUsers, ...usersToProcess];
         })
         .then(users => prune_members(client, users, verified_role));
 }

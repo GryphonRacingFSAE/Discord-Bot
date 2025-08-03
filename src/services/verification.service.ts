@@ -1,29 +1,35 @@
-import { DiscordClient } from "@/discord-client";
-import * as schema from "@/schema.js";
-import { MySql2Database } from "drizzle-orm/mysql2";
-import { ChannelType, EmbedBuilder, Events, Guild, Message, SlashCommandBuilder, User } from "discord.js";
+import { DiscordClient } from "@/discord-client.ts";
+import * as schema from "@/schema.ts";
+import { LibSQLDatabase } from "drizzle-orm/libsql";
+import { ChannelType, EmbedBuilder, Events, Guild, Message, MessageFlags, SlashCommandBuilder, User } from "discord.js";
 import { and, eq, isNotNull, sql } from "drizzle-orm";
-import type { Command, OnMessageCreate, OnReady, Service } from "@/service.js";
+import type { Command, OnMessageCreate, OnReady, Service } from "@/service.ts";
 import nodemailer from "nodemailer";
 import cron from "node-cron";
-import path from "node:path";
-import fs from "node:fs/promises";
-import { format_embed } from "@/util.js";
-import { check_members } from "@/services/permissions/index.js";
-import { db } from "@/db.js";
+import { join } from "node:path";
+import { format_embed } from "@/util.ts";
+import { check_members } from "@/services/permissions/index.ts";
+import { db } from "@/db.ts";
 
 const CODE_LENGTH = 8;
 
-// Generates a code randomly
+// Generates a code randomly using cryptographically secure random number generation
 function generate_verification_code(): number {
-    return new Date().getTime() % 10 ** CODE_LENGTH;
+    // Generate a code from 32 bits of random data
+    const array = new Uint8Array(4); 
+    crypto.getRandomValues(array);
+    let randomNumber = 0;
+    for (let i = 0; i < array.length; i++) {
+        randomNumber = (randomNumber << 8) + array[i];
+    }
+    return Math.abs(randomNumber) % (10 ** CODE_LENGTH);
 }
 
 /**
  * @description Generates a html verification page
  */
-async function get_email_html(code: string): Promise<string> {
-    return fs.readFile(path.join(process.cwd(), "./verification-email.html"), { encoding: "utf-8" }).then(content => {
+function get_email_html(code: string): Promise<string> {
+    return Deno.readTextFile(join(Deno.cwd(), "./verification-email.html")).then(content => {
         return content.replace("{{verificationCode}}", code);
     });
 }
@@ -42,7 +48,7 @@ const email_linked =
  * @description Sends a permissions email to the user parameter. **User parameter are not checked here**.
  * @returns Promise to completion of email
  */
-async function send_verification_email(client: DiscordClient, db: MySql2Database<typeof schema>, message: Message) {
+async function send_verification_email(_client: DiscordClient, db: LibSQLDatabase<typeof schema> | undefined, message: Message) {
     // Handle the cases where a duplicate email may exist
     if ((await email_linked?.execute({ email: message.content.toLowerCase() })) !== undefined) {
         return message.author
@@ -60,7 +66,7 @@ async function send_verification_email(client: DiscordClient, db: MySql2Database
         },
     });
     console.log(`Sending verification email!`);
-    return get_email_html(`${verification_code.toString().substring(0, 4)} ${verification_code.toString().substring(4)}`).then(async content => {
+    return get_email_html(`${verification_code.toString().substring(0, 4)} ${verification_code.toString().substring(4)}`).then(content => {
         return new Promise((resolve, reject) => {
             console.log("Sending!");
             transporter.sendMail(
@@ -70,7 +76,7 @@ async function send_verification_email(client: DiscordClient, db: MySql2Database
                     subject: "Verification Code",
                     html: content,
                 },
-                function (error, info) {
+                function (error: any, info: any) {
                     if (error) {
                         console.error(error);
                         reject(error);
@@ -81,7 +87,7 @@ async function send_verification_email(client: DiscordClient, db: MySql2Database
             );
         })
             .then(_ => {
-                return db
+                return db!
                     .insert(schema.verifying_users)
                     .values({
                         verificationCode: verification_code,
@@ -115,8 +121,8 @@ async function send_verification_email(client: DiscordClient, db: MySql2Database
  * @description Validates if there is a currently active verification session
  * @returns The active verification session if there is one
  */
-async function has_verification_session(db: MySql2Database<typeof schema>, sender: User): Promise<schema.VerifyingUser | undefined> {
-    return db.query.verifying_users.findFirst({
+function has_verification_session(db: LibSQLDatabase<typeof schema> | undefined, sender: User): Promise<schema.VerifyingUser | undefined> {
+    return db!.query.verifying_users.findFirst({
         where: eq(schema.verifying_users.discordId, sender.id),
     });
 }
@@ -174,7 +180,13 @@ const on_message_send_event: OnMessageCreate = {
                     email: user.email,
                     discordId: user.discordId,
                 } satisfies schema.NewUser)
-                .onDuplicateKeyUpdate({ set: { email: user.email, discordId: user.discordId } })
+                .onConflictDoUpdate({
+                    target: schema.users.email,
+                    set: { 
+                        email: user.email, 
+                        discordId: user.discordId 
+                    }
+                })
                 .then(async () => check_members(client, [guild.members.cache.get(message.author.id)!]))
                 .then(async () => {
                     return db.delete(schema.verifying_users).where(eq(schema.verifying_users.discordId, message.author.id)).execute();
@@ -211,22 +223,19 @@ const on_message_send_event: OnMessageCreate = {
     },
     once: false,
     run_on: [Events.MessageCreate],
-    validate(client: DiscordClient): Promise<boolean> {
+    validate(_client: DiscordClient): Promise<boolean> {
         return Promise.resolve(
             process.env.EMAIL_USERNAME !== undefined &&
                 process.env.EMAIL_APP_PASSWORD !== undefined &&
                 process.env.EMAIL_SERVICE !== undefined &&
-                process.env.MYSQL_USER !== undefined &&
-                process.env.MYSQL_PASSWORD !== undefined &&
-                process.env.MYSQL_DATABASE !== undefined &&
-                process.env.MYSQL_PORT !== undefined &&
+                process.env.DATABASE_PATH !== undefined &&
                 process.env.DISCORD_GUILD_ID !== undefined,
         );
     },
 };
 
 const on_ready: OnReady = {
-    execution(_, client: DiscordClient, db): Promise<void> {
+    execution(_, _client: DiscordClient, db): Promise<void> {
         // remove session older than one hour
         if (db === undefined) return Promise.resolve(undefined);
         cron.schedule("*/15 * * * *", async () => {
@@ -235,7 +244,7 @@ const on_ready: OnReady = {
                 .delete(schema.verifying_users)
                 .where(sql`${schema.verifying_users.dateCreated} < (${now} - 60*60*1000)`)
                 .execute();
-        });
+        }).start();
         setInterval(() => {
             sending_rates.clear();
         }, 60 * 1000);
@@ -250,35 +259,67 @@ const on_ready: OnReady = {
 
 const cmd_unlink = {
     data: new SlashCommandBuilder()
-        .setName("verify")
+        .setName("verification")
         .setDescription("Commands relating to the verification process")
-        .addSubcommand(sub_command => sub_command.setName("unlink").setDescription("If you have a linked email, this will unlink it entirely.")) as SlashCommandBuilder,
+        .addSubcommand(sub_command => sub_command.setName("unlink").setDescription("If you have a linked email, this will unlink it entirely."))
+        .addSubcommand(sub_command => sub_command.setName("update").setDescription("Update a user's verification status immediately").addUserOption(option => option.setName("user").setDescription("The user to update"))) as SlashCommandBuilder,
     validate: async () => {
         return Promise.resolve(true);
     },
     execution: async (client, interaction) => {
         if (db === undefined || interaction.guild === undefined) {
-            return interaction.reply({ ephemeral: true, content: "DB is down." }).then(_ => {});
+            return interaction.reply({ flags: MessageFlags.Ephemeral, content: "DB is down." }).then(_ => {});
         }
-        return (db as unknown as MySql2Database<typeof schema>)
-            .update(schema.users)
-            .set({ discordId: sql`NULL` })
-            .where(eq(schema.users.discordId, interaction.user.id))
-            .then(_ =>
-                interaction.reply({
-                    ephemeral: true,
-                    embeds: [format_embed(new EmbedBuilder().setTitle("Unliked").setDescription("Successfully unlinked email from your discord account."), "yellow")],
-                }),
-            )
-            .then(_ => check_members(client, [interaction.guild!.members.cache.get(interaction.user.id)!]))
-            .then(_ => {});
+        if (!interaction.isChatInputCommand()) return;
+        
+        switch (interaction.options.getSubcommand()) {
+            case "unlink":
+                return db
+                    .update(schema.users)
+                    .set({ discordId: sql`NULL` })
+                    .where(eq(schema.users.discordId, interaction.user.id))
+                    .then(_ =>
+                        interaction.reply({
+                            flags: MessageFlags.Ephemeral,
+                            embeds: [format_embed(new EmbedBuilder().setTitle("Unlinked").setDescription("Successfully unlinked email from your discord account."), "yellow")],
+                        }),
+                    )
+                    .then(_ => check_members(client, [interaction.guild!.members.cache.get(interaction.user.id)!]))
+                    .then(_ => {});
+            case "update": {
+                const targetUser = interaction.options.getUser("user");
+                if (!targetUser) {
+                    return interaction.reply({
+                        flags: MessageFlags.Ephemeral,
+                        embeds: [format_embed(new EmbedBuilder().setTitle("Error").setDescription("Please specify a user to update."), "red")],
+                    }).then(_ => {});
+                }
+                
+                const guildMember = interaction.guild?.members.cache.get(targetUser.id);
+                if (!guildMember) {
+                    return interaction.reply({
+                        flags: MessageFlags.Ephemeral,
+                        embeds: [format_embed(new EmbedBuilder().setTitle("Error").setDescription("User not found in this server."), "red")],
+                    }).then(_ => {});
+                }
+
+                // Perform immediate verification check
+                await check_members(client, [guildMember]);
+                
+                return interaction.reply({
+                    flags: MessageFlags.Ephemeral,
+                    embeds: [format_embed(new EmbedBuilder().setTitle("Updated").setDescription(`Successfully updated verification status for ${targetUser.tag}.`), "yellow")],
+                }).then(_ => {});
+            }
+        }
+        
     },
 } satisfies Command;
 
 const verificationService: Service = {
     name: "verification",
-    validate: async () => {
-        return process.env.DISCORD_GUILD_ID !== undefined;
+    validate: () => {
+        return Promise.resolve(Deno.env.get("DISCORD_GUILD_ID") !== undefined);
     },
     events: [on_message_send_event, on_ready],
     commands: [cmd_unlink],

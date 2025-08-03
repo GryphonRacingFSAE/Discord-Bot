@@ -1,6 +1,7 @@
 node_modules/
-*.env*
 resources/
 dist/
 drizzle/
 onedrive/
+logs/
+database.sqlite

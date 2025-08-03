@@ -1,35 +1,22 @@
-import { drizzle, MySql2Database } from "drizzle-orm/mysql2";
-import mysql from "mysql2/promise";
-//import { schema } from "drizzle-kit/serializer/mysqlSchema";
-import * as schema from "@/schema.js";
-import { sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/libsql";
+import { createClient } from "@libsql/client/node";
+import * as schema from "@/schema.ts";
 
-let db: MySql2Database<typeof schema> | undefined = undefined;
+let db: ReturnType<typeof drizzle<typeof schema>> | undefined = undefined;
 
-if (
-    process.env.MYSQL_HOST !== undefined &&
-    process.env.MYSQL_USER !== undefined &&
-    process.env.MYSQL_PASSWORD !== undefined &&
-    process.env.MYSQL_DATABASE !== undefined &&
-    process.env.MYSQL_PORT !== undefined &&
-    process.env.DEPLOY !== "1"
-) {
-    try {
-        const connection = await mysql.createConnection({
-            host: process.env.MYSQL_HOST,
-            user: process.env.MYSQL_USER,
-            password: process.env.MYSQL_PASSWORD,
-            database: process.env.MYSQL_DATABASE,
-            port: Number(process.env.MYSQL_PORT),
-            multipleStatements: true,
-        });
-        db = drizzle(connection, { mode: "default", schema });
-        console.log("Loaded db!");
-    } catch {
-        console.log("Failed to load db");
-    }
-} else {
-    console.warn("No db loaded!");
+try {
+    console.log("Attempting to connect to SQLite database...");
+        
+    const databasePath = Deno.env.get("DATABASE_PATH") || "./database.sqlite";
+    console.log(`Database path: ${databasePath}`);
+
+    // Use @libsql/client Node.js version with proper file:// URL format
+    const client = createClient({ url: `file:${databasePath}` });
+    db = drizzle(client, { schema });
+
+    console.log("Loaded SQLite db!");
+} catch (error) {
+    console.error("Failed to load db:", error);
 }
 
 export { db };

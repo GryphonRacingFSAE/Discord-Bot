@@ -1,5 +1,5 @@
 /* tslint:disable:no-unused-variable */
-import { mysqlTable, text, boolean, int, datetime, varchar, serial, date } from "drizzle-orm/mysql-core";
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { relations, sql } from "drizzle-orm";
 
 /**
@@ -7,38 +7,38 @@ import { relations, sql } from "drizzle-orm";
  *
  * Email and discord ids should only be unique.
  */
-export const users = mysqlTable("users", {
-    email: varchar("email", { length: 255 }).primaryKey().notNull(),
-    discordId: varchar("discord_id", { length: 32 }).unique(),
-    paymentStatus: boolean("payment_status").notNull().default(false),
-    gryphLife: boolean("in_gryphlife").notNull().default(false),
-    firstName: varchar("first_name", { length: 64 }),
-    lastName: varchar("last_name", { length: 64 }),
+export const users = sqliteTable("users", {
+    email: text("email", { length: 255 }).primaryKey().notNull(),
+    discordId: text("discord_id", { length: 32 }).unique(),
+    paymentStatus: integer("payment_status", { mode: "boolean" }).notNull().default(false),
+    gryphLife: integer("in_gryphlife", { mode: "boolean" }).notNull().default(false),
+    firstName: text("first_name", { length: 64 }),
+    lastName: text("last_name", { length: 64 }),
 });
 
-export const verifying_users = mysqlTable("verifying_users", {
-    email: varchar("email", { length: 255 }).notNull(),
-    discordId: varchar("discord_id", { length: 32 }).primaryKey().notNull(),
-    verificationCode: int("verification_code").notNull().default(0),
-    dateCreated: datetime("date_created")
+export const verifying_users = sqliteTable("verifying_users", {
+    email: text("email", { length: 255 }).notNull(),
+    discordId: text("discord_id", { length: 32 }).primaryKey().notNull(),
+    verificationCode: integer("verification_code").notNull().default(0),
+    dateCreated: text("date_created")
         .default(sql`CURRENT_TIMESTAMP`)
         .notNull(),
 });
 
-export const countdown_channel = mysqlTable("countdown_channel", {
-    channel_id: varchar("channel_id", { length: 48 }).primaryKey(),
+export const countdown_channel = sqliteTable("countdown_channel", {
+    channel_id: text("channel_id", { length: 48 }).primaryKey(),
     message_id: text("message_id"),
-    messages_since: int("messages_since").notNull().default(0),
+    messages_since: integer("messages_since").notNull().default(0),
 });
 
-export const countdown = mysqlTable("countdown", {
-    id: serial("id").primaryKey(),
-    channel_id: varchar("channel_id", { length: 48 })
+export const countdown = sqliteTable("countdown", {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    channel_id: text("channel_id", { length: 48 })
         .references(() => countdown_channel.channel_id)
         .notNull(),
     title: text("name").notNull(),
     link: text("link").default("https://shattereddisk.github.io/rickroll/rickroll.mp4"),
-    expiration: datetime("end_time").notNull(),
+    expiration: text("end_time").notNull(),
 });
 
 export const ChannelRelations = relations(countdown_channel, ({ many }) => ({

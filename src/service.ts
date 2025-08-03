@@ -1,9 +1,9 @@
 // This increases complexity, yes, but it makes it easier
 // for us to ensure we don't accidentally run services which are not meant to run
 import { ClientEvents, CommandInteraction, Events, GuildMember, Message, MessageInteraction, SlashCommandBuilder } from "discord.js";
-import { DiscordClient } from "@/discord-client.js";
-import { MySql2Database } from "drizzle-orm/mysql2";
-import * as schema from "@/schema.js";
+import { DiscordClient } from "@/discord-client.ts";
+import { LibSQLDatabase } from "drizzle-orm/libsql";
+import * as schema from "@/schema.ts";
 
 /**
  * @description Describes a command template
@@ -32,7 +32,7 @@ export type Event<T extends unknown[]> = {
      * @description Validates if a event should be included or not
      */
     validate: (client: DiscordClient) => Promise<boolean>;
-    execution: (eventName: keyof ClientEvents, client: DiscordClient, db: MySql2Database<typeof schema> | undefined, ...args: T) => Promise<void>;
+    execution: (eventName: keyof ClientEvents, client: DiscordClient, db: LibSQLDatabase<typeof schema> | undefined, ...args: T) => Promise<void>;
 };
 
 // Define commonly used events

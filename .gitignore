@@ -110,3 +110,4 @@ bot-logs.txt
 messages.json
 resources/
 drizzle/
+*.sqlite

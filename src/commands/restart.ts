@@ -1,8 +1,8 @@
 // More accurately a shutdown command, but for all intents and purposes of running the bot,
 // it functions as a restart command thanks to the docker setup
 
-import { CommandInteraction, SlashCommandBuilder } from "discord.js";
-import type { Command } from "@/types.js";
+import { CommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";
+import type { Command } from "@/types.ts";
 
 export default function commandFactory() {
     return {
@@ -14,7 +14,7 @@ export default function commandFactory() {
                 if (!guild) {
                     await interaction.reply({
                         content: "This command can only be used in a server (guild)",
-                        ephemeral: true,
+                        flags: MessageFlags.Ephemeral,
                     });
                     return;
                 }
@@ -30,7 +30,7 @@ export default function commandFactory() {
                 ) {
                     await interaction.reply({
                         content: "You do not have the necessary permissions to use this command",
-                        ephemeral: true,
+                        flags: MessageFlags.Ephemeral,
                     });
                     return;
                 }

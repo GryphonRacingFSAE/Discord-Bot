@@ -1,9 +1,9 @@
-import { Command, OnReady, Service } from "@/service.js";
+import { Command, OnReady, Service } from "@/service.ts";
 import { Events, SlashCommandBuilder } from "discord.js";
-import { DiscordClient } from "@/discord-client.js";
+import { DiscordClient } from "@/discord-client.ts";
 import cron from "node-cron";
-import * as permissions from "./index.js";
-import { db } from "@/db.js";
+import * as permissions from "./index.ts";
+import { db } from "@/db.ts";
 
 const on_ready: OnReady = {
     run_on: [Events.ClientReady],
@@ -20,7 +20,7 @@ const on_ready: OnReady = {
         // run once a day (i hope)
         cron.schedule("0 0 * * *", async () => {
             guild.members.fetch().then(_ => permissions.check_members(client, Array.from(guild.members.cache.filter(member => !member.user.bot).values())));
-        });
+        }).start();
         return;
     },
 };
@@ -29,11 +29,7 @@ const service: Service = {
     name: "permissions",
     validate: async client => {
         return (
-            process.env.MYSQL_HOST !== undefined &&
-            process.env.MYSQL_USER !== undefined &&
-            process.env.MYSQL_PASSWORD !== undefined &&
-            process.env.MYSQL_DATABASE !== undefined &&
-            process.env.MYSQL_PORT !== undefined &&
+            process.env.DATABASE_PATH !== undefined &&
             process.env.DISCORD_GUILD_ID !== undefined
         );
     },

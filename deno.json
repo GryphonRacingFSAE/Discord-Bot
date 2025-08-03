@@ -1,0 +1,40 @@
+{
+  "compilerOptions": {
+    "lib": ["deno.window"],
+    "strict": true
+  },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"]
+    }
+  },
+  "fmt": {
+    "useTabs": false,
+    "lineWidth": 80,
+    "indentWidth": 2,
+    "semiColons": true,
+    "singleQuote": false,
+    "proseWrap": "preserve",
+    "include": ["src/"]
+  },
+  "tasks": {
+    "dev": "deno run --allow-all --watch src/index.ts",
+    "start": "deno run --allow-all src/index.ts",
+    "generate": "deno run --allow-all npm:drizzle-kit generate",
+    "migrate": "deno run --allow-all manual-migrate.ts",
+    "deploy-commands": "deno run --allow-all src/deploy-commands.ts"
+  },
+  "imports": {
+    "@/": "./src/",
+    "@libsql/client": "npm:@libsql/client@^0.15.10",
+    "discord.js": "npm:discord.js@^14.21.0",
+    "dotenv": "npm:dotenv@^17.2.1",
+    "drizzle-kit": "npm:drizzle-kit@^0.31.4",
+    "drizzle-orm": "npm:drizzle-orm@^0.44.4",
+    "node-cron": "npm:node-cron@^4.2.1",
+    "nodemailer": "npm:nodemailer@^7.0.5",
+    "otpauth": "npm:otpauth@^9.4.0",
+    "posthog-node": "npm:posthog-node@^5.6.0"
+  },
+  "nodeModulesDir": "auto"
+}

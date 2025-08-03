@@ -1,31 +1,24 @@
 import { Events, GatewayIntentBits, Partials } from "discord.js";
-import dotenv from "dotenv";
-import { DiscordClient } from "@/discord-client.js";
-import type { Command, Event } from "@/types.js";
-import path from "node:path";
-import fs from "node:fs";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import * as Service from "@/service.js";
-import * as schema from "@/schema.js";
-import { promisify } from "node:util";
-import mysql from "mysql2/promise";
-import { drizzle } from "drizzle-orm/mysql2";
-import { MySql2Database } from "drizzle-orm/mysql2";
-import { db } from "@/db.js";
-import { migrate } from "drizzle-orm/mysql2/migrator";
-dotenv.config();
+import { config } from "dotenv";
+import { DiscordClient } from "@/discord-client.ts";
+import type { Event } from "@/types.ts";
+import * as Service from "@/service.ts";
+import { db } from "@/db.ts";
+
+// Load environment variables
+config();
 
 // Check for all environments
-if (!process.env.DISCORD_BOT_TOKEN || !process.env.DISCORD_APPLICATION_ID || !process.env.DISCORD_GUILD_ID) {
+const DISCORD_BOT_TOKEN = Deno.env.get("DISCORD_BOT_TOKEN");
+const DISCORD_APPLICATION_ID = Deno.env.get("DISCORD_APPLICATION_ID");
+const DISCORD_GUILD_ID = Deno.env.get("DISCORD_GUILD_ID");
+
+if (!DISCORD_BOT_TOKEN || !DISCORD_APPLICATION_ID || !DISCORD_GUILD_ID) {
     throw new Error("Environment tokens are not defined!");
 }
 
-// Some hack to get __dirname to work in modules
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const service_folder = path.join(__dirname, "services");
-const service_sources = fs.readdirSync(service_folder);
-const RUNNING_IN_DOCKER = process.env.RUNNING_IN_DOCKER === "true";
-const stat = promisify(fs.stat);
+// Get service folder using proper Deno URL resolution
+const service_folder = new URL("./services/", import.meta.url);
 
 const client = new DiscordClient({
     intents: [GatewayIntentBits.MessageContent, GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.DirectMessages, GatewayIntentBits.GuildMessages],
@@ -38,75 +31,96 @@ async function main() {
     console.log("Starting bot...");
     // Load in db
     if (db !== undefined) {
-        try {
-            await migrate(db, { migrationsFolder: path.resolve(__dirname, "../drizzle") });
-        } catch (_) {
-            /* block empty */
-            console.warn("Failed migration!");
-        }
+        console.log("Database loaded successfully!");
+        // Migrations are handled by db_migration.sh script
     } else {
         console.warn("Failed to load db!");
     }
 
     // Load in services
     {
+        const service_sources = [];
+        try {
+            for await (const dirEntry of Deno.readDir(service_folder)) {
+                service_sources.push(dirEntry.name);
+            }
+        } catch (error) {
+            console.warn("Could not read services folder:", error);
+        }
+
         await Promise.all(
             service_sources.map(async source => {
-                // there are 2 ways to make a valid verificationService:
+                // there are 2 ways to make a valid service:
                 // - my-verification.service.ts
                 // - my-foldr
                 //    L index.ts
                 //    L a.ts
-                //    L verification.service.ts <--
-                const service_path = path.join(service_folder, source);
-                const stats = await stat(service_path);
+                //    L service.ts <--
+                const service_path = new URL(`./${source}`, service_folder);
+                let stats;
+                try {
+                    stats = await Deno.stat(service_path);
+                } catch {
+                    return undefined;
+                }
+
                 let resolved_path: string;
-                if (stats.isDirectory()) {
-                    const serviceFilePath = path.join(service_path, "service.js");
-                    if (fs.existsSync(serviceFilePath)) {
-                        resolved_path = pathToFileURL(serviceFilePath).href;
-                    } else {
-                        return undefined; // Skip if no verificationService.ts file is found in the directory
+                if (stats.isDirectory) {
+                    const serviceFileUrl = new URL("./service.ts", service_path.href + "/");
+                    try {
+                        await Deno.stat(serviceFileUrl);
+                        resolved_path = serviceFileUrl.href;
+                    } catch {
+                        return undefined; // Skip if no service.ts file is found in the directory
                     }
-                } else if (service_path.endsWith(".js")) {
-                    resolved_path = pathToFileURL(service_path).href;
+                } else if (service_path.href.endsWith(".ts")) {
+                    resolved_path = service_path.href;
                 } else {
                     return undefined;
                 }
 
                 // TODO: USE ZOD OR SOME DYNAMIC TYPE VALIDATOR!!!
-                const service_factory: Service.Service = (await import(resolved_path)).default;
-                console.log(`Loading service ${service_factory.name}`);
-                if (!(await service_factory.validate(client))) {
-                    console.log(`${service_factory.name} failed validation. Turning off!`);
+                try {
+                    const service_factory: Service.Service = (await import(resolved_path)).default;
+                    if (!service_factory || typeof service_factory !== 'object' || !service_factory.name) {
+                        console.warn(`Service at ${resolved_path} does not export a valid service object`);
+                        return undefined;
+                    }
+                    console.log(`Loading service ${service_factory.name}`);
+                    if (!(await service_factory.validate(client))) {
+                        console.log(`${service_factory.name} failed validation. Turning off!`);
+                        return undefined;
+                    }
+                    if (service_factory.commands !== undefined) {
+                        const validated_commands = await Promise.all(
+                            service_factory.commands.map(async command => {
+                                const validated = await command.validate(client);
+                                if (!validated) {
+                                    console.log(`${command.data.name} failed validation. Turning off!`);
+                                }
+                                return validated ? command : null;
+                            }),
+                        );
+                        service_factory.commands = validated_commands.filter((command): command is Service.Command => command !== null);
+                    }
+                    if (service_factory.events !== undefined) {
+                        const validated_events = await Promise.all(
+                            service_factory.events.map(async event => {
+                                const validated = await event.validate(client);
+                                if (!validated) {
+                                    console.log(`${event.run_on} failed validation. Turning off!`);
+                                }
+                                return validated ? event : null;
+                            }),
+                        );
+                        service_factory.events = validated_events.filter((service): service is Service.Event<unknown[]> => service !== null);
+                    }
+                    console.log(`Loaded service: ${service_factory.name}`);
+                    return service_factory;
+                } catch (error) {
+                    console.error(`Failed to load service from ${resolved_path}: ${error}`);
                     return undefined;
                 }
-                if (service_factory.commands !== undefined) {
-                    const validated_commands = await Promise.all(
-                        service_factory.commands.map(async command => {
-                            const validated = await command.validate(client);
-                            if (!validated) {
-                                console.log(`${command.data.name} failed validation. Turning off!`);
-                            }
-                            return validated ? command : null;
-                        }),
-                    );
-                    service_factory.commands = validated_commands.filter((command): command is Service.Command => command !== null);
-                }
-                if (service_factory.events !== undefined) {
-                    const validated_events = await Promise.all(
-                        service_factory.events.map(async event => {
-                            const validated = await event.validate(client);
-                            if (!validated) {
-                                console.log(`${event.run_on} failed validation. Turning off!`);
-                            }
-                            return validated ? event : null;
-                        }),
-                    );
-                    service_factory.events = validated_events.filter((service): service is Service.Event<unknown[]> => service !== null);
-                }
-                console.log(`Loaded service: ${service_factory.name}`);
-                return service_factory;
             }),
         )
             .then(services =>
@@ -121,13 +135,13 @@ async function main() {
             });
     }
 
-    // Load verificationService events
+    // Load service events
     for (const [_, service] of client.services) {
         if (!service.events) continue;
         service.events.map(event => {
             const method = event.once ? "once" : "on";
             // Use the function application method to correctly apply event listeners
-            event.run_on.map(async run_on => {
+            event.run_on.map(run_on => {
                 client[method](run_on, async (...args: unknown[]) => {
                     // The 'execute' function expects the event name as the first argument
                     // followed by the database instance 'db' and then any event arguments
@@ -141,20 +155,37 @@ async function main() {
     // Load in commands
     {
         // Iterate over every command/folder
-        const command_directory = path.join(__dirname, "commands");
-        const command_sources = fs.readdirSync(command_directory).filter(file => file.endsWith(".js"));
+        const command_directory = new URL("./commands/", import.meta.url);
+        const command_sources = [];
+        try {
+            for await (const dirEntry of Deno.readDir(command_directory)) {
+                if (dirEntry.isFile && dirEntry.name.endsWith(".ts")) {
+                    command_sources.push(dirEntry.name);
+                }
+            }
+        } catch (error) {
+            console.warn("Could not read commands folder:", error);
+        }
 
         // Iterate over file in said folder
         for (const file of command_sources) {
-            const command_path = path.join(command_directory, file);
-            const resolved_path = pathToFileURL(command_path).href;
+            const command_path = new URL(`./${file}`, command_directory);
+            const resolved_path = command_path.href;
             const command_factory = (await import(resolved_path)).default;
             // Set a new item in the Collection with the key as the command name and the value as the exported module
             if (typeof command_factory === "function") {
-                const command: Command | null = command_factory();
-                if (command) {
-                    client.commands.set(command.data.name, command);
-                    console.log(`Loaded command ${command.data.name}`);
+                const legacy_command: import("@/types.ts").Command | null = command_factory();
+                if (legacy_command) {
+                    // Convert legacy command to service command format
+                    const service_command: Service.Command = {
+                        data: legacy_command.data,
+                        validate: () => Promise.resolve(true),
+                        execution: async (_client: DiscordClient, interaction) => {
+                            return await legacy_command.execute(interaction);
+                        }
+                    };
+                    client.commands.set(service_command.data.name, service_command);
+                    console.log(`Loaded legacy command ${service_command.data.name}`);
                 }
             }
         }
@@ -162,14 +193,23 @@ async function main() {
 
     // Load in events
     {
-        const event_directory = path.join(__dirname, "events");
-        const event_files = fs.readdirSync(event_directory).filter(file => file.endsWith(".js"));
+        const event_directory = new URL("./events/", import.meta.url);
+        const event_files = [];
+        try {
+            for await (const dirEntry of Deno.readDir(event_directory)) {
+                if (dirEntry.isFile && dirEntry.name.endsWith(".ts")) {
+                    event_files.push(dirEntry.name);
+                }
+            }
+        } catch (error) {
+            console.warn("Could not read events folder:", error);
+        }
 
         // Iterate over each event file
         for (const file of event_files) {
             // Import files' content
-            const event_path = path.join(event_directory, file);
-            const resolved_path = pathToFileURL(event_path).href;
+            const event_path = new URL(`./${file}`, event_directory);
+            const resolved_path = event_path.href;
             const event: Event = (await import(resolved_path)).default;
 
             // Attach the event onto the client
@@ -187,7 +227,7 @@ async function main() {
     });
 
     // Login using token
-    await client.login(process.env.DISCORD_BOT_TOKEN);
+    await client.login(DISCORD_BOT_TOKEN);
 }
 console.log("Starting!");
 main().catch(err => console.error(err));

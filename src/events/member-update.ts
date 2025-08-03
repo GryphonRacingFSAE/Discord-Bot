@@ -2,7 +2,7 @@
 // The purpose of this is to auto-assign Dynamics, Electrical, and Business roles
 
 import { Events, GuildMember } from "discord.js";
-import { DiscordClient } from "@/discord-client.js";
+import { DiscordClient } from "@/discord-client.ts";
 
 function arrayNotUndefined<T>(value: (T | undefined)[]): value is T[] {
     return value.every(v => v !== undefined);
@@ -43,7 +43,7 @@ export async function updateSubsectionRoles(member: GuildMember) {
 export default {
     name: Events.GuildMemberUpdate,
     once: false,
-    async execute(client: DiscordClient, old_member: GuildMember, new_member: GuildMember) {
+    async execute(_client: DiscordClient, _old_member: GuildMember, new_member: GuildMember) {
         await updateSubsectionRoles(new_member);
     },
 };

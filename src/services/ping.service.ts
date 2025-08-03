@@ -1,6 +1,6 @@
-import * as Service from "@/service.js";
-import { DiscordClient } from "@/discord-client";
-import { CommandInteraction, SlashCommandBuilder } from "discord.js";
+import * as Service from "@/service.ts";
+import { DiscordClient } from "@/discord-client.ts";
+import { CommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";
 
 const service: Service.Service = {
     validate(client: DiscordClient): Promise<boolean> {
@@ -19,7 +19,7 @@ const service: Service.Service = {
              */
             execution: async (client, interaction) => {
                 const delta = Math.abs((Date.now() - interaction.createdTimestamp) / 1000).toFixed(2);
-                await interaction.reply({ content: `Pong in ${delta} seconds!`, ephemeral: true });
+                await interaction.reply({ content: `Pong in ${delta} seconds!`, flags: MessageFlags.Ephemeral });
             },
 
             validate: async () => {

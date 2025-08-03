@@ -10,7 +10,7 @@ import { EmbedBuilder, EmbedField } from "discord.js";
  */
 export function format_embed(embed: EmbedBuilder, color: "yellow" | "red") {
     return embed.setColor(color === "yellow" ? "#FFC72A" : "#C20430").setFooter({
-        text: "The UofG FSAE Bot will never ask your personal information, passwords, identification, and/or SSNs. Stay safe!",
+        text: "The UoG FSAE Bot will never ask your personal information, passwords, identification, and/or SSNs. Stay safe!",
     });
 }
 

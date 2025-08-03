@@ -1,29 +1,62 @@
 /**
  * @description Responsible for executing all commands
  */
-import { Service, Event, OnInteractCreate } from "@/service.js";
+import { Service, OnInteractCreate } from "@/service.ts";
 import { CommandInteraction, Events } from "discord.js";
-import { DiscordClient } from "@/discord-client";
+import { DiscordClient } from "@/discord-client.ts";
 
 const on_interact_create = {
     run_on: [Events.InteractionCreate],
     once: false,
     validate: () => Promise.resolve(true),
-    execution: async (__, client: DiscordClient, _, interaction: CommandInteraction) => {
+    execution: async (__, client: DiscordClient, _, interaction: CommandInteraction): Promise<void> => {
         if (!interaction.isChatInputCommand()) return;
-        // iterate services and check if they have the correct command
-        for (const [_, service] of client.services) {
+        
+        // First, check service commands
+        for (const [service_name, service] of client.services) {
             if (service.commands === undefined) continue;
+            
             try {
-                return service.commands
-                    .filter(command => command.data.name === interaction.commandName)[0]
-                    .execution(client, interaction)
-                    .then(_ => {})
-                    .catch(err => console.error(`Failed execution of command: ${err}`));
+                const command = service.commands.find(command => command.data.name === interaction.commandName);
+                if (command) {
+                    console.log(`Executing service command: ${interaction.commandName} from service: ${service_name}`);
+                    if (typeof command.execution !== 'function') {
+                        console.error(`Command ${interaction.commandName} from service ${service_name} has no execution function`);
+                        return;
+                    }
+                    try {
+                        await command.execution(client, interaction);
+                    } catch (err) {
+                        console.error(`Failed execution of service command ${interaction.commandName}: ${err}`);
+                    }
+                    return;
+                }
             } catch (e) {
-                console.error(`Failed setup of execution for ${interaction.commandName}: ${e}`);
+                console.error(`Failed setup of execution for service command ${interaction.commandName} from service ${service_name}: ${e}`);
             }
         }
+        
+        // Then, check standalone commands
+        const standalone_command = client.commands.get(interaction.commandName);
+        if (standalone_command) {
+            try {
+                console.log(`Executing standalone command: ${interaction.commandName}`);
+                if (typeof standalone_command.execution !== 'function') {
+                    console.error(`Standalone command ${interaction.commandName} has no execution function`);
+                    return;
+                }
+                try {
+                    await standalone_command.execution(client, interaction);
+                } catch (err) {
+                    console.error(`Failed execution of standalone command ${interaction.commandName}: ${err}`);
+                }
+                return;
+            } catch (e) {
+                console.error(`Failed setup of execution for standalone command ${interaction.commandName}: ${e}`);
+            }
+        }
+        
+        console.warn(`Command not found: ${interaction.commandName}`);
     },
 } satisfies OnInteractCreate;
 const service = {
