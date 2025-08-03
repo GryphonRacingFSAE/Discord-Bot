@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { format_embed } from "@/util.ts";
 import { check_members } from "@/services/permissions/index.ts";
 import { db } from "@/db.ts";
+import  { posthog } from "@/posthog.ts";
 
 const CODE_LENGTH = 8;
 
@@ -48,7 +49,7 @@ const email_linked =
  * @description Sends a permissions email to the user parameter. **User parameter are not checked here**.
  * @returns Promise to completion of email
  */
-async function send_verification_email(_client: DiscordClient, db: LibSQLDatabase<typeof schema> | undefined, message: Message) {
+async function send_verification_email(client: DiscordClient, db: LibSQLDatabase<typeof schema> | undefined, message: Message) {
     // Handle the cases where a duplicate email may exist
     if ((await email_linked?.execute({ email: message.content.toLowerCase() })) !== undefined) {
         return message.author
@@ -93,6 +94,14 @@ async function send_verification_email(_client: DiscordClient, db: LibSQLDatabas
                         email: message.content.toLowerCase(),
                     })
                     .execute();
+            })
+            .then(() => {
+                if (posthog) {
+                    posthog.capture({
+                        distinctId: client.user?.id || "unknown",
+                        event: "verification_email_sent",
+                    });
+                }
             })
             .then(async _ => {
                 await message.reply({
@@ -160,7 +169,14 @@ const on_message_send_event: OnMessageCreate = {
                             format_embed(new EmbedBuilder().setTitle("Invalid email address").setDescription(`Your email address of \`${message.content}\` is not a valid email address.`), "red"),
                         ],
                     })
-                    .then(_ => {});
+                    .then(_ => {
+                        if (posthog) {
+                            posthog.capture({
+                                distinctId: client.user?.id || "unknown",
+                                event: "verification_session_invalid_email",
+                            });
+                        }
+                    });
             }
         } else if (Number(message.content) === user.verificationCode) {
             if ((await email_linked?.execute({ email: user.email })) !== undefined) {
@@ -168,7 +184,14 @@ const on_message_send_event: OnMessageCreate = {
                     .send({
                         embeds: [format_embed(new EmbedBuilder().setTitle("Email exists").setDescription("This email is already registered."), "red")],
                     })
-                    .then(_ => {});
+                    .then(_ => {
+                        if (posthog) {
+                            posthog.capture({
+                                distinctId: client.user?.id || "unknown",
+                                event: "verification_session_duplicate_email",
+                            });
+                        }
+                    });
             }
             return db
                 .insert(schema.users)
@@ -192,7 +215,14 @@ const on_message_send_event: OnMessageCreate = {
                         embeds: [format_embed(new EmbedBuilder().setTitle("Linked!").setDescription("You now have successfully linked your discord and email account."), "yellow")],
                     });
                 })
-                .then(_ => {});
+                .then(_ => {
+                    if (posthog) {
+                        posthog.capture({
+                            distinctId: client.user?.id || "unknown",
+                            event: "verification_code_entered",
+                        });
+                    }
+                });
         } else if (message.content.toLowerCase().trim() === "cancel") {
             return db
                 .delete(schema.verifying_users)
@@ -203,7 +233,14 @@ const on_message_send_event: OnMessageCreate = {
                         embeds: [format_embed(new EmbedBuilder().setTitle("Cancelled!").setDescription("Verification process has been cancelled."), "yellow")],
                     });
                 })
-                .then(_ => {});
+                .then(_ => {
+                    if (posthog) {
+                        posthog.capture({
+                            distinctId: client.user?.id || "unknown",
+                            event: "verification_session_cancelled",
+                        });
+                    }
+                });
         } else {
             return message
                 .reply({

@@ -8,7 +8,7 @@ import { eq, sql } from "drizzle-orm";
 import * as schema from "@/schema.ts";
 import { format_embed } from "@/util.ts";
 import { db } from "@/db.ts";
-import { isFeatureEnabled } from "@/posthog.ts";
+import { isFeatureEnabled, posthog } from "@/posthog.ts";
 
 // Error codes to make it easier for us to scream at the user
 // No email? 🗿 No discord? 🗿 No gryphlife? 🗿 And most importantly no payment? 🗿🗿🗿
@@ -62,22 +62,52 @@ function user_allowed(user: schema.User | undefined): UserStatus {
 /**
  * @description Builds a denial message including why they were revoked given a status
  */
-function build_denial_message(status: UserStatus): EmbedBuilder[] {
+function build_denial_message(client_id: string | undefined, status: UserStatus): EmbedBuilder[] {
     const fields: APIEmbedField[] = [];
     if (status & UserStatus.noEmail) {
         fields.push({ name: "No email", value: "You do not have an email account associated. " });
+        if (posthog) {
+            posthog.capture({
+                distinctId: client_id || "unknown",
+                event: "verification_session_no_email",
+            });
+        }
     }
     if (status & UserStatus.noDiscord) {
         fields.push({ name: "No discord", value: "You do not have an associated discord account." });
+        if (posthog) {
+            posthog.capture({
+                distinctId: client_id || "unknown",
+                event: "verification_session_not_in_discord",
+            });
+        }
     }
     if (status & UserStatus.noPayment) {
         fields.push({ name: "No payment", value: "You have not paid the club fees due." });
+        if (posthog) {
+            posthog.capture({
+                distinctId: client_id || "unknown",
+                event: "verification_session_not_paid",
+            });
+        }
     }
     if (status & UserStatus.noGryphLife) {
         fields.push({ name: "No GryphLife", value: "You have not joined the GryphLife club." });
+        if (posthog) {
+            posthog.capture({
+                distinctId: client_id || "unknown",
+                event: "verification_session_not_in_gryphlife",
+            });
+        }
     }
     if (status & UserStatus.noDataBase) {
         fields.push({ name: "No database entry", value: "You are not in our database." });
+        if (posthog) {
+            posthog.capture({
+                distinctId: client_id || "unknown",
+                event: "verification_session_not_in_database",
+            });
+        }
     }
 
     return [
@@ -93,7 +123,7 @@ function build_denial_message(status: UserStatus): EmbedBuilder[] {
  * @description Responsible for removing the permissions role + sending a message to users passed in
  * @returns Array of users unverified
  */
-export async function prune_members(_client: Client, users: { discord: GuildMember; reason: UserStatus }[], verified_role: Role) {
+export async function prune_members(client: Client, users: { discord: GuildMember; reason: UserStatus }[], verified_role: Role) {
     // Check if role removal is enabled via feature flag
     const canRemoveRoles = await isFeatureEnabled("VERIFICATION_ROLE_REMOVE");
     
@@ -103,8 +133,15 @@ export async function prune_members(_client: Client, users: { discord: GuildMemb
             
             if (canRemoveRoles) {
                 try {
-                    await user.discord.roles.remove(verified_role);
-                    await user.discord.send({ embeds: build_denial_message(user.reason) });
+                    await user.discord.roles.remove(verified_role).then(_ => {
+                        if (posthog) {
+                            posthog.capture({
+                                distinctId: client.user?.id || "unknown",
+                                event: "verification_role_removed",
+                            });
+                        }
+                    });
+                    await user.discord.send({ embeds: build_denial_message(client.user?.id, user.reason) });
                     return user;
                 } catch (err) {
                     console.error(`Failed to remove verification role for ${user.discord.user.tag}: ${err}`);
@@ -188,6 +225,13 @@ export async function check_members(client: Client, members: GuildMember[]) {
                             return user.discord.send({
                                 embeds: [format_embed(new EmbedBuilder().setTitle("Access granted").setDescription("You now have access to the UoG FSAE discord server."), "yellow")],
                             });
+                        }).then(_ => {
+                            if (posthog) {
+                                posthog.capture({
+                                    distinctId: client.user?.id || "unknown",
+                                    event: "verification_role_granted",
+                                });
+                            }
                         });
                     } else {
                         console.log(`Would grant access to ${user.discord.user.tag}, but role addition is disabled by feature flag`);

@@ -3,6 +3,7 @@ import process from "node:process";
 import { updateSubsectionRoles } from "@/events/member-update.ts";
 import { DiscordClient } from "@/discord-client.ts";
 import { initDoorStatus } from "@/door-status.ts";
+import { startUptimeTracking } from "@/posthog.ts";
 
 // Define MessageInfo type
 interface MessageInfo {
@@ -23,6 +24,9 @@ export default {
             throw new Error("client.user is null");
         }
         console.log(`Ready! Logged in as ${client.user.tag}`);
+
+        // Start uptime tracking with bot ID
+        await startUptimeTracking(client.user.id);
 
         // On login, update all subsection roles that might've been missed
         const guild = client.guilds.cache.get(process.env.DISCORD_GUILD_ID!);

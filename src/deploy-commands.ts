@@ -21,10 +21,6 @@ async function main() {
         console.log("Clearing all existing global commands...");
         await rest.put(Routes.applicationCommands(Deno.env.get("DISCORD_APPLICATION_ID")!), { body: [] });
         console.log("Successfully cleared all global commands.");
-        
-        console.log("Clearing all existing guild commands...");
-        await rest.put(Routes.applicationGuildCommands(Deno.env.get("DISCORD_APPLICATION_ID")!, Deno.env.get("DISCORD_GUILD_ID")!), { body: [] });
-        console.log("Successfully cleared all guild commands.");
     } catch (error) {
         console.error("Error clearing existing commands:", error);
     }

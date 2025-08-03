@@ -90,7 +90,7 @@ const save_audit_logs = {
         const start_date = (interaction as ChatInputCommandInteraction).options.getString("start-date");
 
         // Call the function to save the audit logs, with interaction provided to indicate the manual scenario
-        await saveAuditLogs(interaction, guild, start_date);
+        await saveAuditLogs(interaction, guild, start_date ?? undefined);
     },
     validate: _ => Promise.resolve(true),
 } satisfies Command;

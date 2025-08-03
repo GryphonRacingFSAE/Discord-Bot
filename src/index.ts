@@ -1,13 +1,10 @@
 import { Events, GatewayIntentBits, Partials } from "discord.js";
 import { config } from "dotenv";
-import { DiscordClient } from "@/disco                }
-                console.log(`${service.name} loaded event: ${run_on}`);
-            });
-        });
-    }ient.ts";
+import { DiscordClient } from "@/discord-client.ts";
 import type { Event } from "@/types.ts";
 import * as Service from "@/service.ts";
 import { db } from "@/db.ts";
+import { cleanup as cleanupPostHog } from "@/posthog.ts";
 
 // Load environment variables
 config();
@@ -53,7 +50,7 @@ async function main() {
             service_sources.map(async source => {
                 // there are 2 ways to make a valid service:
                 // - my-verification.service.ts
-                // - my-foldr
+                // - my-folder
                 //    L index.ts
                 //    L a.ts
                 //    L service.ts <--
@@ -222,3 +219,19 @@ async function main() {
 
 console.log("Starting bot...");
 main().catch(err => console.error(err));
+
+// Handle graceful shutdown
+async function gracefulShutdown() {
+    console.log("Shutting down gracefully...");
+    await cleanupPostHog();
+    Deno.exit(0);
+}
+
+// Listen for shutdown signals
+Deno.addSignalListener("SIGINT", gracefulShutdown);
+Deno.addSignalListener("SIGTERM", gracefulShutdown);
+
+// Handle unhandled exits
+globalThis.addEventListener("beforeunload", async () => {
+    await cleanupPostHog();
+});
