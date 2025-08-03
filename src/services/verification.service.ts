@@ -65,10 +65,8 @@ async function send_verification_email(_client: DiscordClient, db: LibSQLDatabas
             pass: process.env.EMAIL_APP_PASSWORD, // Your email password
         },
     });
-    console.log(`Sending verification email!`);
     return get_email_html(`${verification_code.toString().substring(0, 4)} ${verification_code.toString().substring(4)}`).then(content => {
         return new Promise((resolve, reject) => {
-            console.log("Sending!");
             transporter.sendMail(
                 {
                     from: process.env.EMAIL_USERNAME,
@@ -108,7 +106,7 @@ async function send_verification_email(_client: DiscordClient, db: LibSQLDatabas
                 return true;
             })
             .catch(err => {
-                console.log(err);
+                console.error("Email verification error:", err);
                 message.reply({
                     embeds: [format_embed(new EmbedBuilder().setTitle("Error").setDescription("Seems like our mailing service is down currently. Please be patient as we try to fix it."), "yellow")],
                 });
@@ -133,7 +131,6 @@ function has_verification_session(db: LibSQLDatabase<typeof schema> | undefined,
 const sending_rates: Map<string, number> = new Map();
 const RATE_LIMIT = 15; // max messages/minute
 function is_rated_limited(user: User) {
-    console.log(`rate is: ${sending_rates.get(user.id)}`);
     return (sending_rates.get(user.id) || 1) > RATE_LIMIT;
 }
 
@@ -146,7 +143,6 @@ const on_message_send_event: OnMessageCreate = {
         const guild = client.guilds.cache.get(process.env.DISCORD_GUILD_ID!) as Guild;
         if (!guild.members.cache.has(message.author.id)) return Promise.resolve(undefined);
         const user = await has_verification_session(db, message.author);
-        console.log(`${user}`);
         if (user === undefined) {
             // make a new entry
             // https://stackoverflow.com/questions/201323/how-can-i-validate-an-email-address-using-a-regular-expression
@@ -302,8 +298,6 @@ const cmd_unlink = {
                         embeds: [format_embed(new EmbedBuilder().setTitle("Error").setDescription("User not found in this server."), "red")],
                     }).then(_ => {});
                 }
-
-                // Perform immediate verification check
                 await check_members(client, [guildMember]);
                 
                 return interaction.reply({

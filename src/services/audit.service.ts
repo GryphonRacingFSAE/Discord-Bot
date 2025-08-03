@@ -13,7 +13,6 @@ async function saveAuditLogs(interaction: CommandInteraction | null, guild: Guil
         filtered_start_date = new Date();
         filtered_start_date.setDate(filtered_start_date.getDate() - 6);
     }
-    console.log("Saving audit logs since:", filtered_start_date.toISOString().slice(0, 10));
 
     try {
         // Fetch the audit logs for the guild
@@ -55,7 +54,6 @@ async function saveAuditLogs(interaction: CommandInteraction | null, guild: Guil
                 });
             }
         }
-        console.log("Successfully saved audit logs.");
     } catch (error) {
         console.error("Error saving audit logs:", error);
         // If the command is run manually (interaction provided), reply with an error message
@@ -117,7 +115,6 @@ const on_ready = {
                 // Call the function and handle any errors
                 try {
                     await saveAuditLogs(null, guild);
-                    console.log("Audit logs saved successfully.");
                 } catch (error) {
                     console.error("Error occurred while saving audit logs:", error);
                 }

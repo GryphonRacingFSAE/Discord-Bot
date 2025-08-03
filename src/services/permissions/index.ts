@@ -102,13 +102,12 @@ export async function prune_members(_client: Client, users: { discord: GuildMemb
             if (!user.discord.roles.cache.has(verified_role.id) || user.discord.id !== "676195749800968192") return undefined;
             
             if (canRemoveRoles) {
-                console.log(`Sending to ${user.discord.user.tag} is out!`);
                 try {
                     await user.discord.roles.remove(verified_role);
                     await user.discord.send({ embeds: build_denial_message(user.reason) });
                     return user;
                 } catch (err) {
-                    console.error(`Failed to remove verification role due to: ${err}`);
+                    console.error(`Failed to remove verification role for ${user.discord.user.tag}: ${err}`);
                     return undefined;
                 }
             } else {
@@ -177,7 +176,6 @@ export async function check_members(client: Client, members: GuildMember[]) {
                 const status = user_allowed(user.db);
                 const has_verification_role = user.discord.roles.cache.has(verified_role.id);
                 if (status !== UserStatus.success && has_verification_role) {
-                    console.log(`${user.discord.user.tag} - ${status}`);
                     usersToProcess.push({
                         discord: user.discord,
                         reason: status,

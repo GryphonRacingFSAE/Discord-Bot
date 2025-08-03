@@ -1,6 +1,10 @@
 import { Events, GatewayIntentBits, Partials } from "discord.js";
 import { config } from "dotenv";
-import { DiscordClient } from "@/discord-client.ts";
+import { DiscordClient } from "@/disco                }
+                console.log(`${service.name} loaded event: ${run_on}`);
+            });
+        });
+    }ient.ts";
 import type { Event } from "@/types.ts";
 import * as Service from "@/service.ts";
 import { db } from "@/db.ts";
@@ -25,10 +29,7 @@ const client = new DiscordClient({
     partials: [Partials.Message, Partials.Channel, Partials.User],
 });
 
-console.log("Starting");
-
 async function main() {
-    console.log("Starting bot...");
     // Load in db
     if (db !== undefined) {
         console.log("Database loaded successfully!");
@@ -86,18 +87,13 @@ async function main() {
                         console.warn(`Service at ${resolved_path} does not export a valid service object`);
                         return undefined;
                     }
-                    console.log(`Loading service ${service_factory.name}`);
                     if (!(await service_factory.validate(client))) {
-                        console.log(`${service_factory.name} failed validation. Turning off!`);
                         return undefined;
                     }
                     if (service_factory.commands !== undefined) {
                         const validated_commands = await Promise.all(
                             service_factory.commands.map(async command => {
                                 const validated = await command.validate(client);
-                                if (!validated) {
-                                    console.log(`${command.data.name} failed validation. Turning off!`);
-                                }
                                 return validated ? command : null;
                             }),
                         );
@@ -107,9 +103,6 @@ async function main() {
                         const validated_events = await Promise.all(
                             service_factory.events.map(async event => {
                                 const validated = await event.validate(client);
-                                if (!validated) {
-                                    console.log(`${event.run_on} failed validation. Turning off!`);
-                                }
                                 return validated ? event : null;
                             }),
                         );
@@ -147,7 +140,6 @@ async function main() {
                     // followed by the database instance 'db' and then any event arguments
                     return await (event as Service.Event<unknown[]>).execution(run_on, client, db, ...args);
                 });
-                console.log(`${service.name} loaded event: ${run_on}`);
             });
         });
     }
@@ -185,7 +177,6 @@ async function main() {
                         }
                     };
                     client.commands.set(service_command.data.name, service_command);
-                    console.log(`Loaded legacy command ${service_command.data.name}`);
                 }
             }
         }
@@ -218,7 +209,6 @@ async function main() {
             } else {
                 client.on(event.name, (...args) => event.execute(client, ...args));
             }
-            console.log(`Loaded event ${event.name}`);
         }
     }
 
@@ -229,5 +219,6 @@ async function main() {
     // Login using token
     await client.login(DISCORD_BOT_TOKEN);
 }
-console.log("Starting!");
+
+console.log("Starting bot...");
 main().catch(err => console.error(err));

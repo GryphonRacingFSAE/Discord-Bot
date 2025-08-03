@@ -19,7 +19,6 @@ const on_interact_create = {
             try {
                 const command = service.commands.find(command => command.data.name === interaction.commandName);
                 if (command) {
-                    console.log(`Executing service command: ${interaction.commandName} from service: ${service_name}`);
                     if (typeof command.execution !== 'function') {
                         console.error(`Command ${interaction.commandName} from service ${service_name} has no execution function`);
                         return;
@@ -40,7 +39,6 @@ const on_interact_create = {
         const standalone_command = client.commands.get(interaction.commandName);
         if (standalone_command) {
             try {
-                console.log(`Executing standalone command: ${interaction.commandName}`);
                 if (typeof standalone_command.execution !== 'function') {
                     console.error(`Standalone command ${interaction.commandName} has no execution function`);
                     return;
