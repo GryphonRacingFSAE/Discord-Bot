@@ -22,6 +22,9 @@ const service: Service.Service = {
                 await interaction.reply({ content: `Pong in ${delta} seconds!`, flags: MessageFlags.Ephemeral });
             },
 
+            /**
+             * @description Validates command prior to execution. If returns false, command will not be executed at all.
+             */
             validate: async () => {
                 return Promise.resolve(true);
             },
