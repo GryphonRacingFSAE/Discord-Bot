@@ -2,6 +2,7 @@ name: GRacing Bot CI
 
 on:
   push:
+    branches: [ main ]
 
 jobs:
   Lint-Type-Build-Check-Bot:
@@ -50,43 +51,16 @@ jobs:
           cd esp32
           pio run
 
-  # Currently we deploy via docker on our shop server, which is set up has a runner
+  # Currently we deploy via docker compose on our shop server, which is set up has a runner
   Deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: [ self-hosted, Linux, X64 ]
     needs: [Lint-Type-Build-Check-Bot, Lint-Build-Check-Door-Sensor]
     steps:
       - uses: actions/checkout@v4
 
-      # I installed docker using the docs here: https://docs.docker.com/desktop/install/ubuntu/
-      - name: Deploy with Docker
-        env:
-          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
-          DISCORD_APPLICATION_ID: ${{ secrets.DISCORD_APPLICATION_ID }}
-          DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
-          EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
-          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-          EMAIL_SERVICE: ${{ vars.EMAIL_SERVICE }}
-          EMAIL_HOST: ${{ vars.EMAIL_HOST }}
-          EMAIL_PORT: ${{ vars.EMAIL_PORT }}
-          VERIFICATION_CHANNEL: ${{ vars.VERIFICATION_CHANNEL }}
+      # Deploy with Docker Compose
+      - name: Deploy with Docker Compose
         run: |
-          docker build . --tag gracingbot
-          docker stop GRacingBot || true # It's okay if these fail, as the bot might not be active or existant
-          docker rm GRacingBot || true
-          docker run -d --restart unless-stopped -e DISCORD_BOT_TOKEN -e DISCORD_APPLICATION_ID -e DISCORD_GUILD_ID -e EMAIL_USERNAME -e EMAIL_PASSWORD -e EMAIL_HOST -e EMAIL_SERVICE -e EMAIL_PORT -e VERIFICATION_CHANNEL -p 80:80 -p 587:587 --name GRacingBot -v /home/grc0/GRacingBotFiles:/usr/app/resources -v "/home/grc0/OneDrive/Gryphon Racing Administrative/Team Roster":/usr/app/onedrive gracingbot
-
-  # Docker compose deploy
-  DeployNew:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: [ self-hosted, Linux, X64 ]
-    needs: [ Lint-Type-Build-Check-Bot, Lint-Build-Check-Door-Sensor ]
-    steps:
-      - uses: actions/checkout@v4]
-
-        name: Deploy with docker
-        run: |
-          docker build . --tag gracingbot
-          docker stop GRacingBot || true
-          docker rm GRacingBot || true
-          docker compose up --build -d
+          docker-compose down || true
+          docker-compose build
+          docker-compose up -d

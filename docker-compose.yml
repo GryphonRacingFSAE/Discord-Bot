@@ -8,9 +8,9 @@ services:
       - "587:587"
       - "3300:3000"
     volumes:
-      - ./resources:/usr/app/resources
+      - /home/grc0/GRacingBotFiles:/usr/app/resources
+      - "/home/grc0/OneDrive/Gryphon Racing Administrative/Team Roster:/usr/app/onedrive"
       - ./dist:/usr/app/dist
-      - ./onedrive:/usr/app/onedrive
       - ./drizzle:/usr/app/drizzle
       - ./node_modules:/usr/app/node_modules
       - ./logs:/usr/app/logs
@@ -20,3 +20,4 @@ services:
     env_file:
       - .env
     restart: unless-stopped
+    container_name: GRacingBot
