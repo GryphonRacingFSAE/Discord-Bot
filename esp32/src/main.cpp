@@ -8,11 +8,11 @@
 #define HEARTBEAT_INTERVAL 3000 
 
 #define WIFI_SSID "uog-wifi-secure"
-#define SERVER_URL "10.12.203.217:5000"
+#define SERVER_URL "10.12.202.218:5000" // Replace with your local computer's IP address
 
 #define EAP_USERNAME "ngocanhk"
 #define EAP_IDENTITY "ngocanhk"
-#define EAP_PASSWORD "C3@Xk,&f)YBe)NL"
+#define EAP_PASSWORD "password"
 
 void sendDoorState() {
   String shop_status = digitalRead(DOOR_SWITCH_PIN) == HIGH ? "CLOSED" : "OPEN";
