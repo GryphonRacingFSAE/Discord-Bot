@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, time
 import json
 import os
 from zoneinfo import ZoneInfo
@@ -91,14 +91,50 @@ async def comp_add(interaction: discord.Interaction, name: str, date: str):
     await interaction.response.send_message(f"Competition **{name}** added for {date}")
 
 
+@bot.event
+async def on_ready():
+    print(f"Logged in as {bot.user}")
+    try:
+        synced = await tree.sync()
+        print(f"Synced {len(synced)} commands")
+
+        channel = await bot.fetch_channel(SHOP_STATUS_CHANNEL_ID)
+        print(f"Fetched channel: {channel}")
+
+        await init_shop_status()
+        check_updates.start()
+    except Exception as e:
+        print(f"Error syncing commands: {e}")
+
+
 # Load shop status from JSON
 async def load_shop_status():
+    status = ""
     try:
         with open(SHOP_STATUS_FILE, "r") as f:
             data = json.load(f)
             return data.get("shop-status", "UNKNOWN")
     except FileNotFoundError:
         return [] 
+            
+
+async def current_shop_status():
+    now = datetime.now(ZoneInfo("America/New_York")).time()
+    close = time(23, 0)
+    open = time(8, 30)
+
+    # I used this to test from 1:00 PM to 1:05 PM since I don't want to wait until 11:00 PM
+    if close < open:
+        if close <= now < open:
+            return "CLOSED"
+    else:
+        # The one that does the actual thing
+        if now >= close or now < open:
+            return "CLOSED"
+
+    status = await load_shop_status()
+    return status
+    
 
 
 # Embed message for shop status (make it look nice)
@@ -118,8 +154,9 @@ async def shop_status_embed(status: str):
 
 # Init shop status message
 async def init_shop_status():
-    channel = bot.get_channel(SHOP_STATUS_CHANNEL_ID)
-    status = await load_shop_status()
+    channel = await bot.fetch_channel(SHOP_STATUS_CHANNEL_ID)
+
+    status = await current_shop_status()
     embed = await shop_status_embed(status)
     bot.last_status_msg = status
     bot.status_msg = await channel.send(embed=embed)
@@ -127,26 +164,15 @@ async def init_shop_status():
 
 # Update shop status message if changed
 async def update_shop_status():
+    channel = await bot.fetch_channel(SHOP_STATUS_CHANNEL_ID)
+
     if bot.status_msg:
-        status = await load_shop_status()
+        status = await current_shop_status()
         if status != bot.last_status_msg:
-            channel = bot.get_channel(SHOP_STATUS_CHANNEL_ID)
             await bot.status_msg.delete()
             embed= await shop_status_embed(status)
             bot.status_msg = await channel.send(embed=embed)
             bot.last_status_msg = status
-
-
-@bot.event
-async def on_ready():
-    print(f"Logged in as {bot.user}")
-    try:
-        synced = await tree.sync()
-        print(f"Synced {len(synced)} commands")
-        await init_shop_status()
-        check_updates.start()
-    except Exception as e:
-        print(f"Error syncing commands: {e}")
 
 
 @tasks.loop(seconds=5)  # check every 5 seconds
