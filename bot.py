@@ -126,11 +126,11 @@ async def current_shop_status():
     # I used this to test from 1:00 PM to 1:05 PM since I don't want to wait until 11:00 PM
     if close < open:
         if close <= now < open:
-            return "CLOSED"
+            return "CLOSED, SWTICH WAS NOT CLOSED"
     else:
         # The one that does the actual thing
         if now >= close or now < open:
-            return "CLOSED"
+            return "CLOSED, SWITCH WAS NOT CLOSED"
 
     status = await load_shop_status()
     return status
