@@ -5,4 +5,14 @@ services:
     env_file: .env
     volumes:
       - ./comps.json:/app/comps.json
+      - ./shop_status.json:/app/shop_status.json 
+    restart: unless-stopped
+
+  server:
+    build: ./shop_status
+    container_name: shop_status
+    ports:
+        - "5000:5000"
+    volumes:
+      - ./shop_status.json:/app/shop_status.json
     restart: unless-stopped
