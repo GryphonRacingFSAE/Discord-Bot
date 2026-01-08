@@ -46,14 +46,14 @@ async def comp(interaction: discord.Interaction):
         await interaction.response.send_message("No competitions added yet")
         return
 
-    now = datetime.datetime.now(ZoneInfo("America/New_York"))
+    now = datetime.now(ZoneInfo("America/New_York"))
     embed = discord.Embed(
         title="Upcoming Competitions 🗓️",
         color=discord.Color.blue(),
     )
 
     for comp in comps:
-        comp_time = datetime.datetime.strptime(comp["date"], "%Y-%m-%dT%H:%M:%S")
+        comp_time = datetime.strptime(comp["date"], "%Y-%m-%dT%H:%M:%S")
         comp_time = comp_time.replace(tzinfo=ZoneInfo("America/New_York"))
         remaining = comp_time - now
         if remaining.total_seconds() > 0:
@@ -108,6 +108,7 @@ async def on_ready():
 
 # Load shop status from JSON
 async def load_shop_status():
+    status = ""
     try:
         with open(SHOP_STATUS_FILE, "r") as f:
             data = json.load(f)
@@ -116,8 +117,6 @@ async def load_shop_status():
         # Try not read the json when esp32 writing the json
         print("Skipping check")
         return bot.last_status_msg or "UNKNOWN"
-    except FileNotFoundError:
-        return [] 
             
 
 async def current_shop_status():
@@ -160,23 +159,15 @@ async def init_shop_status():
 
 # Update shop status message if changed
 async def update_shop_status():
-    try:
+    channel = await bot.fetch_channel(SHOP_STATUS_CHANNEL_ID)
+
+    if bot.status_msg:
         status = await current_shop_status()
-        
-        if status == bot.last_status_msg:
-            return
-        
-        channel = await bot.fetch_channel(SHOP_STATUS_CHANNEL_ID)
-        
-        if bot.status_msg: 
-            print(f"Status changed")
-            if status != bot.last_status_msg:
-                await bot.status_msg.delete()
-                embed = await shop_status_embed(status)
-                bot.status_msg = await channel.send(embed=embed)
-                bot.last_status_msg = status
-    except Exception as e:
-        print(f"Loop error caugth: {e}")
+        if status != bot.last_status_msg:
+            await bot.status_msg.delete()
+            embed= await shop_status_embed(status)
+            bot.status_msg = await channel.send(embed=embed)
+            bot.last_status_msg = status
 
 
 @tasks.loop(seconds=5)  # check every 5 seconds
