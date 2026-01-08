@@ -173,7 +173,6 @@ async def update_shop_status():
         print(f"Loop error caugth: {e}")
 
 
-
 @tasks.loop(seconds=5)  # check every 5 seconds
 async def check_updates():
     await update_shop_status()
