@@ -13,8 +13,7 @@ TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
 COMPS_FILE = "comps.json"
 SHOP_STATUS_FILE = "shop_status.json"   # Shop status
-SHOP_STATUS_CHANNEL_ID = 1418329450080108586    # Shop status channel ID
-
+SHOP_STATUS_CHANNEL_ID = 1329876584534118441    # Shop status channel ID
 
 # load competitions from file
 def load_comps():
@@ -123,18 +122,11 @@ async def current_shop_status():
     close = time(23, 0)
     open = time(8, 30)
 
-    # I used this to test from 1:00 PM to 1:05 PM since I don't want to wait until 11:00 PM
-    if close < open:
-        if close <= now < open:
-            return "CLOSED, SWTICH WAS NOT CLOSED"
-    else:
-        # The one that does the actual thing
-        if now >= close or now < open:
-            return "CLOSED, SWITCH WAS NOT CLOSED"
+    if now >= close or now < open:
+        return "CLOSED, SWITCH WAS NOT CLOSED"
 
     status = await load_shop_status()
-    return status
-    
+    return status 
 
 
 # Embed message for shop status (make it look nice)
@@ -152,6 +144,7 @@ async def shop_status_embed(status: str):
 
     return embed
 
+
 # Init shop status message
 async def init_shop_status():
     channel = await bot.fetch_channel(SHOP_STATUS_CHANNEL_ID)
@@ -166,13 +159,19 @@ async def init_shop_status():
 async def update_shop_status():
     channel = await bot.fetch_channel(SHOP_STATUS_CHANNEL_ID)
 
-    if bot.status_msg:
+    try:
         status = await current_shop_status()
-        if status != bot.last_status_msg:
-            await bot.status_msg.delete()
-            embed= await shop_status_embed(status)
-            bot.status_msg = await channel.send(embed=embed)
-            bot.last_status_msg = status
+        
+        if bot.status_msg: 
+            print(f"Status changed")
+            if status != bot.last_status_msg:
+                await bot.status_msg.delete()
+                embed = await shop_status_embed(status)
+                bot.status_msg = await channel.send(embed=embed)
+                bot.last_status_msg = status
+    except Exception as e:
+        print(f"Loop error caugth: {e}")
+
 
 
 @tasks.loop(seconds=5)  # check every 5 seconds
