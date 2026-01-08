@@ -108,11 +108,14 @@ async def on_ready():
 
 # Load shop status from JSON
 async def load_shop_status():
-    status = ""
     try:
         with open(SHOP_STATUS_FILE, "r") as f:
             data = json.load(f)
             return data.get("shop-status", "UNKNOWN")
+    except json.JSONDecodeError:
+        # Try not read the json when esp32 writing the json
+        print("Skipping check")
+        return bot.last_status_msg or "UNKNOWN"
     except FileNotFoundError:
         return [] 
             
@@ -157,10 +160,13 @@ async def init_shop_status():
 
 # Update shop status message if changed
 async def update_shop_status():
-    channel = await bot.fetch_channel(SHOP_STATUS_CHANNEL_ID)
-
     try:
         status = await current_shop_status()
+        
+        if status == bot.last_status_msg:
+            return
+        
+        channel = await bot.fetch_channel(SHOP_STATUS_CHANNEL_ID)
         
         if bot.status_msg: 
             print(f"Status changed")
