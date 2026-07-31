@@ -1,2 +1,4 @@
 discord.py
 python-dotenv
+paho-mqtt
+influxdb-client
