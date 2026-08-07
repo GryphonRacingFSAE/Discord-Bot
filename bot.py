@@ -83,7 +83,7 @@ async def comp(interaction: discord.Interaction):
 @app_commands.describe(name="Name of the competition", date="ISO date (e.g. 2025-08-01T18:00:00)")
 async def comp_add(interaction: discord.Interaction, name: str, date: str):
     try:
-        datetime.datetime.fromisoformat(date)
+        datetime.fromisoformat(date)
     except ValueError:
         await interaction.response.send_message(
             "Invalid date format. Use ISO 8601, e.g., `2025-08-01T18:00:00`", ephemeral=True
@@ -98,7 +98,7 @@ async def comp_add(interaction: discord.Interaction, name: str, date: str):
 
 
 def build_status_embed(status: str, rssi: int | None) -> discord.Embed:
-    color = discord.Color.green() if status == "OPEN" else discord.Color.red()
+    color = {"OPEN": discord.Color.green(), "CLOSED": discord.Color.red(),}.get(status, discord.Color.greyple())
     embed = discord.Embed(
         title=f"Shop Status: {status}",
         color=color,

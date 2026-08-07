@@ -33,6 +33,8 @@ def log_to_influx(status: str, rssi: int | None):
 
     if status in ("OPEN", "CLOSED"):
         point = point.field("closed", 1 if status == "CLOSED" else 0)
+    elif status == "OFFLINE":
+        point = point.field("offline", 1)
     
     try:
         write_api.write(bucket=INFLUXDB_BUCKET, org=INFLUXDB_ORG, record=point)
@@ -67,7 +69,7 @@ def on_message(client, userdata, msg,):
         print(f"[mqtt] failed to parse JSON payload '{payload}': {e}")
 
 
-    if status not in ("OPEN", "CLOSED"):
+    if status not in ("OPEN", "CLOSED", "OFFLINE"):
         print(f"[mqtt] received invalid status '{status}'")
         return
 

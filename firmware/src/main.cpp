@@ -13,7 +13,7 @@
 
 // LWT: broker publishes this automatically if we disconnect uncleanly
 // (network drop, brownout, crash) so subscribers never see stale "OPEN"/"CLOSED"
-#define MQTT_LWT_MESSAGE "OFFLINE"
+#define MQTT_LWT_MESSAGE "{\"shop-status\":\"OFFLINE\"}"
 #define MQTT_LWT_QOS 1
 #define MQTT_LWT_RETAIN true
  
