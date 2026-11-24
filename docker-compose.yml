@@ -3,6 +3,22 @@ services:
     build: .
     container_name: discord-bot
     env_file: .env
+    environment:
+      - PYTHONUNBUFFERED=1
     volumes:
       - ./comps.json:/app/comps.json
     restart: unless-stopped
+    depends_on:
+      - mosquitto
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+
+volumes:
+  mosquitto-data:
